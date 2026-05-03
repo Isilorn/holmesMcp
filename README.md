@@ -1,2 +1,45 @@
-# holmesMcp
-Plugin Jeedom natif open source qui expose la box comme serveur MCP en lecture seule. Holmes observe, déduit, raconte — sans jamais toucher à la scène, sans jamais exposer les secrets de votre maison
+# Holmes MCP
+
+> *Holmes observe, déduit, raconte. Il ne touche jamais à la scène, sans jamais exposer les secrets de votre maison.*
+
+Plugin Jeedom natif open source qui expose votre box Jeedom comme **serveur MCP** ([Model Context Protocol](https://modelcontextprotocol.io)) en lecture seule.
+
+Orienté audit, diagnostic et assistance à la conception. Pour **Claude Desktop**, **Cursor** et tout client MCP compatible.
+
+---
+
+## Fonctionnalités V1
+
+- **25 tools** de lecture : équipements, commandes, scénarios, plugins, logs, configuration
+- **5 resources** MCP minimales pour les workflows courants
+- **Authentification Bearer** par utilisateur Jeedom (token individuel)
+- **Sanitisation forte** : 3 mécanismes cumulatifs, aucun credential exposé
+- Installation via le **market Jeedom** — zéro setup côté client
+
+## Prérequis
+
+| Composant | Version minimale |
+| --- | --- |
+| Jeedom | 4.5+ |
+| OS | Debian 12 Bookworm x86_64 |
+| Python (auto-installé) | 3.11+ |
+
+## Installation
+
+1. Market Jeedom → rechercher **Holmes MCP**
+2. Installer les dépendances (bouton "Dépendances")
+3. Démarrer le daemon
+4. Configurer un token par utilisateur Jeedom
+5. Coller l'URL MCP + Bearer token dans votre client MCP
+
+## Documentation
+
+Documentation complète : **[isilorn.github.io/holmesMcp](https://isilorn.github.io/holmesMcp/)**
+
+## Statut
+
+`v0.0.0` — Bootstrap J0 (en développement, pas encore fonctionnel)
+
+## Licence
+
+[AGPL-3.0](LICENSE) — Holmes MCP est un logiciel libre.

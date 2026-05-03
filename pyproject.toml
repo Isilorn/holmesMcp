@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "holmes-mcp"
+version = "0.0.0"
+description = "Holmes MCP — daemon Python du plugin Jeedom natif"
+requires-python = ">=3.11"
+license = {text = "AGPL-3.0"}
+
+# ── Ruff (lint + format — D11.6, ADR-0002) ────────────────────────────────────
+[tool.ruff]
+target-version = "py311"
+line-length    = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "W",   # pycodestyle warnings
+    "UP",  # pyupgrade
+]
+ignore = [
+    "N801",  # class names — convention Jeedom snake_case tolérée (jeedom_com, etc.)
+    "N802",  # function names — idem
+]
+
+[tool.ruff.format]
+quote-style  = "single"
+indent-style = "space"
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths    = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+
+[tool.coverage.run]
+source  = ["resources/holmesMcpd"]
+omit    = ["resources/holmesMcpd/jeedom/*", "resources/holmesMcpd/tools/__init__.py"]
+
+[tool.coverage.report]
+fail_under = 80

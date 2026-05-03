@@ -1,0 +1,66 @@
+site_name: Holmes MCP
+site_description: >-
+  Plugin Jeedom natif — expose votre box comme serveur MCP en lecture seule.
+  Pour Claude Desktop, Cursor et tout client MCP compatible.
+site_author: Isilorn
+site_url: https://isilorn.github.io/holmesMcp/
+repo_url: https://github.com/Isilorn/holmesMcp
+repo_name: Isilorn/holmesMcp
+docs_dir: docs/user
+edit_uri: edit/main/docs/user/
+
+theme:
+  name: material
+  language: fr
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Mode sombre
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Mode clair
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.tabs.link
+    - content.code.copy
+
+plugins:
+  - search:
+      lang: fr
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+
+nav:
+  - Accueil: index.md
+  - Présentation: presentation.md
+  - Installation: installation.md
+  - Configuration: configuration.md
+  - Clients MCP: clients-mcp.md
+  - Sécurité: securite.md
+  - Tools (25): tools.md
+  - Resources (5): resources.md
+  - Diagnostic & logs: diagnostic.md
+  - FAQ: faq.md
+  - Sphere jeedom-audit: jeedom-audit.md
+  - Contribuer: contribuer.md

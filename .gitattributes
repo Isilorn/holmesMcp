@@ -1,0 +1,17 @@
+# Normalisation fins de ligne — convention market Jeedom + GitHub
+* text=auto eol=lf
+
+# Fichiers binaires
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.zip  binary
+
+# PHP / Python / JS : LF imposé
+*.php  text eol=lf
+*.py   text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.toml text eol=lf

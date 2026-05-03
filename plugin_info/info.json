@@ -1,0 +1,15 @@
+{
+  "id": "holmesMcp",
+  "name": "Holmes MCP",
+  "description": "Expose votre box Jeedom comme serveur MCP (Model Context Protocol) en lecture seule. Orienté audit, diagnostic et assistance à la conception pour Claude Desktop, Cursor et tout client MCP compatible.",
+  "licence": "AGPL-3.0",
+  "author": "Isilorn",
+  "require": "4.5",
+  "category": "supervision",
+  "changelog": "plugin_info/changelog.md",
+  "documentation": "https://isilorn.github.io/holmesMcp/",
+  "hasDependency": true,
+  "hasOwnDeamon": true,
+  "maxDependancyInstallTime": 10,
+  "version": "0.0.0"
+}

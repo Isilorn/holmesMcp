@@ -1,0 +1,58 @@
+# ── Credentials et secrets — JAMAIS dans le repo (D11.8, ADR-0013) ───────────
+.env
+.env.*
+*.creds
+*credentials*.json
+*secret*.json
+*apikey*
+*.pem
+*.key
+*.p12
+
+# Fixtures réelles (hors repo — workspace local Claude Code uniquement)
+tests/fixtures/real/
+tests/live/fixtures/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Venv Jeedom (généré par dependancy_install côté box)
+resources/venv/
+
+# ── Jeedom runtime (artefacts locaux box) ─────────────────────────────────────
+/tmp/
+*.pid
+
+# ── Tests / couverture ────────────────────────────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── MkDocs (build local — déployé via CI) ─────────────────────────────────────
+site/
+
+# ── Archives ─────────────────────────────────────────────────────────────────
+*.zip
+*.tar.gz

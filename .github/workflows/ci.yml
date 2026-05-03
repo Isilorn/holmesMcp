@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check resources/holmesMcpd/ tests/
+      - run: ruff format --check resources/holmesMcpd/ tests/
+
+  unit:
+    name: Tests unitaires
+    runs-on: ubuntu-22.04
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Installer dépendances test
+        run: pip install mcp httpx sqlparse structlog pymysql pytest pytest-asyncio pytest-cov
+      - name: Tests unitaires
+        run: pytest tests/unit/ -v --cov=resources/holmesMcpd --cov-report=term-missing
+
+  integration:
+    name: Tests intégration (MySQL Docker)
+    runs-on: ubuntu-22.04
+    needs: lint
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: jeedom
+          MYSQL_USER: jeedom_mcp_ro
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Installer dépendances test
+        run: pip install mcp httpx sqlparse structlog pymysql pytest pytest-asyncio pytest-cov
+      - name: Charger fixtures synthétiques
+        run: |
+          if ls tests/fixtures/synthetic/*.sql 2>/dev/null; then
+            mysql -h 127.0.0.1 -u root -proot jeedom < tests/fixtures/synthetic/*.sql
+          fi
+      - name: Tests intégration
+        env:
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_PORT: 3306
+          TEST_DB_NAME: jeedom
+          TEST_DB_USER: jeedom_mcp_ro
+          TEST_DB_PASSWORD: test_password
+        run: pytest tests/integration/ -v

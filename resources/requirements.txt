@@ -1,0 +1,13 @@
+# Référence documentation — source de vérité = plugin_info/packages.json
+# Ces versions sont indicatives ; les versions épinglées seront fixées post-J0-2
+# après vérification de compatibilité sur Bookworm (ADR-0002).
+
+mcp              # SDK MCP Python officiel (Streamable HTTP D3.1, spec 2025-03-26+)
+httpx            # Client HTTP async (API JSON-RPC localhost D4bis.5 — D9.1)
+sqlparse         # Parsing SQL SELECT-only (D5.6 query_sql — D9.1)
+structlog        # Logging structuré JSON Lines (D14.1 — D9.1)
+pymysql          # Driver MySQL read-only pure Python (D4bis.1 — à confirmer J0-2)
+
+# Tests (hors packages.json — CI uniquement)
+pytest
+pytest-asyncio
