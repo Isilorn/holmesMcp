@@ -1,0 +1,157 @@
+# CONTRIBUTING-CLAUDE-CODE.md — Contrat opérationnel PO / Claude Code
+
+> Document dérivé de la section 0 du brief de cadrage (`docs/sources/00-brief-cadrage.md`).  
+> Ce fichier est le contrat opérationnel du binôme PO / Claude Code pour le projet Holmes MCP.  
+> Toute évolution de ce contrat passe par une ADR (ADR-0015).
+
+---
+
+## 1. Répartition des rôles
+
+| Rôle | Qui | Responsabilités |
+| --- | --- | --- |
+| **Product Owner (PO)** | L'utilisateur humain | Décide, oriente, arbitre. Fournit les matières que Claude Code ne peut pas produire seul (captures d'écran UI Jeedom, validation Claude Desktop sur sa machine, sanity check sanitisation, soumission market, communication forum). Ne tape pas de code, ne rédige pas de doc, n'exécute pas de scripts complexes. |
+| **Implémenteur** | Claude Code | Code, rédige, propose, pose des questions structurées quand un arbitrage est nécessaire. Produit tous les artefacts du repo (ADRs, guides, doc utilisateur, références, scripts, tests). Avec accès SSH à la box du PO (§4 ci-dessous), exécute aussi : tests live, déploiements, smoke tests, récupération de fixtures réelles, debug. Demande explicitement les matières physiques au PO. |
+
+---
+
+## 2. Conséquences pratiques pour Claude Code
+
+**(a) Pas d'attente que le PO rédige.** Tout texte (ADR, guide, doc utilisateur, README, code, tests) est rédigé par Claude Code. Le PO valide ou demande retouche.
+
+**(b) Pose des questions structurées, pas ouvertes.** Quand un arbitrage est nécessaire, présenter au PO **2 à 4 options claires** avec leurs trade-offs. Indiquer une recommandation par défaut quand possible. Le PO peut accepter, choisir une autre option, ou demander à débattre.
+
+**(c) Préférer "valider un draft" à "produire ex nihilo via questions".** Quand il s'agit de rédiger une section ou un fichier, Claude Code produit un draft et le PO le critique.
+
+**(d) Auto-validation des choix triviaux.** Conventions de nommage internes, organisation de fichiers internes, choix de variables, formulations mineures dans les drafts : Claude Code décide seul et avance. Pas de gaspillage de cycles de validation sur des détails.
+
+**(e) Goulets d'étranglement physiques — matières que seul le PO peut fournir :**
+
+1. **Captures d'écran UI Jeedom** — page de config plugin, état daemon, fiche market (D12.6)
+2. **Validation finale Claude Desktop** sur la machine PO avant V1.0.0 (D8.3 critère #4)
+3. **Sanity check sanitisation** à l'œil humain sur installation réelle avant V1.0.0 (D15.6)
+4. **Soumission market Jeedom** (compte développeur PO)
+5. **Communication forum Jeedom** (identité PO)
+6. **Snapshots Proxmox** du conteneur Jeedom avant chaque session SSH significative (~30s — sécurité opérationnelle)
+
+Demandes au PO : **explicites, timées, groupées** ("À l'étape J7, j'ai besoin de 3 captures + validation Claude Desktop + sanity check sanitisation"). Format : spec précise du livrable attendu (résolution, contenu, délai).
+
+**(f) Sessions courtes orientées avancement.** Préférer plusieurs sessions ciblées avec validation PO entre les deux à une session marathon. À la fin de chaque session, le PO doit pouvoir comprendre ce qui a été produit en lisant le résumé de session sans relire tout le code.
+
+---
+
+## 3. Discipline de continuité entre sessions
+
+Le PO ne mémorise pas les détails techniques entre sessions. L'**axe documentaire** assure la persistance — `docs/state/PROJECT_STATE.md` et `docs/sessions/*.md` mis à jour à chaque session significative.
+
+**Routine de début de session Claude Code** :
+
+1. Lire `docs/README.md`
+2. Lire `docs/state/PROJECT_STATE.md`
+3. Lire les ADRs `accepted` récentes dans `docs/decisions/`
+4. Lire la dernière entrée `docs/sessions/`
+5. Annoncer au PO : état courant + objectifs de la session
+
+Si la dernière session date de plus de 2 semaines → mention explicite, relecture complète des ADRs accepted.
+
+**Routine de fin de session significative** :
+
+1. Mettre à jour `docs/state/PROJECT_STATE.md`
+2. Créer une entrée `docs/sessions/AAAA-MM-JJ-{slug}.md`
+3. ADR(s) si décisions non triviales prises en session
+4. Commit + tag pre-release si jalon atteint
+
+---
+
+## 4. Cadre d'usage de l'accès SSH PO
+
+Claude Code dispose d'un alias SSH `Jeedom` opérationnel sur sa machine de dev. La connexion utilise l'utilisateur **`gtillit`** du système. Le daemon Holmes MCP tourne sous le user d'exécution Apache/Jeedom (typiquement `www-data`), distinct du user SSH.
+
+**Conséquence** : la discipline de prompt est le filet de sécurité principal. Les garde-fous suivants sont **non négociables**.
+
+### 4.1 Conditions générales d'usage SSH
+
+- Actions limitées au plugin Holmes MCP (lecture, install/test, démarrage/arrêt daemon plugin)
+- Aucune modification non autorisée de la config Jeedom, des autres plugins, du système hors plugin
+- Logs des actions SSH dans `docs/sessions/` pour traçabilité PO
+- En cas de doute : demande PO avant action
+
+### 4.2 Reco opérationnelle PO — snapshot Proxmox
+
+Avant chaque session SSH significative (install/désinstall plugin, tests live nombreux), le PO **prend un snapshot du conteneur Jeedom** (~30s). Claude Code annonce en début de session "j'aurai besoin d'accès SSH avec install/désinstall plugin, snapshot recommandé" et attend confirmation PO avant action.
+
+### 4.3 Blacklist explicite — commandes interdites sans validation PO préalable
+
+Les commandes suivantes sont **interdites sans validation PO explicite préalable** (demande structurée en chat avec justification + commande exacte, le PO valide ou refuse) :
+
+- `rm -rf`, `rm -r` sur tout chemin hors `/tmp/` ou hors workspace de dev Holmes MCP
+- `DROP DATABASE`, `DROP TABLE`, `DROP USER`, `TRUNCATE`, `DELETE FROM`, `UPDATE`, `INSERT` (toute requête MySQL modifiante)
+- Modifications de fichiers dans `/etc/`, `/usr/`, `/var/log/` (hors logs Jeedom du plugin Holmes MCP)
+- `chmod`/`chown` sur fichiers ou dossiers non liés au plugin Holmes MCP
+- `apt-get install/remove/purge`, `pip install` hors venv Holmes MCP
+- `systemctl stop/disable/mask` sur services autres que ceux du plugin Holmes MCP
+- Toute commande `sudo` **hors périmètre plugin Holmes MCP** — `gtillit` est sudoer, mais sudo reste soumis à validation PO pour toute action hors plugin (chown plugin OK, apt système NON)
+- Toute manipulation de `~/.ssh/`, `/etc/shadow`, `/etc/passwd`, fichiers de creds Jeedom (`common.config.php` reste accessible en lecture pour D4bis.2)
+- Toute commande pouvant déclencher un redémarrage système ou couper le serveur web
+
+---
+
+## 5. Isolation des credentials et de la configuration d'accès
+
+**Aucun credential, alias SSH, IP, hostname, user MySQL, port, mot de passe, token, apikey, chemin absolu PO-spécifique, ou identifiant lié à l'environnement PO ne doit apparaître dans le repo Holmes MCP.** Stockage exclusif sur la devbox Claude Code.
+
+**Garde-fous techniques** (mis en place en J0) :
+
+- `.gitignore` strict (chemins SSH, credentials, `.env`, fixtures réelles non sanitisées, dumps MySQL)
+- Pre-commit hook : scan automatique du commit pour patterns sensibles (regex IP, tokens, hostnames) — refus si détection
+- Pre-push hook : second scan avant push GitHub
+- Review systématique de chaque PR vers `main` avec checklist credentials avant merge
+
+**Documentation publique** : placeholders systématiques (`<your-jeedom-host>`, `<your-mysql-password>`, `<your-mcp-token>`).
+
+**Logs de sessions** : références neutres aux actions SSH, pas de commande brute incluant des éléments sensibles.
+
+**Fixtures réelles MySQL** : workspace local Claude Code uniquement (hors repo). Fixtures synthétiques uniquement dans le repo.
+
+**Procédure de réponse rapide en cas de leak** : rewrite git history, force push, rotation immédiate du credential, ADR d'incident.
+
+---
+
+## 6. Modèle d'arbitrage — demandes structurées avec options
+
+Quand un arbitrage est nécessaire, Claude Code présente **2 à 4 options claires** avec leurs trade-offs et une recommandation par défaut. Le PO accepte, choisit une autre option, ou demande à débattre.
+
+Pas de questions ouvertes ("comment veux-tu faire X ?"). Toujours : "Option A (recommandée) / Option B / Option C — lequel choisis-tu ?"
+
+---
+
+## 7. Auto-validation des choix triviaux
+
+Conventions de nommage internes, organisation de fichiers internes, choix de variables, formulations mineures dans les drafts, choix entre deux implémentations équivalentes → Claude Code décide seul et avance. Pas de gaspillage de cycles de validation.
+
+---
+
+## 8. Demandes de matières physiques — explicites, timées, groupées
+
+Pour les goulets d'étranglement physiques (§2.e), Claude Code formule ses demandes :
+
+- **Explicites** : "À l'étape J7.4, j'ai besoin de…"
+- **Timées** : "…d'ici la fin de cette session" ou "avant J7"
+- **Groupées** : une sollicitation PO pour N matières plutôt que N sollicitations
+- **Avec spec précise** : format, résolution, contenu attendu
+
+---
+
+## 9. Sessions courtes orientées avancement
+
+Préférence pour plusieurs sessions ciblées avec validation PO entre les deux, plutôt qu'une session marathon qui produit beaucoup sans validation intermédiaire. Critère : à la fin de chaque session, le PO comprend ce qui a été produit en lisant le résumé de session.
+
+---
+
+## 10. Statut "EN ATTENTE" si un goulet bloque
+
+Si une session se termine en attendant une matière du PO, Claude Code :
+
+1. Met à jour `PROJECT_STATE.md` avec statut clair "EN ATTENTE de [matière X]"
+2. Liste les tâches qui peuvent avancer en parallèle (autres jalons indépendants)
+3. Le PO peut soit fournir la matière, soit demander à avancer sur les autres tâches

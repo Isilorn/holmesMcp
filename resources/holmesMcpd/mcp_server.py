@@ -28,12 +28,13 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
     mcp = FastMCP(
         name='Holmes MCP',
         instructions=_INSTRUCTIONS,
+        host='0.0.0.0',
+        port=args.port,
     )
 
     _register_poc_tools(mcp)
 
-    log.info('Serveur MCP initialisé — tools enregistrés : %s',
-             [t.name for t in mcp.list_tools()] if hasattr(mcp, 'list_tools') else '[POC hello]')
+    log.info('Serveur MCP initialisé — tool POC : hello')
     return mcp
 
 

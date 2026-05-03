@@ -133,8 +133,8 @@ class holmesMcp extends eqLogic {
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     private static function _isPythonReady() {
-        $venv_python = realpath(__DIR__ . '/../../resources/venv/bin/python3');
-        if ($venv_python && file_exists($venv_python)) {
+        $venv_python = __DIR__ . '/../../resources/python_venv/bin/python3';
+        if (file_exists($venv_python)) {
             $result = shell_exec($venv_python . ' -c "import mcp" 2>&1');
             return ($result === null || trim($result) === '');
         }

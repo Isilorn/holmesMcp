@@ -10,15 +10,15 @@
 |---|---|
 | **Version courante** | `v0.0.0` (J0 en cours) |
 | **Jalon en cours** | J0 — Bootstrap repo + POC D2.3 |
-| **Session en cours** | J0-1 terminée / J0-2 prochaine (SSH — snapshot Proxmox requis) |
-| **Dernière session** | `2026-05-03-j0-1-bootstrap` |
-| **Statut global** | 🟠 EN COURS — J0-1 bootstrap ✅, J0-2 SSH POC en attente snapshot Proxmox |
+| **Session en cours** | J0-2 terminée / J0-3 prochaine (validation Claude Desktop — matière PO) |
+| **Dernière session** | `2026-05-03-j0-2-ssh-poc` |
+| **Statut global** | 🟠 EN COURS — J0-1 ✅, J0-2 ✅ (daemon up, tools/list ok), J0-3 en attente PO |
 
 ---
 
 ## Jalon courant : J0 (en cours)
 
-### J0-1 ✅ Bootstrap repo (2026-05-03)
+### J0-1 ✅ Bootstrap repo + outils dev (2026-05-03)
 
 - Structure complète du plugin (PHP shell, daemon Python POC-ready, tests, CI)
 - Gardes-fous : `.gitignore` strict + hooks pre-commit/pre-push (scan credentials)
@@ -26,14 +26,18 @@
 - D11.6 ✅ : ruff → ADR-0002 proposed
 - D10.3 ✅ : docs/ embarqué dans main → ADR-0014 proposed
 - D12.6 ✅ : MkDocs Material + docs.yml CI → ADR-0014 proposed
+- Scripts dev testés et validés : `dev/add-sudo-temp.sh` + `dev/remove-sudo-temp.sh` + `dev/secrets.cfg`
 
-### J0-2 prochaine — SSH + POC daemon (snapshot Proxmox requis avant)
+### J0-2 ✅ SSH + POC daemon (2026-05-03)
 
-1. `netstat` sur box → D3.2 (port défaut)
-2. Lecture `common.config.php`, test `CREATE USER` → D4bis.1 + D4bis.2
-3. Install plugin shell via mécanisme Jeedom (zip + market ou SCP)
-4. Démarrage daemon → vérification état vert "Démon" dans UI
-5. Test `tools/list` via MCP Inspector depuis la machine Claude Code
+- D3.2 ✅ : port défaut **8765** (libre sur la box, aucune collision plugins)
+- D4bis.1 ✅ : PyMySQL confirmé (MariaDB 10.x Bookworm, localhost)
+- D4bis.2 ✅ : `CREATE USER` via `sudo mysql` (unix_socket root, user jeedom trop restrictif)
+- D2.4 ✅ : venv natif Jeedom (`resources/python_venv/`) — `system::update()` Jeedom 4.4.9+
+- Plugin installé sur la box, dépendances OK, daemon UP (PID confirmé, state:ok)
+- `tools/list` → tool `hello` retourné via Streamable HTTP — hypothèses D2.3 #1-#6 validées
+- Bugs corrigés en session : `realpath()` symlink venv, `FastMCP.run()` API 1.27.0, `list_tools()` async
+- Infrastructure MySQL : user `jeedom_mcp_ro` créé, `GRANT SELECT ON jeedom.*`, mdp dans `/etc/holmes_mcp_ro.conf`
 
 ### J0-3 prochaine — Validation Claude Desktop (matière PO)
 
@@ -68,9 +72,10 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | Décision | Jalon | Question | Critères |
 |---|---|---|---|
 | D1.2 | J0 | Version spec MCP cible (dernière stable J0) | Compatibilité SDK MCP Python, support N/N-1 |
-| D3.2 | J0 | Port par défaut + path `/mcp` (vérification ports plugins majeurs sur box PO) | Port haut >8000, libre des plugins majeurs |
-| D4bis.1 | J0 | Driver MySQL : PyMySQL (reco) vs mysql-connector-python | Pure Python, maintenance active, MariaDB 10.x compat |
-| D4bis.2 | J0 | Mécanisme création user MySQL RO à l'install (lire `common.config.php`, test `CREATE USER` privilege) | Message clair si échec privilege |
+| ~~D3.2~~ | ~~J0~~ | ~~Port par défaut~~ | ✅ **Tranché J0-2** : port **8765** (libre sur box PO) |
+| ~~D4bis.1~~ | ~~J0~~ | ~~Driver MySQL~~ | ✅ **Tranché J0-2** : PyMySQL (confirmé MariaDB 10.x Bookworm) |
+| ~~D4bis.2~~ | ~~J0~~ | ~~Création user MySQL RO~~ | ✅ **Tranché J0-2** : `sudo mysql` unix_socket (user jeedom sans CREATE USER global) |
+| ~~D2.4~~ | ~~J0~~ | ~~Isolation Python~~ | ✅ **Tranché J0-2** : venv natif Jeedom `resources/python_venv/` |
 | ~~D9.1~~ | ~~J0~~ | ~~Libs Python~~ | ✅ **Tranché J0-1** : httpx + sqlparse + structlog — ADR-0002 |
 | ~~D10.3~~ | ~~J0~~ | ~~docs/ embarqué vs branche~~ | ✅ **Tranché J0-1** : docs/ dans main — ADR-0014 |
 | D10.8 | J0 | Vérification ID `holmesMcp` libre sur market Jeedom + collision marque | Recherche market officielle |
@@ -81,15 +86,14 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | D6.3 | J1 | Plafond énumération resources (typique 50 entités) | Claude Desktop réactif, mesure empirique box PO |
 | D14.4 | J1 | UI vue dédiée logs Holmes MCP (framework JS, refresh, filtres) | Jeedom standard, sans dépendance JS exotique |
 | D15.2 | J1 | Liste hard-codée plugins à filtrer (10 plugins les plus installés) | Livrable : enrichissement `_domain/sanitize.py` |
-| D2.4 | J0 | Mécanisme exact isolation Python (venv Jeedom 4.4.9+ natif vs `dependance.lib` Mips) | Bénéfice clair sans complexifier le diagnostic |
 
 ---
 
 ## POC requis avant validation (🟣)
 
-| POC | Jalon | Hypothèses à valider | Goulet PO |
-|---|---|---|---|
-| D2.3 — Faisabilité daemon Python sur Bookworm | J0 | 7 hypothèses (voir brief §"POCs requis") | Hypothèse #7 : validation Claude Desktop sur machine PO (HTTP non-TLS LAN) |
+| POC                                           | Jalon | Hypothèses à valider                              | Goulet PO                                   |
+|-----------------------------------------------|-------|---------------------------------------------------|---------------------------------------------|
+| D2.3 — Faisabilité daemon Python sur Bookworm | J0    | #1-#6 ok (J0-2) — #7 en attente PO (HTTP LAN) | J0-3 : Claude Desktop HTTP non-TLS LAN PO |
 
 **Plan B si hypothèse #7 échoue** : HTTPS self-signed (génération auto `openssl` à l'install, exposition daemon en HTTPS). Coût +1 à 2 jours. ADR documentant le choix.
 

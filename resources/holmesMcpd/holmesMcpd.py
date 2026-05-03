@@ -73,9 +73,9 @@ def main() -> None:
         mcp = build_mcp(ARGS)
 
         # Transport : Streamable HTTP (spec MCP 2025-03-26+, ADR-0003)
-        # API exacte validée en J0-2 contre la version SDK installée sur la box
+        # SDK 1.27.0 : host/port passés au constructeur FastMCP, pas à run()
         log.info('Démarrage serveur MCP Streamable HTTP sur 0.0.0.0:%d/mcp', ARGS.port)
-        mcp.run(transport='streamable-http', host='0.0.0.0', port=ARGS.port, path='/mcp')
+        mcp.run(transport='streamable-http')
 
     except Exception:
         log.exception('Erreur fatale — arrêt daemon Holmes MCP')

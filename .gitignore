@@ -1,9 +1,13 @@
+# ── Outils dev locaux — non committés (scripts sudo, déploiement local) ───────
+dev/
+
 # ── Credentials et secrets — JAMAIS dans le repo (D11.8, ADR-0013) ───────────
 .env
 .env.*
 *.creds
 *credentials*.json
 *secret*.json
+secrets.cfg
 *apikey*
 *.pem
 *.key
