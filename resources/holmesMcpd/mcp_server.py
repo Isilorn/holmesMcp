@@ -2,17 +2,17 @@
 
 Construit l'instance FastMCP et enregistre les tools/resources.
 POC J0 : un seul tool `hello` pour valider l'intégration complète.
-J1+ : import des modules tools/ et resources/ au fur et à mesure.
+J3+ : import des modules tools/ et resources/ au fur et à mesure.
 """
 
 from __future__ import annotations
 
 import argparse
-import logging
 
+import structlog
 from mcp.server.fastmcp import FastMCP
 
-log = logging.getLogger('holmesMcp.server')
+log = structlog.get_logger('holmesMcp.server')
 
 _INSTRUCTIONS = (
     'Holmes observe, déduit, raconte. '
@@ -34,12 +34,12 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
 
     _register_poc_tools(mcp)
 
-    log.info('Serveur MCP initialisé — tool POC : hello')
+    log.info('mcp_initialized', tool='hello')
     return mcp
 
 
 def _register_poc_tools(mcp: FastMCP) -> None:
-    """Tools POC J0 — remplacés par les vrais tools à partir de J3."""
+    """Tools POC J0 — remplacés par les 25 tools V1 à partir de J3."""
 
     @mcp.tool()
     def hello(name: str = 'Jeedom') -> str:

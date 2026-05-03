@@ -44,8 +44,9 @@ class holmesMcp extends eqLogic {
         $cmd .= ' ' . $daemon_path . '/holmesMcpd.py';
         $cmd .= ' --loglevel '   . log::convertLogLevel(log::getLogLevel(__CLASS__));
         $cmd .= ' --socketport ' . config::byKey('socketport', __CLASS__, 55000);
-        $cmd .= ' --apikey '     . jeedom::getApiKey(__CLASS__);
-        $cmd .= ' --port '       . $port;
+        $cmd .= ' --apikey '        . jeedom::getApiKey(__CLASS__);
+        $cmd .= ' --jeedom-apikey ' . jeedom::getApiKey();
+        $cmd .= ' --port '          . $port;
         $cmd .= ' --pid '        . $pid_file;
         $cmd .= ' --callback '   . network::getNetworkAccess('internal', 'http:127.0.0.1:port:comp') . '/core/php/jeeholmesMcp.php';
 

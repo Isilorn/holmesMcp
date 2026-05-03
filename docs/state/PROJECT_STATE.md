@@ -8,15 +8,15 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.0.0` (J0 en cours) |
-| **Jalon en cours** | J0 — Bootstrap repo + POC D2.3 |
-| **Session en cours** | J0-3 terminée / J0-3bis prochaine (plan B HTTPS self-signed) |
+| **Version courante** | `v0.0.0` (J1 à venir) |
+| **Jalon en cours** | J1 — _core + matrice skill |
+| **Session en cours** | J1 prochaine |
 | **Dernière session** | `2026-05-03-j0-3-claude-desktop` |
-| **Statut global** | 🟠 EN COURS — J0-1 ✅, J0-2 ✅, J0-3 ✅ hypothèse #7 ❌ → plan B HTTPS activé |
+| **Statut global** | 🟢 J0 ✅ TERMINÉ — J0-1 ✅, J0-2 ✅, J0-3 ✅ (ADR-0018 accepted, HTTP LAN retenu) |
 
 ---
 
-## Jalon courant : J0 (en cours)
+## Jalon J0 ✅ Clôturé (2026-05-03)
 
 ### J0-1 ✅ Bootstrap repo + outils dev (2026-05-03)
 
@@ -39,18 +39,18 @@
 - Bugs corrigés en session : `realpath()` symlink venv, `FastMCP.run()` API 1.27.0, `list_tools()` async
 - Infrastructure MySQL : user `jeedom_mcp_ro` créé, `GRANT SELECT ON jeedom.*`, mdp dans `/etc/holmes_mcp_ro.conf`
 
-### J0-3 ✅ Validation Claude Desktop (2026-05-03)
+### J0-3 ✅ Validation client MCP LAN (2026-05-03)
 
-- Hypothèse #7 ❌ : Claude Desktop rejette les URLs `http://` au parsing du config — serveur même pas contacté
-- Plan B activé : HTTPS self-signed généré à l'install (`openssl`), daemon expose HTTPS via uvicorn
-- ADR-0018 rédigée (accepted)
+- Hypothèse #7 ✅ validée via **Claude Code** (HTTP LAN natif, `type: "http"` dans `.mcp.json`)
+- Claude Desktop : ne supporte pas HTTP LAN direct — contournement via `mcp-remote` (stdio→HTTP)
+- Plan B HTTPS self-signed **abandonné** — HTTP suffisant pour V1
+- ADR-0018 rédigée et accepted
 
-### J0-3bis prochaine — Implémentation HTTPS self-signed (plan B)
+### J0 ✅ Clôturé (2026-05-03)
 
-- `post_install.sh` : génération certificat self-signed `openssl req -x509`
-- `holmesMcpd.py` : uvicorn avec `ssl_keyfile` + `ssl_certfile`
-- `holmesMcp.class.php` : `getMcpUrl()` → `https://`
-- Validation Claude Desktop avec URL `https://` (matière PO)
+Toutes les hypothèses D2.3 validées. Plan B HTTPS self-signed abandonné (HTTP suffisant). ADR-0018 accepted. J0-3bis annulée.
+
+**Stratégie de test validée (ADR-0018) :** les tests d'intégration V1 sont réalisés en priorité depuis **Claude Code**. C'est Claude Code qui les exécute via SSH sur la box PO — sans intervention du PO pour les tests techniques. Le PO intervient uniquement pour les validations de matière (sanity check UI, critère D8.3 #5).
 
 ---
 
@@ -79,7 +79,7 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 
 | Décision | Jalon | Question | Critères |
 |---|---|---|---|
-| D1.2 | J0 | Version spec MCP cible (dernière stable J0) | Compatibilité SDK MCP Python, support N/N-1 |
+| ~~D1.2~~ | ~~J0~~ | ~~Version spec MCP cible~~ | ✅ **Tranché J1-1** : spec **2025-03-26** (Streamable HTTP) — mcp==1.27.0 |
 | ~~D3.2~~ | ~~J0~~ | ~~Port par défaut~~ | ✅ **Tranché J0-2** : port **8765** (libre sur box PO) |
 | ~~D4bis.1~~ | ~~J0~~ | ~~Driver MySQL~~ | ✅ **Tranché J0-2** : PyMySQL (confirmé MariaDB 10.x Bookworm) |
 | ~~D4bis.2~~ | ~~J0~~ | ~~Création user MySQL RO~~ | ✅ **Tranché J0-2** : `sudo mysql` unix_socket (user jeedom sans CREATE USER global) |
@@ -92,16 +92,14 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | D12.7 | J0 | Procédure soumission market : étapes manuelles vs automatisables | Vérification API/UI développeur Jeedom |
 | D5.8 | J1 | Matrice couverture skill jeedom-audit WF1-WF13 ↔ tools MCP V1 | Livrable : `docs/skill-coverage-matrix.md` |
 | D6.3 | J1 | Plafond énumération resources (typique 50 entités) | Claude Desktop réactif, mesure empirique box PO |
-| D14.4 | J1 | UI vue dédiée logs Holmes MCP (framework JS, refresh, filtres) | Jeedom standard, sans dépendance JS exotique |
-| D15.2 | J1 | Liste hard-codée plugins à filtrer (10 plugins les plus installés) | Livrable : enrichissement `_domain/sanitize.py` |
+| ~~D14.4~~ | ~~J1~~ | ~~UI vue dédiée logs (framework JS)~~ | ✅ **Tranché J1-1** : tableau HTML natif Jeedom + polling AJAX `setInterval` — pas de dépendance JS externe |
+| ~~D15.2~~ | ~~J1~~ | ~~Liste hard-codée plugins à filtrer~~ | ✅ **Tranché J1-1** : liste produite dans `_domain/sanitize.py` — 10 plugins les plus installés (jMQTT, Aqara, Zigbee2MQTT, Sonos, Philips Hue, Z-Wave, Netatmo, ecodevices, rfxcom, agenda) |
 
 ---
 
 ## POC requis avant validation (🟣)
 
-**D2.3 — Faisabilité daemon Python sur Bookworm** (J0) :
-Hypotheses #1-#6 validées en J0-2. Hypothese #7 (Claude Desktop HTTP LAN) : ko — HTTP refusé par Claude Desktop.
-Plan B HTTPS self-signed activé (ADR-0018 accepted). Goulet PO : J0-3bis, valider Claude Desktop sur HTTPS.
+**D2.3 ✅ — Faisabilité daemon Python sur Bookworm** : toutes les hypothèses #1-#7 validées (J0). ADR-0018 accepted. HTTP retenu, plan B abandonné. Aucun POC ouvert.
 
 ---
 
@@ -129,7 +127,7 @@ Plan B HTTPS self-signed activé (ADR-0018 accepted). Goulet PO : J0-3bis, valid
 
 | Risque | Niveau | Mitigation |
 |---|---|---|
-| Claude Desktop HTTP non-TLS LAN (D2.3 hypothèse #7) | 🔴 Élevé | POC J0, plan B HTTPS self-signed |
+| ~~Claude Desktop HTTP non-TLS LAN (D2.3 hypothèse #7)~~ | ~~🔴 Élevé~~ | ✅ Clos J0-3 — HTTP LAN natif via Claude Code, Claude Desktop via mcp-remote |
 | `CREATE USER` privilege absent sur install PO (D4bis.2) | 🟡 Moyen | Message clair, détection à l'install |
 | ID `holmesMcp` pris sur market (D10.8) | 🟡 Moyen | Vérification J0, alternatives préparées |
 | Validateur market Jeedom (critères partiellement publics) | 🟡 Moyen | Pre-submit checklist en J0/J7 |
@@ -158,5 +156,5 @@ Plan B HTTPS self-signed activé (ADR-0018 accepted). Goulet PO : J0-3bis, valid
 | ADR-0015 | Modèle opérationnel PO / Claude Code | draft |
 | ADR-0016 | Observabilité | draft |
 | ADR-0017 | Sanitisation et guardrails | draft |
-| ADR-0018 | Résultat POC D2.3 | *(à rédiger post-POC J0)* |
+| ADR-0018 | Résultat POC D2.3 | accepted |
 | ADR-0019 | Couverture skill jeedom-audit D5.8 | *(à rédiger post-J1)* |

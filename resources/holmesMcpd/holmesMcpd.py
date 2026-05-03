@@ -14,29 +14,38 @@ from pathlib import Path
 
 # ── CLI (pattern Jeedom — arguments passés par deamon_start() en PHP) ─────────
 _parser = argparse.ArgumentParser(description='Holmes MCP daemon')
-_parser.add_argument('--loglevel',   default='info',
-                     choices=['debug', 'info', 'warning', 'error'])
-_parser.add_argument('--socketport', default=55000, type=int,
-                     help='Port socket interne Jeedom (PHP→daemon)')
-_parser.add_argument('--apikey',     required=True,
-                     help='Clé API plugin Jeedom (pour callbacks daemon→PHP)')
-_parser.add_argument('--port',       default=8765, type=int,
-                     help='Port HTTP d\'écoute MCP')
-_parser.add_argument('--pid',        required=True,
-                     help='Chemin du fichier PID')
-_parser.add_argument('--callback',   default='',
-                     help='URL callback daemon→PHP (jeeholmesMcp.php)')
+_parser.add_argument('--loglevel', default='info', choices=['debug', 'info', 'warning', 'error'])
+_parser.add_argument(
+    '--socketport', default=55000, type=int, help='Port socket interne Jeedom (PHP→daemon)'
+)
+_parser.add_argument('--apikey', required=True, help='Clé API plugin Jeedom (callbacks daemon→PHP)')
+_parser.add_argument(
+    '--jeedom-apikey',
+    required=True,
+    dest='jeedom_apikey',
+    help='Clé API JSON-RPC globale Jeedom (appels API localhost)',
+)
+_parser.add_argument('--port', default=8765, type=int, help="Port HTTP d'écoute MCP")
+_parser.add_argument('--pid', required=True, help='Chemin du fichier PID')
+_parser.add_argument('--callback', default='', help='URL callback daemon→PHP (jeeholmesMcp.php)')
 ARGS = _parser.parse_args()
 
-# ── Logging stdlib (structlog intégré à partir de J1 — D9.1) ──────────────────
+# ── Structlog (D9.1 — JSON Lines vers stdout redirigé dans le log Jeedom) ─────
+import structlog  # noqa: E402
+
 _LOG_LEVEL = getattr(logging, ARGS.loglevel.upper(), logging.INFO)
-logging.basicConfig(
-    level=_LOG_LEVEL,
-    format='[%(asctime)s][%(name)s][%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    stream=sys.stdout,
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt='iso'),
+        structlog.processors.JSONRenderer(),
+    ],
+    wrapper_class=structlog.make_filtering_bound_logger(_LOG_LEVEL),
+    context_class=dict,
+    logger_factory=structlog.PrintLoggerFactory(),
 )
-log = logging.getLogger('holmesMcp')
+log = structlog.get_logger('holmesMcp')
 
 # ── PID file ──────────────────────────────────────────────────────────────────
 _PID_PATH = Path(ARGS.pid)
@@ -45,7 +54,7 @@ _PID_PATH = Path(ARGS.pid)
 def _write_pid() -> None:
     _PID_PATH.parent.mkdir(parents=True, exist_ok=True)
     _PID_PATH.write_text(str(os.getpid()))
-    log.info('PID %d écrit dans %s', os.getpid(), _PID_PATH)
+    log.info('pid_written', pid=os.getpid(), path=str(_PID_PATH))
 
 
 def _remove_pid() -> None:
@@ -54,7 +63,7 @@ def _remove_pid() -> None:
 
 # ── Signal handlers ───────────────────────────────────────────────────────────
 def _handle_shutdown(signum, frame) -> None:
-    log.info('Signal %d reçu — arrêt propre du daemon Holmes MCP', signum)
+    log.info('daemon_shutdown', signal=signum)
     _remove_pid()
     sys.exit(0)
 
@@ -65,20 +74,32 @@ signal.signal(signal.SIGINT, _handle_shutdown)
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main() -> None:
-    log.info('=== Holmes MCP daemon démarrage (port=%d, pid=%s) ===', ARGS.port, _PID_PATH)
+    log.info('daemon_start', port=ARGS.port, pid_path=str(_PID_PATH))
     _write_pid()
 
     try:
+        import uvicorn
+        from _core.auth import BearerAuthMiddleware, TokenStore
+        from _core.db import connect
         from mcp_server import build_mcp
+
+        # Chargement du store de tokens depuis la DB Jeedom
+        conn = connect()
+        token_store = TokenStore.from_db(conn)
+        conn.close()
+
+        # Construction du serveur MCP
         mcp = build_mcp(ARGS)
 
-        # Transport : Streamable HTTP (spec MCP 2025-03-26+, ADR-0003)
-        # SDK 1.27.0 : host/port passés au constructeur FastMCP, pas à run()
-        log.info('Démarrage serveur MCP Streamable HTTP sur 0.0.0.0:%d/mcp', ARGS.port)
-        mcp.run(transport='streamable-http')
+        # Récupération de l'app ASGI Streamable HTTP et ajout du middleware auth
+        mcp_asgi = mcp.streamable_http_app()
+        authed_app = BearerAuthMiddleware(mcp_asgi, token_store=token_store)
+
+        log.info('daemon_listening', host='0.0.0.0', port=ARGS.port, path='/mcp')
+        uvicorn.run(authed_app, host='0.0.0.0', port=ARGS.port, log_config=None)
 
     except Exception:
-        log.exception('Erreur fatale — arrêt daemon Holmes MCP')
+        log.exception('daemon_fatal_error')
         _remove_pid()
         sys.exit(1)
 
