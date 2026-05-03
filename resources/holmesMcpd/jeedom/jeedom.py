@@ -11,8 +11,8 @@ import logging
 import os
 import socket
 import threading
-import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 log = logging.getLogger('holmesMcp.jeedom')
 
@@ -110,7 +110,7 @@ class jeedom_socket:  # noqa: N801 — convention Jeedom
                     if data:
                         msg = json.loads(data.decode())
                         self._callback(msg)
-                except socket.timeout:
+                except TimeoutError:
                     pass
         except Exception as exc:
             log.error('Erreur socket Jeedom : %s', exc)
