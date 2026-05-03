@@ -90,7 +90,7 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ~~D11.6~~ | ~~J0~~ | ~~Lint/format Python~~ | ✅ **Tranché J0-1** : ruff — ADR-0002 |
 | ~~D12.6~~ | ~~J0~~ | ~~MkDocs Material + CI docs.yml~~ | ✅ **Tranché J0-1** : MkDocs Material — ADR-0014 |
 | D12.7 | J0 | Procédure soumission market : étapes manuelles vs automatisables | Vérification API/UI développeur Jeedom |
-| D5.8 | J1 | Matrice couverture skill jeedom-audit WF1-WF13 ↔ tools MCP V1 | Livrable : `docs/skill-coverage-matrix.md` |
+| ~~D5.8~~ | ~~J1~~ | ~~Matrice couverture skill jeedom-audit~~ | ✅ **Tranché J1-2** : 13/13 WF couverts, 0 ajout requis — `docs/skill-coverage-matrix.md` + ADR-0019 |
 | D6.3 | J1 | Plafond énumération resources (typique 50 entités) | Claude Desktop réactif, mesure empirique box PO |
 | ~~D14.4~~ | ~~J1~~ | ~~UI vue dédiée logs (framework JS)~~ | ✅ **Tranché J1-1** : tableau HTML natif Jeedom + polling AJAX `setInterval` — pas de dépendance JS externe |
 | ~~D15.2~~ | ~~J1~~ | ~~Liste hard-codée plugins à filtrer~~ | ✅ **Tranché J1-1** : liste produite dans `_domain/sanitize.py` — 10 plugins les plus installés (jMQTT, Aqara, Zigbee2MQTT, Sonos, Philips Hue, Z-Wave, Netatmo, ecodevices, rfxcom, agenda) |
@@ -157,4 +157,4 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ADR-0016 | Observabilité | draft |
 | ADR-0017 | Sanitisation et guardrails | draft |
 | ADR-0018 | Résultat POC D2.3 | accepted |
-| ADR-0019 | Couverture skill jeedom-audit D5.8 | *(à rédiger post-J1)* |
+| ADR-0019 | Couverture skill jeedom-audit D5.8 | accepted |
