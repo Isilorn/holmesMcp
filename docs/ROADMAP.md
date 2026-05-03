@@ -21,6 +21,7 @@
 | **Avertissement page config si IP non-LAN** | §10.7 risques | Détecter si le port MCP est accessible depuis l'extérieur et avertir l'utilisateur. | Faible (détection IP) |
 | **Raffinements UI vue logs** | D14.4 | Graphes d'activité, export CSV, filtres avancés sur les logs Holmes MCP. | Moyen |
 | **Support Jeedom 4.6+** | D12.3 | Politique N/N-1 : quand Jeedom 4.6 sortira, tester et documenter le support. | Variable (dépend des breaking changes Jeedom) |
+| **Validation clients desktop grand public** | ADR-0018 | Tester Claude Desktop (si support HTTP LAN natif ajouté), ChatGPT (si support MCP), et tout nouveau client desktop compatible. Les tests V1 sont réalisés dans Claude Code — les clients desktop évoluent vite et ne nécessitent pas de changement côté daemon. | Faible (tests uniquement, daemon inchangé) |
 
 ---
 
