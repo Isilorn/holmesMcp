@@ -10,9 +10,9 @@
 |---|---|
 | **Version courante** | `v0.0.0` (J0 en cours) |
 | **Jalon en cours** | J0 — Bootstrap repo + POC D2.3 |
-| **Session en cours** | J0-2 terminée / J0-3 prochaine (validation Claude Desktop — matière PO) |
-| **Dernière session** | `2026-05-03-j0-2-ssh-poc` |
-| **Statut global** | 🟠 EN COURS — J0-1 ✅, J0-2 ✅ (daemon up, tools/list ok), J0-3 en attente PO |
+| **Session en cours** | J0-3 terminée / J0-3bis prochaine (plan B HTTPS self-signed) |
+| **Dernière session** | `2026-05-03-j0-3-claude-desktop` |
+| **Statut global** | 🟠 EN COURS — J0-1 ✅, J0-2 ✅, J0-3 ✅ hypothèse #7 ❌ → plan B HTTPS activé |
 
 ---
 
@@ -39,10 +39,18 @@
 - Bugs corrigés en session : `realpath()` symlink venv, `FastMCP.run()` API 1.27.0, `list_tools()` async
 - Infrastructure MySQL : user `jeedom_mcp_ro` créé, `GRANT SELECT ON jeedom.*`, mdp dans `/etc/holmes_mcp_ro.conf`
 
-### J0-3 prochaine — Validation Claude Desktop (matière PO)
+### J0-3 ✅ Validation Claude Desktop (2026-05-03)
 
-- Hypothèse #7 : connexion Claude Desktop HTTP LAN → plan B HTTPS si échec
-- ADR-0018 (résultat POC complet)
+- Hypothèse #7 ❌ : Claude Desktop rejette les URLs `http://` au parsing du config — serveur même pas contacté
+- Plan B activé : HTTPS self-signed généré à l'install (`openssl`), daemon expose HTTPS via uvicorn
+- ADR-0018 rédigée (accepted)
+
+### J0-3bis prochaine — Implémentation HTTPS self-signed (plan B)
+
+- `post_install.sh` : génération certificat self-signed `openssl req -x509`
+- `holmesMcpd.py` : uvicorn avec `ssl_keyfile` + `ssl_certfile`
+- `holmesMcp.class.php` : `getMcpUrl()` → `https://`
+- Validation Claude Desktop avec URL `https://` (matière PO)
 
 ---
 
@@ -91,11 +99,9 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 
 ## POC requis avant validation (🟣)
 
-| POC                                           | Jalon | Hypothèses à valider                              | Goulet PO                                   |
-|-----------------------------------------------|-------|---------------------------------------------------|---------------------------------------------|
-| D2.3 — Faisabilité daemon Python sur Bookworm | J0    | #1-#6 ok (J0-2) — #7 en attente PO (HTTP LAN) | J0-3 : Claude Desktop HTTP non-TLS LAN PO |
-
-**Plan B si hypothèse #7 échoue** : HTTPS self-signed (génération auto `openssl` à l'install, exposition daemon en HTTPS). Coût +1 à 2 jours. ADR documentant le choix.
+**D2.3 — Faisabilité daemon Python sur Bookworm** (J0) :
+Hypotheses #1-#6 validées en J0-2. Hypothese #7 (Claude Desktop HTTP LAN) : ko — HTTP refusé par Claude Desktop.
+Plan B HTTPS self-signed activé (ADR-0018 accepted). Goulet PO : J0-3bis, valider Claude Desktop sur HTTPS.
 
 ---
 
