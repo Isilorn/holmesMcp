@@ -50,6 +50,15 @@ Le PO ne mémorise pas les détails techniques entre sessions. L'**axe documenta
 |---|---|
 | **Sous-session** (J0-1, J1-2…) | Unité de travail et de livrable — correspond à un bloc cohérent du jalon |
 | **Session Claude Code** | Fenêtre de conversation — peut couvrir 1 ou N sous-sessions |
+
+### Stratégie de branches (D10.5)
+
+| Branche | Rôle | Règle |
+|---|---|---|
+| `develop` | Intégration — travail en cours | Tout le code J2+ va sur `develop` |
+| `main` | Stable — toujours = dernier jalon complet | Merge depuis `develop` **uniquement à la fin d'un jalon** |
+
+**Règle** : on ne merge `develop` → `main` que lorsque le DoD du jalon est intégralement coché et le tag posé. Entre deux jalons, `main` est figé. Le market Jeedom et les utilisateurs pointent sur `main` — il ne doit jamais contenir de code en cours.
 | **Jalon** (J0, J1…) | Ensemble de sous-sessions partageant un objectif, avec DoD et tag semver |
 
 ### Règle — ADR on commit
