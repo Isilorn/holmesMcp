@@ -47,19 +47,33 @@ Le PO ne mémorise pas les détails techniques entre sessions. L'**axe documenta
 ### Vocabulaire
 
 | Terme | Définition |
-|---|---|
+| --- | --- |
 | **Sous-session** (J0-1, J1-2…) | Unité de travail et de livrable — correspond à un bloc cohérent du jalon |
 | **Session Claude Code** | Fenêtre de conversation — peut couvrir 1 ou N sous-sessions |
+| **Jalon** (J0, J1…) | Ensemble de sous-sessions partageant un objectif, avec DoD et tag semver |
 
 ### Stratégie de branches (D10.5)
 
 | Branche | Rôle | Règle |
-|---|---|---|
-| `develop` | Intégration — travail en cours | Tout le code J2+ va sur `develop` |
-| `main` | Stable — toujours = dernier jalon complet | Merge depuis `develop` **uniquement à la fin d'un jalon** |
+| --- | --- | --- |
+| `develop` | Intégration — tout le code J3+ | Commits quotidiens ici. Jamais de commit direct sur `main`. |
+| `main` | Stable — toujours = dernier jalon complet | Reçoit **uniquement** les merges depuis `develop` en fin de jalon. |
 
-**Règle** : on ne merge `develop` → `main` que lorsque le DoD du jalon est intégralement coché et le tag posé. Entre deux jalons, `main` est figé. Le market Jeedom et les utilisateurs pointent sur `main` — il ne doit jamais contenir de code en cours.
-| **Jalon** (J0, J1…) | Ensemble de sous-sessions partageant un objectif, avec DoD et tag semver |
+**Règle fondamentale** : on ne merge `develop` → `main` que lorsque le DoD du jalon est intégralement coché et le tag posé. Entre deux jalons, `main` est figé. Le market Jeedom et les utilisateurs pointent sur `main` — il ne doit jamais contenir de code en cours.
+
+**Garde-fou technique** : le `pre-commit` hook bloque automatiquement tout commit direct sur `main` (déclenché si `git symbolic-ref HEAD` vaut `main` et qu'aucun merge n'est en cours). Les hooks sont versionnés dans `.githooks/` — activer après un clone :
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Seuls trois cas passent le hook :
+
+1. **Merge commit depuis `develop`** — détecté automatiquement via `.git/MERGE_HEAD`
+2. **Hotfix urgent** — `HOLMES_MAIN_COMMIT=1 git commit ...` (justifier dans le message de commit)
+3. **Doc post-merge** (fichier session, PROJECT_STATE) — `HOLMES_MAIN_COMMIT=1 git commit ...`
+
+> **Historique** : J0-J2 ont été développés directement sur `main` (dérive pré-garde-fou). `develop` est synchronisée avec `main` depuis la fin de J2 (tag `v0.3.0`). À partir de J3, la règle est appliquée et techniquement renforcée.
 
 ### Règle — ADR on commit
 
@@ -68,6 +82,12 @@ Le PO ne mémorise pas les détails techniques entre sessions. L'**axe documenta
 ### Routine de début de jalon
 
 **Avant de démarrer la première sous-session d'un jalon**, planifier les sous-sessions du jalon :
+
+```bash
+# S'assurer d'être sur develop et à jour
+git checkout develop
+git merge --ff-only main   # develop doit être à parité avec main en début de jalon
+```
 
 1. Lire le bloc jalon dans `docs/PLANNING.md` (livrables + DoD)
 2. Décomposer en sous-sessions nommées (J2-1, J2-2…) avec objectif et dépendances
@@ -110,14 +130,22 @@ python -m pytest tests/unit/ --cov --cov-report=term-missing -q
 #### Étape 3 — Commit
 
 ```bash
+# Vérifier qu'on est bien sur develop (jamais sur main)
+git branch --show-current   # doit afficher "develop"
+
 # Ajouter explicitement les fichiers (pas git add .)
 git add <fichiers code> <ADRs> <session file> PROJECT_STATE.md
 
-# Message de commit : convention "Jx-y : livrable principal"
-git commit -m "J2-1 : _domain/sanitize.py — 3 mécanismes + couverture 100%"
+# Message de commit : convention "feat/docs/fix(scope): livrable principal"
+git commit -m "feat(domain): cmd_refs — résolveur #cmdId# + 100% coverage"
 ```
 
-Le pre-commit hook scanne les credentials — si refus, inspecter avant de bypasser.
+Le pre-commit hook vérifie :
+
+- **Branche** : bloque si on est sur `main` sans `MERGE_HEAD` ni `HOLMES_MAIN_COMMIT=1`
+- **Credentials** : bloque si pattern IP/token/password détecté
+
+Si credential refusé à tort → demander d'ajuster le filtre (ADR-0013), ne pas bypasser.
 
 #### Étape 4 — Mémoire Claude Code (si la session Claude Code se ferme)
 
@@ -134,8 +162,26 @@ attendre la fermeture de fenêtre.
 **Quand toutes les sous-sessions d'un jalon sont ✅** :
 
 1. Vérifier le DoD du jalon dans `docs/PLANNING.md` — cocher chaque critère
-2. Si tout est coché → commit + **tag pre-release** (`v0.x.0`)
+2. Merger `develop` → `main` + tag (si DoD ✅) :
+
+   ```bash
+   # Depuis develop : dernier commit de code/doc déjà posé
+   git checkout main
+   git merge --no-ff develop -m "chore: merge develop — J3 clôturé (v0.4.0)"
+   git tag v0.x.0
+   git checkout develop           # retour sur develop immédiatement
+
+   # Doc post-merge si nécessaire (session file, PROJECT_STATE) :
+   # HOLMES_MAIN_COMMIT=1 git commit ...   ← seuls commits directs tolérés sur main
+   ```
+
 3. Mettre à jour `docs/state/PROJECT_STATE.md` (jalon ✅, prochain jalon)
+4. Synchroniser `develop` avec `main` si des commits post-merge ont été ajoutés :
+
+   ```bash
+   git checkout develop
+   git merge --ff-only main
+   ```
 
 ### Routine de début de session Claude Code
 

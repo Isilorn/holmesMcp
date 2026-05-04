@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# pre-commit : (1) protection branche main + (2) scan credentials (ADR-0013, D11.8)
+# Bloque les commits directs sur main et tout credential dans les fichiers stagés.
+
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# ── 1. Protection branche main ────────────────────────────────────────────────
+#
+# Règle : tout développement J3+ passe par 'develop'.
+# 'main' n'accepte que les merge commits depuis 'develop' (fin de jalon).
+#
+# Cas légitimes hors merge :
+#   - Hotfix urgent                    → HOLMES_MAIN_COMMIT=1 git commit ...
+#   - Doc post-merge (session file…)   → HOLMES_MAIN_COMMIT=1 git commit ...
+#
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || true)
+
+if [[ "$CURRENT_BRANCH" == "main" ]]; then
+    # Merge commit en cours → autorisé (git crée .git/MERGE_HEAD pendant un merge)
+    if [[ -f ".git/MERGE_HEAD" ]]; then
+        echo -e "${CYAN}[BRANCHE]${NC} Merge commit sur main — autorisé."
+    elif [[ "${HOLMES_MAIN_COMMIT:-}" == "1" ]]; then
+        echo -e "${YELLOW}[BRANCHE]${NC} HOLMES_MAIN_COMMIT=1 — commit exceptionnel sur main (hotfix / doc post-merge)."
+    else
+        echo ""
+        echo -e "${RED}[BLOQUÉ]${NC} Commit direct sur 'main' interdit."
+        echo ""
+        echo "  Travaille sur la branche 'develop' :"
+        echo "    git checkout develop"
+        echo ""
+        echo "  'main' n'accepte que les merges depuis 'develop' (fin de jalon)."
+        echo "  Exception documentée : HOLMES_MAIN_COMMIT=1 git commit ... (hotfix, doc post-merge)"
+        echo ""
+        exit 1
+    fi
+fi
+
+# ── 2. Scan credentials ───────────────────────────────────────────────────────
+
+BLOCKED=0
+
+# Fichiers stagés (ajoutés au commit)
+STAGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)
+
+if [ -z "$STAGED" ]; then
+    exit 0
+fi
+
+scan_pattern() {
+    local label="$1"
+    local pattern="$2"
+    local matches
+    matches=$(echo "$STAGED" | xargs -I{} git show "::{}" 2>/dev/null | grep -nE "$pattern" || true)
+    if [ -n "$matches" ]; then
+        echo -e "${RED}[BLOQUÉ]${NC} Pattern sensible détecté : ${YELLOW}$label${NC}"
+        echo "$matches" | head -5
+        BLOCKED=1
+    fi
+}
+
+# IPs privées concrètes (sauf placeholders documentés)
+scan_pattern "IP privée concrète" \
+    '(192\.168\.[0-9]{1,3}\.[0-9]{1,3}|10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3})'
+
+# Tokens / apikeys concrets (min 20 car hex/base64)
+scan_pattern "Token/apikey concret" \
+    '(apikey|api_key|token|secret)["\s]*[:=]["\s]*[A-Za-z0-9+/]{20,}'
+
+# Mots de passe concrets
+scan_pattern "Mot de passe concret" \
+    '(password|passwd|pwd)["\s]*[:=]["\s]*[^\s<>{}\[\]]{6,}'
+
+# MySQL credentials concrets (user:password format)
+scan_pattern "Credential MySQL concret" \
+    'mysql://[^<\s]{3,}:[^<\s@]{3,}@'
+
+# Chemins SSH spécifiques (hors ~/.ssh/config générique)
+scan_pattern "Chemin SSH spécifique" \
+    '(/home/[a-z][a-z0-9_-]{2,}|/root)/\.ssh/'
+
+# Hostname concret (sauf exemples génériques)
+scan_pattern "Hostname concret potentiel" \
+    '(Host|HostName)\s+[a-zA-Z0-9][a-zA-Z0-9._-]{4,}\.(local|lan|home|box|jeedom)'
+
+if [ "$BLOCKED" -eq 1 ]; then
+    echo ""
+    echo -e "${RED}Commit bloqué — credential potentiel détecté.${NC}"
+    echo "Utilisez des placeholders : <your-jeedom-host>, <your-token>, etc."
+    echo "Si faux positif, contacter Claude Code pour ajuster le filtre (ADR-0013)."
+    exit 1
+fi
+
+exit 0

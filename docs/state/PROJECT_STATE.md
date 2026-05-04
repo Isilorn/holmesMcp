@@ -236,7 +236,7 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 |---|---|---|
 | ADR-0001 | Architecture Holmes MCP | draft |
 | ADR-0002 | Stack technologique | proposed |
-| ADR-0003 | Version spec MCP cible V1 | draft |
+| ADR-0003 | Version spec MCP cible V1 | accepted |
 | ADR-0004 | Authentification MCP externe | draft |
 | ADR-0005 | Canaux d'accès aux données Jeedom | draft |
 | ADR-0006 | Périmètre fonctionnel V1 | draft |
@@ -245,12 +245,12 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ADR-0009 | Réutilisation scripts jeedom-audit | draft |
 | ADR-0010 | Nom et identité produit | draft |
 | ADR-0011 | Licence AGPL-3.0 | draft |
-| ADR-0012 | Stratégie de tests | draft |
+| ADR-0012 | Stratégie de tests | accepted |
 | ADR-0013 | Sécurité opérationnelle — credentials | draft |
 | ADR-0014 | Distribution market et versioning | proposed |
 | ADR-0015 | Modèle opérationnel PO / Claude Code | draft |
 | ADR-0016 | Observabilité | draft |
-| ADR-0017 | Sanitisation et guardrails | draft |
+| ADR-0017 | Sanitisation et guardrails | proposed |
 | ADR-0018 | Résultat POC D2.3 | accepted |
 | ADR-0019 | Couverture skill jeedom-audit D5.8 | accepted |
 | ADR-0020 | Holmes MCP projet séparé de jeedom-skills | accepted |
