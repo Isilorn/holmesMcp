@@ -354,3 +354,50 @@ class TestGetConfig:
         assert result['config'][1]['value'] == FILTERED
         assert result['config'][2]['value'] == '80'
         assert len(result['_filtered_fields']) == 1
+
+
+# ---------------------------------------------------------------------------
+# get_config — plugin optionnel + wildcard * (E02 J3-5)
+# ---------------------------------------------------------------------------
+
+
+class TestGetConfigOptionalPlugin:
+    def test_plugin_none_fetches_all_namespaces(self):
+        with patch('tools.discovery._db.query', return_value=[]) as mock_q:
+            result = discovery.get_config(_MOCK_CONN, None)
+
+        sql = mock_q.call_args[0][1]
+        assert 'WHERE plugin' not in sql
+        assert result['plugin'] == '*'
+
+    def test_plugin_star_fetches_all_namespaces(self):
+        with patch('tools.discovery._db.query', return_value=[]) as mock_q:
+            result = discovery.get_config(_MOCK_CONN, '*')
+
+        sql = mock_q.call_args[0][1]
+        assert 'WHERE plugin' not in sql
+        assert result['plugin'] == '*'
+
+    def test_plugin_specified_filters_by_plugin(self):
+        with patch('tools.discovery._db.query', return_value=[]) as mock_q:
+            result = discovery.get_config(_MOCK_CONN, 'core')
+
+        sql = mock_q.call_args[0][1]
+        assert 'plugin=%s' in sql
+        assert result['plugin'] == 'core'
+
+    def test_plugin_none_with_key_pattern(self):
+        with patch('tools.discovery._db.query', return_value=[]) as mock_q:
+            discovery.get_config(_MOCK_CONN, None, key_pattern='version%')
+
+        sql = mock_q.call_args[0][1]
+        assert 'WHERE plugin' not in sql
+        assert 'LIKE' in sql
+
+    def test_no_args_returns_all(self):
+        with patch('tools.discovery._db.query', return_value=[]) as mock_q:
+            result = discovery.get_config(_MOCK_CONN)
+
+        sql = mock_q.call_args[0][1]
+        assert 'WHERE plugin' not in sql
+        assert result['plugin'] == '*'

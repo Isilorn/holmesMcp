@@ -133,9 +133,11 @@ La bascule de jeedom-audit en consommatrice Holmes MCP (D5.8) est validée sans 
 | Étape | Canal jeedom-audit | Tool Holmes MCP V1 |
 |---|---|---|
 | Résolution commande par nom | SQL fuzzy `cmd` JOIN `eqLogic` | `find_commands_advanced` + `find_equipment_by_name` |
-| Valeur courante (runtime) | API `cmd::byId` (currentValue) | `find_commands_advanced` (champ currentValue) |
+| Valeur courante (runtime) | API `cmd::byId` (currentValue) | `list_commands(equipment_id)` ou `get_equipment(equipment_id)` — champ `currentValue` enrichi via API JSON-RPC |
 
-**Couverture : ✅ Totale**
+> **Note** (J3-5) : `find_commands_advanced` ne retourne pas `currentValue` — enrichissement API non applicable sur les listes transverses (coût N×API prohibitif). Pour `currentValue`, résoudre d'abord l'`equipment_id` via `find_commands_advanced`, puis appeler `list_commands(equipment_id)` ou `get_equipment(equipment_id)`.
+
+**Couverture : ✅ Totale** (via composition find_commands_advanced → list_commands)
 
 ---
 

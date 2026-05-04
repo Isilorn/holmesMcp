@@ -40,3 +40,32 @@ def first_historized_cmd(db_conn):
     if not rows:
         pytest.skip('Aucune commande historisée sur la box')
     return rows[0]['id']
+
+
+@pytest.fixture(scope='session')
+def first_datastore_var_key(db_conn):
+    """Clé de la première variable dataStore disponible sur la box."""
+    rows = query(db_conn, 'SELECT `key` FROM dataStore ORDER BY id LIMIT 1')
+    if not rows:
+        pytest.skip('Aucune variable dataStore sur la box')
+    return rows[0]['key']
+
+
+@pytest.fixture(scope='session')
+def first_datastore_var_type(db_conn):
+    """Type de la première variable dataStore disponible sur la box."""
+    rows = query(db_conn, 'SELECT type FROM dataStore ORDER BY id LIMIT 1')
+    if not rows:
+        pytest.skip('Aucune variable dataStore sur la box')
+    return rows[0]['type']
+
+
+@pytest.fixture(scope='session')
+def first_log_name():
+    """Nom du premier fichier de log disponible (holmesMcp ou premier trouvé)."""
+    from _core import logs as _logs
+
+    files = _logs.list_files()
+    if not files:
+        pytest.skip('Aucun fichier de log trouvé sur la box')
+    return files[0]['name']

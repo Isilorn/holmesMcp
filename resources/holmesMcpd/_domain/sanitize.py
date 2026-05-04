@@ -71,6 +71,8 @@ _TABLE_WHITELISTS: dict[str, frozenset[str]] = {
             'value',
             'configuration',
             'template',
+            'currentValue',
+            'collectDate',
         }
     ),
     'scenario': frozenset(
@@ -96,8 +98,7 @@ _TABLE_WHITELISTS: dict[str, frozenset[str]] = {
             'name',
             'father_id',
             'isVisible',
-            'order',
-            'image',
+            'position',
         }
     ),
     'dataStore': frozenset(
@@ -127,7 +128,6 @@ _TABLE_WHITELISTS: dict[str, frozenset[str]] = {
     ),
     'history': frozenset(
         {
-            'id',
             'cmd_id',
             'datetime',
             'value',
@@ -135,7 +135,6 @@ _TABLE_WHITELISTS: dict[str, frozenset[str]] = {
     ),
     'historyArch': frozenset(
         {
-            'id',
             'cmd_id',
             'datetime',
             'value',
@@ -161,7 +160,7 @@ _TABLE_WHITELISTS: dict[str, frozenset[str]] = {
     'scenarioExpression': frozenset(
         {
             'id',
-            'subElement_id',
+            'scenarioSubElement_id',
             'type',
             'order',
             'expression',

@@ -104,6 +104,19 @@ class TestGetEquipmentLive:
         assert 'error' in result
         assert result['equipment_id'] == 999999
 
+    def test_info_cmds_have_current_value(self, db_conn, first_equipment, jeedom_apikey):
+        result = equipments.get_equipment(db_conn, first_equipment, apikey=jeedom_apikey)
+        info_cmds = [c for c in result['commandes'] if c.get('type') == 'info']
+        if info_cmds:
+            cmd = info_cmds[0]
+            assert 'currentValue' in cmd, (
+                f"currentValue absent de la commande info {cmd.get('id')} "
+                f"(équipement {first_equipment})"
+            )
+            assert 'collectDate' in cmd, (
+                f"collectDate absent de la commande info {cmd.get('id')}"
+            )
+
 
 # ---------------------------------------------------------------------------
 # find_equipment_by_name
@@ -160,6 +173,19 @@ class TestListCommandsLive:
             cmd = result['commandes'][0]
             for field in ('id', 'name', 'eqLogic_id', 'type', 'subType'):
                 assert field in cmd, f'Champ manquant : {field}'
+
+    def test_info_cmds_have_current_value(self, db_conn, first_equipment, jeedom_apikey):
+        result = equipments.list_commands(
+            db_conn, first_equipment, cmd_type='info', apikey=jeedom_apikey
+        )
+        if result['commandes']:
+            cmd = result['commandes'][0]
+            assert 'currentValue' in cmd, (
+                f"currentValue absent de la commande info {cmd.get('id')}"
+            )
+            assert 'collectDate' in cmd, (
+                f"collectDate absent de la commande info {cmd.get('id')}"
+            )
 
 
 # ---------------------------------------------------------------------------

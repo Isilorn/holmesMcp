@@ -8,11 +8,12 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.4.0` (J3-J4 ✅ clôturé) |
-| **Jalon en cours** | J5 — 7 tools + query_sql + 5 resources |
+| **Version courante** | `v0.5.0` (J5 ✅ complet — 25 tools + 5 resources + audit J5-5) |
+| **Jalon en cours** | J6 — Vue UI logs + durcissement sanitisation |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j3-4` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools, 68 tests intégration live) |
+| **Dernière session** | `2026-05-04-j5-5` |
+| **Prochaine session** | `J6` — Page config PHP/JS + vue logs + sanity check sanitisation PO |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0) |
 
 ---
 
@@ -158,6 +159,8 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - J3-2 ✅ : Famille 2 (7 tools équipements/commandes)
 - J3-3 ✅ : Famille 3 (7 tools scénarios)
 - J3-4 ✅ : tests intégration live + corrections schema + déploiement + smoke tests
+- J3-4bis ✅ : enrichissement runtime API JSON-RPC (state/lastLaunch + currentValue/collectDate)
+- J3-5 🔜 : audit exhaustif 18 tools (brief + documentation + besoins jeedom-audit)
 
 ### J3-1 ✅ Famille 1 — 4 tools découverte d'install (2026-05-04)
 
@@ -213,6 +216,203 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
   - `list_scenarios(limit=3)` → 3 scénarios retournés ✅
 - **68/68 tests intégration live** passés. **447/447 tests unitaires** passés. Ruff propre.
 - Tag `v0.4.0` — J3-J4 ✅ clôturé.
+
+### J3-4bis ✅ Enrichissement runtime API JSON-RPC (2026-05-04)
+
+**Contexte** : audit post-J3-4 révèle que `lastLaunch`/`state` (scénarios) et `currentValue`/`collectDate` (commandes info) sont absents des retours tools. Ces champs sont PHP runtime-only — absents de la table MySQL `scenario`. D4bis.6 les planifiait via API JSON-RPC, mais `_core/api.py` (déjà implémenté) n'était jamais appelé par les tools.
+
+**Enrichissement scénarios (`tools/scenarios.py`)** :
+
+- `_fetch_runtime_map(apikey)` : un appel `scenario::all` → `{id: {state, lastLaunch}}`. Retourne `{}` si apikey vide ou API KO.
+- `_fetch_runtime_single(apikey, scenario_id)` : un appel `scenario::byId` pour un scénario unique.
+- `_merge_runtime(scenarios_list, runtime_map)` : injection in-place `state` + `lastLaunch`.
+- 4 tools enrichis : `list_scenarios`, `find_scenarios_advanced`, `get_scenario`, `describe_scenario` — signature `apikey: str = ''` (dégradation gracieuse si absent).
+
+**Enrichissement équipements (`tools/equipments.py`)** :
+
+- `_fetch_cmd_runtime_map(apikey, equipment_id)` : un appel `eqLogic::fullById` → `{cmd_id: {currentValue, collectDate}}`.
+- `_inject_cmd_runtime(cmds, runtime_map)` : injection sur commandes `type == 'info'` uniquement.
+- 2 tools enrichis : `get_equipment`, `list_commands` — signature `apikey: str = ''`.
+- `list_equipments`, `find_equipments_advanced`, `find_commands_advanced` : non enrichis (appels liste, coût prohibitif N×API).
+
+**`mcp_server.py`** : `build_mcp` passe `apikey = args.jeedom_apikey` à `_register_family2` et `_register_family3` ; closures capturent `apikey`.
+
+**Fixture `jeedom_apikey` réécrite (`tests/integration/conftest.py`)** :
+
+- Lit la clé déchiffrée depuis `/proc/<pid>/cmdline` du daemon holmesMcp (PID dans `/tmp/jeedom/holmesMcp/daemon.pid`).
+- Raison : la table `config` stocke la clé chiffrée `crypt:...` (inutilisable pour les appels API directs).
+
+**Nouveaux tests** :
+
+- Unitaires : 29 nouveaux (3 classes `test_scenarios.py` : `TestListScenariosRuntime`, `TestGetScenarioRuntime`, `TestFetchRuntimeHelpers` ; 2 classes `test_equipments.py` : `TestGetEquipmentRuntime`, `TestFetchCmdRuntimeMap`)
+- Intégration live : 8 nouveaux (`test_state_and_last_launch_present` × 4 dans scenarios, `test_info_cmds_have_current_value` × 2 dans equipments)
+
+**93/93 tests intégration live** passés. **476/476 tests unitaires** passés. Ruff propre. Commit `82ae6ef` sur `develop`.
+
+---
+
+## Jalon J5 — Tools familles 4, 5, 6 + `query_sql` + 5 resources
+
+**Objectif** : compléter les 7 tools restants + `query_sql` + 5 resources → 25 tools + 5 resources, tag `v0.5.0`.
+
+**Plan de sous-sessions** :
+
+- J5-1 ✅ : Familles 4+5+6 (7 tools) + tests unitaires
+- J5-2 ✅ : `query_sql` + tests unitaires
+- J5-3 ✅ : Tests d'intégration live (8 tools) + corrections schéma + smoke test 25 tools
+- J5-4 ✅ : 5 resources + énumération D6.3 + 647 tests
+- J5-5 ✅ : Audit exhaustif — 6 écarts corrigés + 648 tests + tag `v0.5.0`
+
+---
+
+### J5-1 ✅ Familles 4, 5, 6 — 7 tools + tests unitaires (2026-05-04)
+
+**Périmètre** :
+
+- `tools/datastore.py` (F4) :
+  - `list_datastore_variables` — liste des variables persistantes (MySQL RO, table `dataStore`)
+  - `get_datastore_variable` — détail d'une variable (valeur, type, datetime)
+- `tools/logs.py` (F5) :
+  - `list_log_files` — liste des logs disponibles (réutilise `_core/logs.py`)
+  - `tail_log` — tail d'un log Jeedom avec grep optionnel (réutilise `_core/logs.py`)
+  - `get_health_summary` — daemons en panne, dépendances KO, messages système, cron en retard (API JSON-RPC)
+- `tools/search.py` (F6) :
+  - `search_text` — recherche dans noms équipements/commandes/scénarios/expressions (MySQL RO, jointures)
+- Tests unitaires pour les 7 tools (mocks DB + logs + API)
+- Registration `mcp_server.py` (_register_family4/5/6)
+
+**Livraisons** :
+
+- `_core/logs.py` : + `list_files()` (scan répertoires log, filtre `validate_log_name`, dédup multi-dirs)
+- `tools/datastore.py` : `list_datastore_variables(conn, var_type, link_id, key_pattern, limit, offset)`, `get_datastore_variable(conn, key, var_type, link_id)` — MySQL RO, whitelist `dataStore` existante
+- `tools/logs.py` : `list_log_files()` (délègue `_core/logs.list_files`), `tail_log(log_name, lines, grep)` (cap 500 lignes), `get_health_summary(conn)` — MySQL RO tables `update`/`message`/`cron`
+- `tools/search.py` : `search_text(conn, text, limit)` — 4 requêtes séparées (eqLogic, cmd, scenario, scenarioExpression), min 2 chars, limit 50 par catégorie
+- `mcp_server.py` : `_register_family4/5/6` — **25 tools enregistrés**
+- Tests : 67 nouveaux tests (19 datastore + 22 logs + 17 search + 9 `list_files` _core) — **557/557 ✅**, couverture 98,20%, ruff propre
+
+---
+
+### J5-2 ✅ `query_sql` + tests unitaires (2026-05-04)
+
+**Périmètre** :
+
+- `tools/query_sql.py` :
+  - Parsing `sqlparse` — rejet de tout statement non-SELECT
+  - Blacklist tables sensibles : `user`, `session`, `network`, regex `(?i).*creds?|credentials?|password|token.*`
+  - LIMIT obligatoire — injecté si absent (50), plafonné à 200
+  - Sanitisation runtime systématique sur les résultats (D15.1)
+  - D15.3 — refus si le SELECT liste explicitement des colonnes sensibles (password, token, apikey, secret…)
+  - Mini SQL cookbook dans la description du tool (mots réservés Jeedom, tables utiles, exemples)
+- Tests unitaires exhaustifs : refus INSERT/UPDATE/DELETE/DROP, refus tables blacklistées, LIMIT injecté/plafonné, sanitisation active, D15.3
+- Registration `mcp_server.py` — `_register_family7` — **25 tools enregistrés**
+
+**Livraisons** :
+
+- `tools/query_sql.py` : `query_sql(conn, sql)` — 5 fonctions internes (`_check_select_only`, `_extract_table_names`, `_check_blacklist`, `_check_sensitive_columns`, `_ensure_limit`), regex compilées, LIMIT default=50 max=200
+- `mcp_server.py` : `_register_family7` ajouté, import `query_sql as query_sql_tools`
+- Tests : 69 nouveaux tests — **626/626 ✅**, `query_sql.py` **100% couverture**, couverture globale 98,33%, ruff propre
+
+---
+
+### J5-3 ✅ Tests d'intégration live + corrections schéma (2026-05-04)
+
+**Périmètre** :
+
+- Tests SSH sur la box réelle (pattern J3-4) pour les 8 nouveaux tools (F4/F5/F6 + `query_sql`) :
+  - `tests/integration/tools/test_datastore_live.py` (12 tests)
+  - `tests/integration/tools/test_logs_live.py` (19 tests)
+  - `tests/integration/tools/test_search_live.py` (14 tests)
+  - `tests/integration/tools/test_query_sql_live.py` (22 tests)
+- Corrections de schéma révélées par la box réelle Jeedom 4.5.3
+- Smoke test MCP : `tools/list` = 25 tools ✅
+
+**4 bugs corrigés** :
+
+1. **`tools/search.py`** — colonne `subElement_id` inexistante → `scenarioSubElement_id` dans `scenarioExpression`
+2. **`tools/logs.py`** — table `message` : colonnes `source`/`type`/`isRead` absentes → `plugin`/`logicalId`, filtre `isRead=0` retiré (champ inexistant)
+3. **`tools/logs.py`** — table `cron` : colonnes `running`/`expression`/`lastRun` absentes → `deamon=1`, retourne `schedule`
+4. **`holmesMcpd.py`** — bug critique daemon : `pydantic_settings` tentait `.env` dans le CWD inaccessible à `www-data` → `PermissionError` masquée (structlog sans `format_exc_info`). Fix : `os.chdir(Path(__file__).parent)` avant le bloc `try:`
+
+**Résultats** :
+
+- **71/71 tests d'intégration live** passés (67 nouveaux + 4 ajustements conftest)
+- **626/626 tests unitaires** passés (tests unitaires mis à jour : `test_logs.py` + `test_search.py`)
+- Smoke test 25 tools MCP via client Python Bearer token ✅
+- Ruff propre — tous fichiers modifiés
+
+---
+
+### J5-4 ✅ 5 resources + énumération D6.3 (2026-05-04)
+
+**Périmètre livré** :
+
+- `resources/holmesMcpd/resources/overview.py` → wrap strict `get_install_overview` (D6.4)
+- `resources/holmesMcpd/resources/health.py` → wrap strict `get_health_summary` (D6.4)
+- `resources/holmesMcpd/resources/scenario.py` → combine `describe_scenario` + `get_scenario_log(lines=50)` (D6.2)
+- `resources/holmesMcpd/resources/equipment.py` → wrap strict `get_equipment` (D6.4)
+- `resources/holmesMcpd/resources/logs_today.py` → wrap `tail_log('http', 500)` best-effort du jour
+- `mcp_server.py` : `_register_resources(mcp, apikey)` + factories `_make_scenario_fn`/`_make_equipment_fn`
+- Énumération hybride D6.3 : 3 statiques + 50 scénarios actifs + 50 équipements actifs + 2 templates = 103 concrètes + 2 templates
+
+**Résultats smoke test** (box réelle Jeedom 4.5.3) :
+
+- `resources/list` → **103 resources concrètes** (3 + 50 + 50) ✅
+- `resources/templates/list` → **2 templates** (`jeedom://scenario/{scenario_id}`, `jeedom://equipment/{equipment_id}`) ✅
+- `resources/read jeedom://install/overview` → version 4.5.3, 217 eq, 62 scénarios ✅
+- `resources/read jeedom://install/health` → summary OK (0 plugins_nok) ✅
+- `resources/read jeedom://scenario/5` → has `last_run_log` ✅
+- `mcp_initialized` : `tools=25, resources=5` ✅
+
+**Bug corrigé** : FastMCP rejette les fonctions paramétrées (`_id=sid`) pour les resources concrètes (sans `{var}` dans l'URI) → fix via factories `_make_scenario_fn(sid, ak)` / `_make_equipment_fn(eid, ak)` retournant des callables sans paramètre.
+
+**Tests** : 21 nouveaux tests unitaires resources — **647/647 ✅**, ruff propre.
+
+---
+
+### J5-5 ✅ Audit exhaustif + tag `v0.5.0` (2026-05-04)
+
+**Méthode** : même grille que J3-5 — 4 axes de croisement.
+
+**Écarts identifiés et traitement** :
+
+| ID | Sévérité | Module | Écart | Fix |
+| --- | --- | --- | --- | --- |
+| E01 | 🔴 Bug | `sanitize.py` | Whitelist `scenarioExpression` avait `subElement_id` (ancien nom avant J5-3) au lieu de `scenarioSubElement_id` — champ FILTERED silencieusement dans `search_text` (WF11 impacté) | Corrigé + test ajouté |
+| E02 | 🟠 Docs | `query_sql.py` + `mcp_server.py` | Cookbook référençait table `plugin` (n'existe pas — c'est `update WHERE type='plugin'`) | Cookbook corrigé |
+| E03 | 🟠 Docs | `query_sql.py` + `mcp_server.py` | Cookbook `cron` listait `lastExecution, state` (colonnes inexistantes) — réels : `schedule, deamon, enable` | Cookbook corrigé |
+| E04 | 🟠 Docs | `query_sql.py` + `mcp_server.py` | Cookbook `scenario` listait `lastLaunch` comme colonne MySQL (uniquement via API JSON-RPC) | Cookbook corrigé |
+| E05 | 🟡 Desc | `mcp_server.py` | `get_health_summary` docstring : "crons potentiellement bloqués" → doit être "daemons actifs (deamon=1 AND enable=1)" | Description corrigée |
+| E06 | 🟡 SQL | `tools/logs.py` | Query cron ne filtrait pas `enable=1` — incluait des daemons désactivés | `AND enable=1` ajouté |
+
+**Chiffres** :
+
+| Métrique | Avant J5-5 | Après J5-5 |
+| --- | --- | --- |
+| Tests unitaires | 647 | 648 (+1 test E01) |
+| Tests intégration live | 71 | 71 (inchangés) |
+| Bugs sanitisation corrigés | — | 1 (E01) |
+| Docs cookbook corrigées | — | 3 (E02, E03, E04) |
+| Descriptions/SQL améliorés | — | 2 (E05, E06) |
+
+**DoD J5 — 5/5 ✅** :
+
+- [x] 25 tools implémentés et testés
+- [x] `query_sql` : refus non-SELECT + blacklist tables + LIMIT testé (100%)
+- [x] 5 resources implémentées et testées (100%)
+- [x] Smoke test J5-4 : 25 tools + 103 resources/2 templates ✅
+- [x] Tag `v0.5.0`
+- `get_health_summary` : champs retournés alignés sur appels API JSON-RPC réels de la box
+- **Markdown** : passe `markdownlint --fix` sur tous les `.md` du repo (warnings MD032/MD040/MD041/MD060 accumulés — non bloquants CI mais à solder avant v0.5.0)
+
+**Sorties** :
+
+- Table écarts (format J3-5 : ID / fichier / écart / fix / statut)
+- Bugs critiques corrigés en session
+- Déférés documentés dans ADR-0007
+- Chiffres avant/après (tests unitaires, intégration, bugs fixés)
+- `PROJECT_STATE.md` mis à jour
+- Session journal `docs/sessions/YYYY-MM-DD-j5-5-audit-tools.md`
+- Tag `v0.5.0`
 
 ---
 
@@ -309,7 +509,7 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ADR-0005 | Canaux d'accès aux données Jeedom | draft |
 | ADR-0006 | Périmètre fonctionnel V1 | draft |
 | ADR-0007 | Liste des 25 tools V1 | draft |
-| ADR-0008 | Liste des 5 resources V1 | draft |
+| ADR-0008 | Liste des 5 resources V1 | accepted |
 | ADR-0009 | Réutilisation scripts jeedom-audit | draft |
 | ADR-0010 | Nom et identité produit | draft |
 | ADR-0011 | Licence AGPL-3.0 | draft |
