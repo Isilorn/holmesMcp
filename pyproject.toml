@@ -52,7 +52,12 @@ markers = [
 
 [tool.coverage.run]
 source  = ["resources/holmesMcpd"]
-omit    = ["resources/holmesMcpd/jeedom/*", "resources/holmesMcpd/tools/__init__.py"]
+omit    = [
+    "resources/holmesMcpd/jeedom/*",
+    "resources/holmesMcpd/tools/__init__.py",
+    "resources/holmesMcpd/holmesMcpd.py",
+    "resources/holmesMcpd/mcp_server.py",
+]
 
 [tool.coverage.report]
 fail_under = 80

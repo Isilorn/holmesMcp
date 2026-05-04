@@ -167,21 +167,28 @@ attendre la fermeture de fenêtre.
    ```bash
    # Depuis develop : dernier commit de code/doc déjà posé
    git checkout main
-   git merge --no-ff develop -m "chore: merge develop — J3 clôturé (v0.4.0)"
+   git merge --ff-only develop    # ff-only si main n'a pas divergé (cas normal)
    git tag v0.x.0
-   git checkout develop           # retour sur develop immédiatement
+   git push origin main develop --tags
 
-   # Doc post-merge si nécessaire (session file, PROJECT_STATE) :
-   # HOLMES_MAIN_COMMIT=1 git commit ...   ← seuls commits directs tolérés sur main
+   # Si doc post-merge nécessaire sur main (session file, PROJECT_STATE) :
+   # HOLMES_MAIN_COMMIT=1 git commit ...
+   # Puis re-sync develop (étape 4)
    ```
 
+   > `--ff-only` fonctionne si `main` = point de départ du jalon (= dernier merge). Si un hotfix a été posé sur `main` entre deux jalons, basculer sur `--no-ff`.
+
 3. Mettre à jour `docs/state/PROJECT_STATE.md` (jalon ✅, prochain jalon)
-4. Synchroniser `develop` avec `main` si des commits post-merge ont été ajoutés :
+4. Resynchroniser `develop` = `main` **immédiatement après le merge** (obligatoire) :
 
    ```bash
    git checkout develop
-   git merge --ff-only main
+   git merge --ff-only main       # develop rattrape le merge commit éventuel
+   git push origin develop
+   git checkout develop           # prêt pour le jalon suivant
    ```
+
+   Résultat : `main` = `develop` = même commit. La fin du jalon suivant se fera à nouveau avec `--ff-only`.
 
 ### Routine de début de session Claude Code
 

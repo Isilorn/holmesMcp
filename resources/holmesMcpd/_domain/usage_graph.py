@@ -37,7 +37,7 @@ _EXPR_REFS = """SELECT DISTINCT
 FROM scenarioExpression expr
 JOIN scenarioSubElement ss  ON ss.id  = expr.scenarioSubElement_id
 JOIN scenarioElement    sel ON sel.id = ss.scenarioElement_id
-JOIN scenario           s   ON s.scenarioElement LIKE CONCAT('%', sel.id, '%')
+JOIN scenario           s   ON s.scenarioElement LIKE CONCAT('%%', sel.id, '%%')
 WHERE expr.expression LIKE %s
   AND ss.type != 'code'
 """
@@ -48,7 +48,7 @@ _CODE_REFS = """SELECT DISTINCT
 FROM scenarioExpression expr
 JOIN scenarioSubElement ss  ON ss.id  = expr.scenarioSubElement_id
 JOIN scenarioElement    sel ON sel.id = ss.scenarioElement_id
-JOIN scenario           s   ON s.scenarioElement LIKE CONCAT('%', sel.id, '%')
+JOIN scenario           s   ON s.scenarioElement LIKE CONCAT('%%', sel.id, '%%')
 WHERE ss.type = 'code'
   AND expr.expression LIKE %s
 """
@@ -59,7 +59,7 @@ _SCENARIO_CALLERS = """SELECT DISTINCT
 FROM scenarioExpression expr
 JOIN scenarioSubElement ss  ON ss.id  = expr.scenarioSubElement_id
 JOIN scenarioElement    sel ON sel.id = ss.scenarioElement_id
-JOIN scenario           s   ON s.scenarioElement LIKE CONCAT('%', sel.id, '%')
+JOIN scenario           s   ON s.scenarioElement LIKE CONCAT('%%', sel.id, '%%')
 WHERE expr.expression = 'scenario'
   AND expr.options LIKE %s
 """

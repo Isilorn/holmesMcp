@@ -35,7 +35,6 @@ from _domain.scenario_walker import (
     walk,
 )
 
-
 # ── Fixture commune ───────────────────────────────────────────────────────────
 
 
@@ -67,7 +66,7 @@ def _make_sql_row(
 def _make_scenario_row(
     scenario_id: int = 70,
     name: str = 'Scénario test',
-    isActive: int = 1,
+    isActive: int = 1,  # noqa: N803
     mode: str = 'schedule',
     trigger: str | None = None,
     scenario_element: str = '[]',
@@ -222,32 +221,38 @@ def test_extract_not_scenario_expression():
 
 def test_extract_action_stop_returns_none():
     opts = json.dumps({'action': 'stop', 'scenario_id': '5'})
-    assert _extract_scenario_call_id({'type': 'action', 'expression': 'scenario', 'options': opts}) is None
+    expr = {'type': 'action', 'expression': 'scenario', 'options': opts}
+    assert _extract_scenario_call_id(expr) is None
 
 
 def test_extract_action_activate_returns_none():
     opts = json.dumps({'action': 'activate', 'scenario_id': '5'})
-    assert _extract_scenario_call_id({'type': 'action', 'expression': 'scenario', 'options': opts}) is None
+    expr = {'type': 'action', 'expression': 'scenario', 'options': opts}
+    assert _extract_scenario_call_id(expr) is None
 
 
 def test_extract_action_start_returns_id():
     opts = json.dumps({'action': 'start', 'scenario_id': '5'})
-    assert _extract_scenario_call_id({'type': 'action', 'expression': 'scenario', 'options': opts}) == 5
+    expr = {'type': 'action', 'expression': 'scenario', 'options': opts}
+    assert _extract_scenario_call_id(expr) == 5
 
 
 def test_extract_action_none_returns_id():
     opts = json.dumps({'action': None, 'scenario_id': '5'})
-    assert _extract_scenario_call_id({'type': 'action', 'expression': 'scenario', 'options': opts}) == 5
+    expr = {'type': 'action', 'expression': 'scenario', 'options': opts}
+    assert _extract_scenario_call_id(expr) == 5
 
 
 def test_extract_action_empty_string_returns_id():
     opts = json.dumps({'action': '', 'scenario_id': '5'})
-    assert _extract_scenario_call_id({'type': 'action', 'expression': 'scenario', 'options': opts}) == 5
+    expr = {'type': 'action', 'expression': 'scenario', 'options': opts}
+    assert _extract_scenario_call_id(expr) == 5
 
 
 def test_extract_scenario_id_missing_returns_none():
     opts = json.dumps({'action': 'start'})
-    assert _extract_scenario_call_id({'type': 'action', 'expression': 'scenario', 'options': opts}) is None
+    expr = {'type': 'action', 'expression': 'scenario', 'options': opts}
+    assert _extract_scenario_call_id(expr) is None
 
 
 def test_extract_invalid_json_returns_none():

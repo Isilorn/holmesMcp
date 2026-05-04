@@ -8,11 +8,11 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.3.0` (J2 ✅ clôturé) |
-| **Jalon en cours** | J3-J4 — 18 tools familles 1-2-3 |
-| **Branche de travail** | `main` |
-| **Dernière session** | `2026-05-04-j2-3` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 prochaine |
+| **Version courante** | `v0.4.0` (J3-J4 ✅ clôturé) |
+| **Jalon en cours** | J5 — 7 tools + query_sql + 5 resources |
+| **Branche de travail** | `develop` |
+| **Dernière session** | `2026-05-04-j3-4` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools, 68 tests intégration live) |
 
 ---
 
@@ -145,6 +145,74 @@ Jeedom Connect (ajouté), Script (ajouté), MQTT Manager (ajouté), Virtuel (ajo
 ### J2 ✅ Clôturé (2026-05-04) — tag `v0.3.0`
 
 DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/` livrés avec couverture 100% sur `sanitize.py` et `cmd_refs.py`.
+
+---
+
+## Jalon J3-J4 — Tools familles 1, 2, 3 (18 tools)
+
+**Objectif** : implémenter les 18 tools en 3 familles avec intégration `_core/` + `_domain/`, tests unitaires, puis tests d'intégration sur box réelle (J3-4).
+
+**Plan de sous-sessions** :
+
+- J3-1 ✅ : Famille 1 (4 tools découverte)
+- J3-2 ✅ : Famille 2 (7 tools équipements/commandes)
+- J3-3 ✅ : Famille 3 (7 tools scénarios)
+- J3-4 ✅ : tests intégration live + corrections schema + déploiement + smoke tests
+
+### J3-1 ✅ Famille 1 — 4 tools découverte d'install (2026-05-04)
+
+- `tools/discovery.py` : 4 tools MySQL RO
+  - `get_install_overview` : version Jeedom + comptages (eq/scen/plugins/objets/cmds)
+  - `list_objects` : hiérarchie objets/pièces, paginé (LIMIT 500), sanitisé
+  - `list_plugins` : plugins installés (id/name/version/state/logical_id), sanitisé
+  - `get_config` : config par namespace plugin + filtre LIKE optionnel, sanitisé — valeurs sensibles masquées, clé visible (transparence LLM)
+- `mcp_server.py` : registration famille 1, tool POC `hello` retiré
+- `tests/unit/tools/test_discovery.py` : 27 tests — 358/358 passés, ruff propre
+- Commit `413f3e0`
+
+### J3-2 ✅ Famille 2 — 7 tools équipements/commandes (2026-05-04)
+
+- `tools/equipments.py` : 7 tools MySQL RO (tables eqLogic, cmd, history, historyArch)
+  - `list_equipments` : liste filtrable (object_id, plugin/eqType_name, is_enable), paginée (LIMIT 100)
+  - `find_equipments_advanced` : filtres combinables (name LIKE, object_id, plugin, is_enable, generic_type, tags LIKE), LIMIT 50
+  - `get_equipment` : détail complet eqLogic + ses commandes, config sanitisée (blobs configuration/status inclus)
+  - `find_equipment_by_name` : recherche LIKE %name%, LIMIT 50
+  - `list_commands` : commandes d'un équipement, filtre optionnel type (info/action), paginée (LIMIT 200)
+  - `find_commands_advanced` : filtres combinables (name, equipment_id, type, subType, generic_type, isHistorized), LIMIT 50
+  - `get_command_history` : historique récent (table `history`) + archivé (`historyArch`), LIMIT 100 par table
+- `mcp_server.py` : `_register_family2` ajouté — 11 tools enregistrés (4 F1 + 7 F2)
+- `tests/unit/tools/test_equipments.py` : 43 tests — **401/401 passés**. Ruff propre.
+
+### J3-3 ✅ Famille 3 — 7 tools scénarios (2026-05-04)
+
+- `tools/scenarios.py` : 7 tools (MySQL RO + `_domain/` + `_core/logs`)
+  - `list_scenarios(group, is_active, limit=100, offset)` : liste paginée filtrable, sanitisée
+  - `find_scenarios_advanced(name_contains, group, is_active, trigger_type, limit=50)` : filtres combinables
+  - `get_scenario(scenario_id)` : détail complet (trigger, group, isActive, mode, timeout…), sanitisé
+  - `get_scenario_structure(scenario_id, max_depth=3, follow_scenario_calls=0)` : arbre brut via `scenario_walker`, machine-friendly
+  - `describe_scenario(scenario_id)` : LLM-friendly, résolution `#cmdId#` → `#[O][E][C]#` systématique via `cmd_refs` + `_humanize` closures
+  - `find_scenario_dependencies(scenario_id)` : graphe callers via `usage_graph.resolve('scenario', …)`
+  - `get_scenario_log(scenario_id, lines=100)` : `scenarioLog/scenario{id}.log`, max 500 lignes
+- `mcp_server.py` : `_register_family3` ajouté — **18 tools enregistrés** (4 F1 + 7 F2 + 7 F3)
+- `tests/unit/tools/test_scenarios.py` : 44 tests — **447/447 passés**. Ruff propre. Commit `3385dca`
+
+### J3-4 ✅ Tests intégration live + corrections schema (2026-05-04)
+
+- `tests/integration/tools/` : 68 tests live (sur box réelle, `sudo -u www-data`)
+  - `test_discovery_live.py` : 16 tests F1 (discovery)
+  - `test_equipments_live.py` : 28 tests F2 (equipments)
+  - `test_scenarios_live.py` : 24 tests F3 (scenarios)
+- **4 bugs schema corrigés** (découverts sur box réelle Jeedom 4.5.3) :
+  - `discovery.py` : table `plugin` inexistante → `update WHERE type='plugin'` ; colonne `order` absente dans `object` → `position`
+  - `equipments.py` : colonne `id` absente dans `history`/`historyArch` → supprimée du SELECT
+  - `scenarios.py` : colonnes `lastLaunch` et `state` absentes dans `scenario` → supprimées de `_SCEN_COLS`
+  - `usage_graph.py` : `%` littéraux non échappés dans CONCAT → `%%` (PyMySQL formatage)
+- **Smoke tests MCP** validés en HTTP sur la box :
+  - `tools/list` → 18 tools retournés ✅
+  - `get_install_overview` → `jeedom_version: 4.5.3`, 217 eq, 62 scénarios, 6212 cmds ✅
+  - `list_scenarios(limit=3)` → 3 scénarios retournés ✅
+- **68/68 tests intégration live** passés. **447/447 tests unitaires** passés. Ruff propre.
+- Tag `v0.4.0` — J3-J4 ✅ clôturé.
 
 ---
 
