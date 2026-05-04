@@ -412,6 +412,46 @@ class TestDescribeScenario:
 
         assert 'trunc at element 5' in result['warnings']
 
+    def test_empty_trigger_returns_empty_string_resolved(self):
+        """Couvre _resolve_text('') — branche `if not text: return text`."""
+        walker_res = _walker_result(empty_tree=True)
+        walker_res['scenario']['trigger'] = None
+        with (
+            patch('tools.scenarios._walker.walk', return_value=walker_res),
+            patch('tools.scenarios._cmd_refs.resolve', return_value=_empty_cmd_refs_result()),
+        ):
+            result = scenarios.describe_scenario(_MOCK_CONN, scenario_id=1)
+
+        assert result['scenario']['trigger_resolved'] == ''
+
+    def test_nested_children_humanized(self):
+        """Couvre _humanize — branche node avec children."""
+        child_node = {
+            'element_id': 99,
+            'depth': 1,
+            'sub_elements': [
+                {
+                    'sub_id': 50,
+                    'ss_type': 'action',
+                    'ss_subtype': 'do',
+                    'expressions': [
+                        {'expr_id': 60, 'order': 1, 'type': 'action',
+                         'expression': 'cmd::execDuration', 'options': None}
+                    ],
+                }
+            ],
+        }
+        walker_res = _walker_result()
+        walker_res['tree'][0]['children'] = [child_node]
+        with (
+            patch('tools.scenarios._walker.walk', return_value=walker_res),
+            patch('tools.scenarios._cmd_refs.resolve', return_value=_empty_cmd_refs_result()),
+        ):
+            result = scenarios.describe_scenario(_MOCK_CONN, scenario_id=1)
+
+        assert 'children' in result['blocks'][0]
+        assert result['blocks'][0]['children'][0]['element_id'] == 99
+
 
 # ---------------------------------------------------------------------------
 # find_scenario_dependencies
