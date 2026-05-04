@@ -77,6 +77,10 @@ def main() -> None:
     log.info('daemon_start', port=ARGS.port, pid_path=str(_PID_PATH))
     _write_pid()
 
+    # pydantic_settings cherche .env dans le CWD — se placer dans le répertoire du daemon
+    # pour éviter une PermissionError si PHP lance depuis un répertoire inaccessible à www-data
+    os.chdir(Path(__file__).parent)
+
     try:
         import uvicorn
         from _core.auth import BearerAuthMiddleware, TokenStore

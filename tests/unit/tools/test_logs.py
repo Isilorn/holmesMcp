@@ -154,8 +154,8 @@ class TestGetHealthSummary:
     def test_messages_unread_returned(self):
         messages = [
             {
-                'source': 'jMQTT',
-                'type': 'error',
+                'plugin': 'jMQTT',
+                'logicalId': 'broker1',
                 'message': 'Connexion broker perdue',
                 'date': '2026-05-04 10:00:00',
             },
@@ -167,7 +167,7 @@ class TestGetHealthSummary:
             result = logs_tools.get_health_summary(_MOCK_CONN)
 
         assert len(result['messages_unread']) == 1
-        assert result['messages_unread'][0]['source'] == 'jMQTT'
+        assert result['messages_unread'][0]['plugin'] == 'jMQTT'
         assert result['messages_unread'][0]['message'] == 'Connexion broker perdue'
         assert result['summary']['messages_unread_count'] == 1
 
@@ -176,8 +176,7 @@ class TestGetHealthSummary:
             {
                 'class': 'jMQTT',
                 'function': 'pull',
-                'expression': '* * * * *',
-                'lastRun': '2026-05-04 09:55:00',
+                'schedule': '* * * * *',
             },
         ]
         with patch(
@@ -192,7 +191,7 @@ class TestGetHealthSummary:
 
     def test_date_none_serialized_as_none(self):
         messages = [
-            {'source': 'core', 'type': 'info', 'message': 'Démarrage', 'date': None},
+            {'plugin': 'core', 'logicalId': None, 'message': 'Démarrage', 'date': None},
         ]
         with patch(
             'tools.logs._db.query',
@@ -204,7 +203,7 @@ class TestGetHealthSummary:
 
     def test_date_string_preserved(self):
         messages = [
-            {'source': 'core', 'type': 'info', 'message': 'OK', 'date': '2026-05-04 10:00:00'},
+            {'plugin': 'core', 'logicalId': None, 'message': 'OK', 'date': '2026-05-04 10:00:00'},
         ]
         with patch(
             'tools.logs._db.query',
@@ -214,9 +213,9 @@ class TestGetHealthSummary:
 
         assert result['messages_unread'][0]['date'] == '2026-05-04 10:00:00'
 
-    def test_last_run_none_serialized(self):
+    def test_cron_schedule_field_present(self):
         crons = [
-            {'class': 'core', 'function': 'check', 'expression': '0 * * * *', 'lastRun': None},
+            {'class': 'core', 'function': 'check', 'schedule': '0 * * * *'},
         ]
         with patch(
             'tools.logs._db.query',
@@ -224,7 +223,7 @@ class TestGetHealthSummary:
         ):
             result = logs_tools.get_health_summary(_MOCK_CONN)
 
-        assert result['crons_running'][0]['lastRun'] is None
+        assert result['crons_running'][0]['schedule'] == '0 * * * *'
 
     def test_plugins_nok_query_targets_update_table(self):
         with patch(
@@ -237,7 +236,7 @@ class TestGetHealthSummary:
         assert '`update`' in first_sql
         assert "status='nok'" in first_sql
 
-    def test_messages_query_targets_unread(self):
+    def test_messages_query_targets_message_table(self):
         with patch(
             'tools.logs._db.query',
             side_effect=self._make_query_side_effects(),
@@ -246,9 +245,9 @@ class TestGetHealthSummary:
 
         second_sql = mock_q.call_args_list[1][0][1]
         assert 'message' in second_sql
-        assert 'isRead=0' in second_sql
+        assert 'plugin' in second_sql
 
-    def test_crons_query_targets_running(self):
+    def test_crons_query_targets_daemon_crons(self):
         with patch(
             'tools.logs._db.query',
             side_effect=self._make_query_side_effects(),
@@ -257,13 +256,13 @@ class TestGetHealthSummary:
 
         third_sql = mock_q.call_args_list[2][0][1]
         assert 'cron' in third_sql
-        assert 'running=1' in third_sql
+        assert 'deamon=1' in third_sql
 
     def test_summary_counts_match_lists(self):
         plugins = [{'plugin': 'p1', 'name': 'P1', 'status': 'nok'}]
         messages = [
-            {'source': 's', 'type': 't', 'message': 'm', 'date': '2026-05-04'},
-            {'source': 's', 'type': 't', 'message': 'm2', 'date': '2026-05-04'},
+            {'plugin': 's', 'logicalId': None, 'message': 'm', 'date': '2026-05-04'},
+            {'plugin': 's', 'logicalId': None, 'message': 'm2', 'date': '2026-05-04'},
         ]
         with patch(
             'tools.logs._db.query',

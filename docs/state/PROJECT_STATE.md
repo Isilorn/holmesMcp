@@ -11,9 +11,9 @@
 | **Version courante** | `v0.4.0` (J3-J4 ✅, J3-4bis ✅ runtime API, J3-5 ✅ audit+fixes) |
 | **Jalon en cours** | J5 — 7 tools + query_sql + 5 resources |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j5-2` |
-| **Prochaine session** | `J5-3` — tests d'intégration live (8 tools F4/F5/F6 + query_sql) + corrections schéma + smoke test 25 tools |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut) |
+| **Dernière session** | `2026-05-04-j5-3` |
+| **Prochaine session** | `J5-4` — 5 resources + tests |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅) |
 
 ---
 
@@ -259,8 +259,8 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 
 - J5-1 ✅ : Familles 4+5+6 (7 tools) + tests unitaires
 - J5-2 ✅ : `query_sql` + tests unitaires
-- J5-3 🔜 : Tests d'intégration live (8 tools) + corrections schéma ← **prochaine**
-- J5-4 🔜 : 5 resources + tests
+- J5-3 ✅ : Tests d'intégration live (8 tools) + corrections schéma + smoke test 25 tools
+- J5-4 🔜 : 5 resources + tests ← **prochaine**
 - J5-5 🔜 : Audit exhaustif + tag `v0.5.0`
 
 ---
@@ -314,19 +314,31 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 
 ---
 
-### J5-3 🔜 Tests d'intégration live + corrections schéma
+### J5-3 ✅ Tests d'intégration live + corrections schéma (2026-05-04)
 
 **Périmètre** :
 
 - Tests SSH sur la box réelle (pattern J3-4) pour les 8 nouveaux tools (F4/F5/F6 + `query_sql`) :
-  - `tests/integration/tools/test_datastore_live.py`
-  - `tests/integration/tools/test_logs_live.py`
-  - `tests/integration/tools/test_search_live.py`
-  - `tests/integration/tools/test_query_sql_live.py`
-- Corrections de schéma si la box révèle des écarts (pattern J3-4)
-- Smoke test MCP : `tools/list` = 25 tools
+  - `tests/integration/tools/test_datastore_live.py` (12 tests)
+  - `tests/integration/tools/test_logs_live.py` (19 tests)
+  - `tests/integration/tools/test_search_live.py` (14 tests)
+  - `tests/integration/tools/test_query_sql_live.py` (22 tests)
+- Corrections de schéma révélées par la box réelle Jeedom 4.5.3
+- Smoke test MCP : `tools/list` = 25 tools ✅
 
-**Sortie attendue** : tous les tests intégration live verts, schéma aligné box réelle.
+**4 bugs corrigés** :
+
+1. **`tools/search.py`** — colonne `subElement_id` inexistante → `scenarioSubElement_id` dans `scenarioExpression`
+2. **`tools/logs.py`** — table `message` : colonnes `source`/`type`/`isRead` absentes → `plugin`/`logicalId`, filtre `isRead=0` retiré (champ inexistant)
+3. **`tools/logs.py`** — table `cron` : colonnes `running`/`expression`/`lastRun` absentes → `deamon=1`, retourne `schedule`
+4. **`holmesMcpd.py`** — bug critique daemon : `pydantic_settings` tentait `.env` dans le CWD inaccessible à `www-data` → `PermissionError` masquée (structlog sans `format_exc_info`). Fix : `os.chdir(Path(__file__).parent)` avant le bloc `try:`
+
+**Résultats** :
+
+- **71/71 tests d'intégration live** passés (67 nouveaux + 4 ajustements conftest)
+- **626/626 tests unitaires** passés (tests unitaires mis à jour : `test_logs.py` + `test_search.py`)
+- Smoke test 25 tools MCP via client Python Bearer token ✅
+- Ruff propre — tous fichiers modifiés
 
 ---
 

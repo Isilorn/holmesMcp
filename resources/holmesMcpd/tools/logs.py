@@ -54,39 +54,37 @@ def tail_log(
 
 
 def get_health_summary(conn: pymysql.connections.Connection) -> dict[str, Any]:
-    """Résumé de santé Jeedom : daemons KO, messages système non lus, crons bloqués.
+    """Résumé de santé Jeedom : daemons KO, messages système récents, crons daemon actifs.
 
     Interroge trois sources MySQL :
     - Plugins avec daemon en panne (table update, status='nok')
-    - Messages système non lus (table message, isRead=0, 20 plus récents)
-    - Crons actuellement en état running — potentiellement bloqués (table cron)
+    - 20 messages système les plus récents (table message)
+    - Crons de type daemon actifs (table cron, deamon=1)
 
     Aucune donnée sensible — résumé diagnostique sans credentials.
     Si toutes les listes sont vides, l'installation est en bonne santé.
     """
     plugins_nok_rows = _db.query(
         conn,
-        "SELECT logicalId AS plugin, name, status FROM `update`"
+        'SELECT logicalId AS plugin, name, status FROM `update`'
         " WHERE type='plugin' AND status='nok' ORDER BY name",
     )
 
     messages_rows = _db.query(
         conn,
-        'SELECT source, type, `message`, `date` FROM message'
-        ' WHERE isRead=0 ORDER BY `date` DESC LIMIT 20',
+        'SELECT plugin, logicalId, `message`, `date` FROM message ORDER BY `date` DESC LIMIT 20',
     )
 
     crons_rows = _db.query(
         conn,
-        'SELECT class, `function`, expression, lastRun FROM cron'
-        ' WHERE running=1 ORDER BY lastRun',
+        'SELECT class, `function`, schedule FROM cron WHERE deamon=1 ORDER BY class',
     )
 
     plugins_nok = [dict(r) for r in plugins_nok_rows]
     messages = [
         {
-            'source': r['source'],
-            'type': r['type'],
+            'plugin': r['plugin'],
+            'logicalId': r['logicalId'],
             'message': r['message'],
             'date': str(r['date']) if r['date'] is not None else None,
         }
@@ -96,8 +94,7 @@ def get_health_summary(conn: pymysql.connections.Connection) -> dict[str, Any]:
         {
             'class': r['class'],
             'function': r['function'],
-            'expression': r['expression'],
-            'lastRun': str(r['lastRun']) if r['lastRun'] is not None else None,
+            'schedule': r['schedule'],
         }
         for r in crons_rows
     ]

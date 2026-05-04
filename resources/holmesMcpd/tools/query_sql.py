@@ -127,7 +127,7 @@ def query_sql(
     - history       : historique commandes (cmd_id, datetime, value)
     - historyArch   : historique archivé (cmd_id, datetime, value)
     - plugin        : plugins installés (id, name, version, state)
-    - update        : mises à jour disponibles (name, version, status)
+    - update        : mises à jour disponibles (name, localVersion, remoteVersion, status)
     - message       : messages système (date, message, plugin, logicalId)
     - cron          : tâches planifiées (class, function, lastExecution, state)
 

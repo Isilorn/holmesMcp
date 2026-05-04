@@ -14,18 +14,32 @@ from tools import search
 _MOCK_CONN = MagicMock()
 
 _ROW_EQ = {
-    'id': 1, 'name': 'Prise Salon', 'eqType_name': 'virtualAlarm',
-    'object_id': 2, 'isEnable': 1, 'isVisible': 1,
+    'id': 1,
+    'name': 'Prise Salon',
+    'eqType_name': 'virtualAlarm',
+    'object_id': 2,
+    'isEnable': 1,
+    'isVisible': 1,
 }
 _ROW_CMD = {
-    'id': 10, 'name': 'Lumière Salon ON', 'eqLogic_id': 1,
-    'type': 'action', 'subType': 'other', 'generic_type': 'LIGHT_ON',
+    'id': 10,
+    'name': 'Lumière Salon ON',
+    'eqLogic_id': 1,
+    'type': 'action',
+    'subType': 'other',
+    'generic_type': 'LIGHT_ON',
 }
 _ROW_SCEN = {
-    'id': 5, 'name': 'Réveil Salon', 'group': 'Matin', 'isActive': 1, 'mode': 'schedule',
+    'id': 5,
+    'name': 'Réveil Salon',
+    'group': 'Matin',
+    'isActive': 1,
+    'mode': 'schedule',
 }
 _ROW_EXPR = {
-    'id': 100, 'subElement_id': 20, 'type': 'action',
+    'id': 100,
+    'scenarioSubElement_id': 20,
+    'type': 'action',
     'expression': 'cmd::execCmd id=10 options={"message":"salon on"}',
 }
 
@@ -76,7 +90,10 @@ class TestSearchTextResults:
         assert result['scenarios'] == []
         assert result['expressions'] == []
         assert result['totals'] == {
-            'equipements': 0, 'commandes': 0, 'scenarios': 0, 'expressions': 0,
+            'equipements': 0,
+            'commandes': 0,
+            'scenarios': 0,
+            'expressions': 0,
         }
 
     def test_equipements_found(self):

@@ -75,15 +75,13 @@ def search_text(
 
     expr_rows = _db.query(
         conn,
-        'SELECT id, subElement_id, type, expression'
+        'SELECT id, scenarioSubElement_id, type, expression'
         ' FROM scenarioExpression WHERE expression LIKE %s ORDER BY id LIMIT %s',
         (pattern, limit),
     )
     expr_sanitized, expr_filtered = sanitize_rows(expr_rows, 'scenarioExpression')
 
-    all_filtered = list(
-        dict.fromkeys(eq_filtered + cmd_filtered + scen_filtered + expr_filtered)
-    )
+    all_filtered = list(dict.fromkeys(eq_filtered + cmd_filtered + scen_filtered + expr_filtered))
 
     return wrap_result(
         {
