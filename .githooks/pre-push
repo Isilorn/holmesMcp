@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # pre-push : second scan avant push GitHub (ADR-0013, D11.8)
-# Scanne tous les commits depuis origin/main (ou depuis le début si première push).
+# Scanne les commits depuis origin (ou depuis le début si première push).
+# Exclusion : tests/ — les fixtures synthétiques utilisent des IPs/tokens fictifs (RFC 5737).
 
 set -euo pipefail
 
@@ -26,8 +27,8 @@ if [ -z "$RANGE" ]; then
     exit 0
 fi
 
-# Contenu des commits à pousser
-CONTENT=$(git log "$RANGE" -p 2>/dev/null || true)
+# Contenu des commits à pousser — hors tests/ (fixtures synthétiques intentionnelles)
+CONTENT=$(git log "$RANGE" -p -- ':!tests/' 2>/dev/null || true)
 
 scan_content() {
     local label="$1"
