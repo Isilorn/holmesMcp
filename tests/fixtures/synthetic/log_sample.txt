@@ -1,0 +1,10 @@
+[2026-05-04 08:00:01][INFO] Jeedom core started
+[2026-05-04 08:00:02][INFO] Plugin holmesMcp loaded
+[2026-05-04 08:00:03][DEBUG] TokenStore loaded: 2 tokens
+[2026-05-04 08:00:10][INFO] MCP server listening on 0.0.0.0:8765
+[2026-05-04 08:05:00][DEBUG] auth_ok user=alice path=/mcp
+[2026-05-04 08:05:01][DEBUG] db_query_ok rows=42
+[2026-05-04 08:05:02][INFO] tools/call get_equipment_list → 5 items
+[2026-05-04 09:00:00][WARNING] api_transport_retry method=eqLogic::all
+[2026-05-04 09:00:01][INFO] api_call_ok method=eqLogic::all
+[2026-05-04 10:30:00][ERROR] auth_invalid_token path=/mcp

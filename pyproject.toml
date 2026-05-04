@@ -46,6 +46,9 @@ indent-style = "space"
 testpaths    = ["tests"]
 asyncio_mode = "auto"
 python_files = ["test_*.py"]
+markers = [
+    "integration: tests requiring live Jeedom box (MySQL, JSON-RPC API, log files)",
+]
 
 [tool.coverage.run]
 source  = ["resources/holmesMcpd"]

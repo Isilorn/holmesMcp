@@ -10,9 +10,9 @@
 |---|---|
 | **Version courante** | `v0.0.0` (J1 en cours) |
 | **Jalon en cours** | J1 — _core + matrice skill |
-| **Session en cours** | J1-3 prochaine (SSH + fixtures + D6.3) |
-| **Dernière session** | `2026-05-04-audit-coherence` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1-1 ✅ (_core + tests), J1-2 ✅ (matrice D5.8), J1-3 prochaine |
+| **Session en cours** | J1-3 ✅ terminée — J2 prochaine (_domain + sanitiseur) |
+| **Dernière session** | `2026-05-04-j1-3` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1-1 ✅, J1-2 ✅, J1-3 ✅ |
 
 ---
 
@@ -71,13 +71,20 @@ Toutes les hypothèses D2.3 validées. Plan B HTTPS self-signed abandonné (HTTP
 - Simplifications vs jeedom-audit : `router.py` non porté (daemon sur la box), `resolve_cmd_refs.py` intégré dans `describe_scenario`
 - D5.8 ✅ tranché
 
-### J1-3 prochaine — D6.3 + intégration live (SSH requis)
+### J1-3 ✅ Tests d'intégration + D6.3 (2026-05-04)
 
-**Pré-requis PO :** snapshot Proxmox avant de commencer.
-
-- D6.3 : mesure empirique du plafond resources sur la box (combien d'entités énumérables sans latence perceptible dans Claude Desktop / MCP Inspector)
-- Tests d'intégration `_core/` sur box réelle : connexion MySQL, chargement token store, appel API JSON-RPC, lecture log
-- Commit sur box : redémarrage daemon avec nouvelle version (`--jeedom-apikey` + structlog + auth middleware)
+- Fixtures synthétiques : `tests/fixtures/synthetic/` (config_tokens, eqlogics, log_sample)
+- Tests d'intégration `tests/integration/` : 18/19 passés (1 skip attendu — clé API chiffrée crypt:)
+  - `_core/db.py` ✅ : connexion socket unix, SELECT 1, tables présentes, comptages D6.3
+  - `_core/auth.py` ✅ : TokenStore chargé depuis DB live (1 token trouvé)
+  - `_core/api.py` ✅ : blacklist save/exec validée, version OK, eqLogic::all skip (crypt:)
+  - `_core/logs.py` ✅ : holmesMcp log résolu, tail, grep, validations traversal
+- **D6.3 mesuré sur box PO** : 217 eqLogics, 6212 cmds, 62 scenarios, 36 objects
+- **2 bugs _core/ corrigés** :
+  - `db.py` : connexion TCP `127.0.0.1` → socket unix `/run/mysqld/mysqld.sock` (GRANT @localhost)
+  - `db.py` : `query()` passait `params=()` vide → PyMySQL formatait `%_` dans LIKE → fix `None`
+- Déploiement daemon avec `--jeedom-apikey` (manquant en prod) — UP et authentifié ✅
+- 74 tests unitaires (100% passés), ruff propre
 
 ---
 
@@ -118,7 +125,7 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ~~D12.6~~ | ~~J0~~ | ~~MkDocs Material + CI docs.yml~~ | ✅ **Tranché J0-1** : MkDocs Material — ADR-0014 |
 | D12.7 | J0 | Procédure soumission market : étapes manuelles vs automatisables | Vérification API/UI développeur Jeedom |
 | ~~D5.8~~ | ~~J1~~ | ~~Matrice couverture skill jeedom-audit~~ | ✅ **Tranché J1-2** : 13/13 WF couverts, 0 ajout requis — `docs/skill-coverage-matrix.md` + ADR-0019 |
-| D6.3 | J1 | Plafond énumération resources (typique 50 entités) | Claude Desktop réactif, mesure empirique box PO |
+| ~~D6.3~~ | ~~J1~~ | ~~Plafond énumération resources~~ | ✅ **Tranché J1-3** : box PO — 217 eqLogics, 6212 cmds, 62 scenarios, 36 objects. Pagination requise pour `cmd` (>1000), optionnelle pour `eqLogic` (217 acceptable). |
 | ~~D14.4~~ | ~~J1~~ | ~~UI vue dédiée logs (framework JS)~~ | ✅ **Tranché J1-1** : tableau HTML natif Jeedom + polling AJAX `setInterval` — pas de dépendance JS externe |
 | ~~D15.2~~ | ~~J1~~ | ~~Liste hard-codée plugins à filtrer~~ | ✅ **Tranché J1-1** : liste produite dans `_domain/sanitize.py` — 10 plugins les plus installés (jMQTT, Aqara, Zigbee2MQTT, Sonos, Philips Hue, Z-Wave, Netatmo, ecodevices, rfxcom, agenda) |
 

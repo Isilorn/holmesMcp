@@ -1,0 +1,4 @@
+[
+  {"token": "tok_alice_abcdef1234567890abcdef", "login": "alice"},
+  {"token": "tok_bob_fedcba0987654321fedcba", "login": "bob"}
+]

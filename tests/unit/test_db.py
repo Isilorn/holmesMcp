@@ -100,6 +100,21 @@ def test_query_with_params():
     assert call_args[0][1] == (42,)
 
 
+def test_query_no_params_not_formatted():
+    """Sans params, PyMySQL ne doit pas interpréter '%' dans le SQL (ex: LIKE 'token_%')."""
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.__enter__ = lambda s: s
+    mock_cursor.__exit__ = MagicMock(return_value=False)
+    mock_cursor.fetchall.return_value = []
+    mock_conn.cursor.return_value = mock_cursor
+
+    query(mock_conn, "SELECT key FROM config WHERE key LIKE 'token_%'")
+    call_args = mock_cursor.execute.call_args
+    # params non passés (None) pour ne pas déclencher le formattage %_ par PyMySQL
+    assert len(call_args[0]) == 1 or call_args[0][1] is None
+
+
 def test_query_applies_escape_reserved():
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
@@ -127,3 +142,16 @@ def test_connect_reads_password(tmp_path):
         assert call_kwargs['password'] == 'mysecret'
         assert call_kwargs['user'] == 'jeedom_mcp_ro'
         assert call_kwargs['database'] == 'jeedom'
+        assert 'unix_socket' in call_kwargs
+        assert 'host' not in call_kwargs
+
+
+def test_connect_socket_override(tmp_path):
+    conf = tmp_path / 'conf'
+    conf.write_text('password=s\nsocket=/tmp/custom.sock\n')
+
+    with patch('pymysql.connect') as mock_connect:
+        mock_connect.return_value = MagicMock()
+        connect(conf_path=conf)
+        call_kwargs = mock_connect.call_args[1]
+        assert call_kwargs['unix_socket'] == '/tmp/custom.sock'

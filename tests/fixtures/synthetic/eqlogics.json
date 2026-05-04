@@ -1,0 +1,7 @@
+[
+  {"id": 1, "name": "Lumière salon",       "object_id": 1, "eqType_name": "philipsHue",     "isEnable": 1, "isVisible": 1, "logicalId": "hue-001"},
+  {"id": 2, "name": "Prise bureau",        "object_id": 1, "eqType_name": "Zigbee2Mqtt",    "isEnable": 1, "isVisible": 1, "logicalId": "z2m-desk"},
+  {"id": 3, "name": "Thermostat chambre",  "object_id": 2, "eqType_name": "Netatmo",        "isEnable": 1, "isVisible": 1, "logicalId": "nat-001"},
+  {"id": 4, "name": "Capteur porte",       "object_id": 3, "eqType_name": "Aqara",          "isEnable": 1, "isVisible": 0, "logicalId": "aqara-door-001"},
+  {"id": 5, "name": "Alarme (désactivée)", "object_id": 3, "eqType_name": "rfxcom",         "isEnable": 0, "isVisible": 0, "logicalId": "rfx-alarm"}
+]
