@@ -12,7 +12,7 @@
 | **Jalon en cours** | J5 — 7 tools + query_sql + 5 resources |
 | **Branche de travail** | `develop` |
 | **Dernière session** | `2026-05-04-j5-2` |
-| **Prochaine session** | `J5-4` — 5 resources + tests (J5-3 live différée, à faire en bloc avec J5-5) |
+| **Prochaine session** | `J5-3` — tests d'intégration live (8 tools F4/F5/F6 + query_sql) + corrections schéma + smoke test 25 tools |
 | **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut) |
 
 ---
@@ -259,8 +259,8 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 
 - J5-1 ✅ : Familles 4+5+6 (7 tools) + tests unitaires
 - J5-2 ✅ : `query_sql` + tests unitaires
-- J5-3 🔜 : Tests d'intégration live (8 tools) + corrections schéma *(différée, en bloc avec J5-5)*
-- J5-4 🔜 : 5 resources + tests ← **prochaine**
+- J5-3 🔜 : Tests d'intégration live (8 tools) + corrections schéma ← **prochaine**
+- J5-4 🔜 : 5 resources + tests
 - J5-5 🔜 : Audit exhaustif + tag `v0.5.0`
 
 ---
