@@ -6,12 +6,13 @@ J3-2 : Famille 2 — 7 tools équipements/commandes.
 J3-3 : Famille 3 — 7 tools scénarios.
 J5-1 : Familles 4-6 — 7 tools dataStore/logs/recherche.
 J5-2 : Famille 7 — query_sql.
-J5-4 : 5 resources (à venir).
+J5-4 : 5 resources + énumération hybride D6.3.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 
 import structlog
 from _core import db as _db
@@ -20,7 +21,15 @@ from tools import datastore, discovery, equipments, scenarios, search
 from tools import logs as logs_tools
 from tools import query_sql as query_sql_tools
 
+from resources import equipment as res_equipment
+from resources import health as res_health
+from resources import logs_today as res_logs_today
+from resources import overview as res_overview
+from resources import scenario as res_scenario
+
 log = structlog.get_logger('holmesMcp.server')
+
+_ENUM_LIMIT = 50  # D6.3 — plafond énumération scénarios/équipements actifs
 
 _INSTRUCTIONS = (
     'Holmes observe, déduit, raconte. '
@@ -48,8 +57,9 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
     _register_family5(mcp)
     _register_family6(mcp)
     _register_family7(mcp)
+    _register_resources(mcp, apikey)
 
-    log.info('mcp_initialized', families=[1, 2, 3, 4, 5, 6, 7], tools=25)
+    log.info('mcp_initialized', families=[1, 2, 3, 4, 5, 6, 7], tools=25, resources=5)
     return mcp
 
 
@@ -604,3 +614,155 @@ def _register_family7(mcp: FastMCP) -> None:
             return query_sql_tools.query_sql(conn, sql)
         finally:
             conn.close()
+
+
+# ── Helpers énumération D6.3 ────────────────────────────────────────────────
+
+def _fetch_top_scenarios(conn, limit: int) -> list[dict]:
+    """Top-N scénarios actifs pour l'énumération hybride D6.3."""
+    sql = 'SELECT id, name FROM scenario WHERE isActive = 1 ORDER BY name LIMIT %s'
+    rows = _db.query(conn, sql, (limit,))
+    return [{'id': r['id'], 'name': r['name']} for r in rows]
+
+
+def _fetch_top_equipments(conn, limit: int) -> list[dict]:
+    """Top-N équipements actifs pour l'énumération hybride D6.3."""
+    sql = 'SELECT id, name FROM eqLogic WHERE isEnable = 1 ORDER BY name LIMIT %s'
+    rows = _db.query(conn, sql, (limit,))
+    return [{'id': r['id'], 'name': r['name']} for r in rows]
+
+
+def _make_scenario_fn(sid: int, ak: str):
+    """Factory — resource concrète scénario sans paramètre (requis par FastMCP)."""
+    def _fn() -> str:
+        conn = _db.connect()
+        try:
+            data = res_scenario.read(conn, sid, ak)
+            return json.dumps(data, ensure_ascii=False, indent=2, default=str)
+        finally:
+            conn.close()
+    return _fn
+
+
+def _make_equipment_fn(eid: int, ak: str):
+    """Factory — resource concrète équipement sans paramètre (requis par FastMCP)."""
+    def _fn() -> str:
+        conn = _db.connect()
+        try:
+            data = res_equipment.read(conn, eid, ak)
+            return json.dumps(data, ensure_ascii=False, indent=2, default=str)
+        finally:
+            conn.close()
+    return _fn
+
+
+def _register_resources(mcp: FastMCP, apikey: str) -> None:
+    """5 resources minimales D6.2 + énumération hybride D6.3 (plafond 50 par catégorie).
+
+    Structure :
+    - 3 resources statiques globales : overview, health, logs/today
+    - 2 resource templates : scenario/{id}, equipment/{id}
+    - Énumération concrète : top-50 scénarios actifs + top-50 équipements actifs
+    """
+
+    # ── Resources statiques globales ──────────────────────────────────────────
+
+    @mcp.resource(
+        'jeedom://install/overview',
+        name='Vue générale de l\'installation',
+        description='Snapshot général : version Jeedom, comptages équipements/scénarios/plugins.',
+        mime_type='application/json',
+    )
+    def _resource_overview() -> str:
+        conn = _db.connect()
+        try:
+            return json.dumps(res_overview.read(conn), ensure_ascii=False, indent=2, default=str)
+        finally:
+            conn.close()
+
+    @mcp.resource(
+        'jeedom://install/health',
+        name='État de santé de l\'installation',
+        description='Daemons KO, messages système non lus, crons bloqués.',
+        mime_type='application/json',
+    )
+    def _resource_health() -> str:
+        conn = _db.connect()
+        try:
+            return json.dumps(res_health.read(conn), ensure_ascii=False, indent=2, default=str)
+        finally:
+            conn.close()
+
+    @mcp.resource(
+        'jeedom://logs/today',
+        name='Logs Jeedom récents',
+        description='Dernières 500 lignes du log core Jeedom (http). Best-effort du jour.',
+        mime_type='text/plain',
+    )
+    def _resource_logs_today() -> str:
+        data = res_logs_today.read()
+        lines = data.get('lines', [])
+        return '\n'.join(lines)
+
+    # ── Resource templates ────────────────────────────────────────────────────
+
+    @mcp.resource(
+        'jeedom://scenario/{scenario_id}',
+        name='Scénario Jeedom',
+        description='Description LLM-friendly d\'un scénario avec résolution #[O][E][C]# et log.',
+        mime_type='application/json',
+    )
+    def _resource_scenario(scenario_id: str) -> str:
+        conn = _db.connect()
+        try:
+            data = res_scenario.read(conn, int(scenario_id), apikey)
+            return json.dumps(data, ensure_ascii=False, indent=2, default=str)
+        finally:
+            conn.close()
+
+    @mcp.resource(
+        'jeedom://equipment/{equipment_id}',
+        name='Équipement Jeedom',
+        description='Équipement complet : commandes, config sanitisée, valeurs courantes.',
+        mime_type='application/json',
+    )
+    def _resource_equipment(equipment_id: str) -> str:
+        conn = _db.connect()
+        try:
+            data = res_equipment.read(conn, int(equipment_id), apikey)
+            return json.dumps(data, ensure_ascii=False, indent=2, default=str)
+        finally:
+            conn.close()
+
+    # ── Énumération hybride D6.3 — top-N concrets ─────────────────────────────
+
+    try:
+        enum_conn = _db.connect()
+        top_scenarios = _fetch_top_scenarios(enum_conn, _ENUM_LIMIT)
+        top_equipments = _fetch_top_equipments(enum_conn, _ENUM_LIMIT)
+        enum_conn.close()
+        log.info(
+            'resources_enum_loaded',
+            scenarios=len(top_scenarios),
+            equipments=len(top_equipments),
+        )
+    except Exception as exc:
+        log.warning('resources_enum_skipped', error=str(exc))
+        top_scenarios = []
+        top_equipments = []
+
+    for s in top_scenarios:
+        mcp.resource(
+            f'jeedom://scenario/{s["id"]}',
+            name=s['name'][:60],
+            description=f'Scénario : {s["name"]}',
+            mime_type='application/json',
+        )(_make_scenario_fn(s['id'], apikey))
+
+    for e in top_equipments:
+        mcp.resource(
+            f'jeedom://equipment/{e["id"]}',
+            name=e['name'][:60],
+            description=f'Équipement : {e["name"]}',
+            mime_type='application/json',
+        )(_make_equipment_fn(e['id'], apikey))

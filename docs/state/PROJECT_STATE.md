@@ -11,9 +11,9 @@
 | **Version courante** | `v0.4.0` (J3-J4 ✅, J3-4bis ✅ runtime API, J3-5 ✅ audit+fixes) |
 | **Jalon en cours** | J5 — 7 tools + query_sql + 5 resources |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j5-3` |
-| **Prochaine session** | `J5-4` — 5 resources + tests |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅) |
+| **Dernière session** | `2026-05-04-j5-4` |
+| **Prochaine session** | `J5-5` — Audit exhaustif + tag `v0.5.0` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 647 ut, smoke ✅) |
 
 ---
 
@@ -260,8 +260,8 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - J5-1 ✅ : Familles 4+5+6 (7 tools) + tests unitaires
 - J5-2 ✅ : `query_sql` + tests unitaires
 - J5-3 ✅ : Tests d'intégration live (8 tools) + corrections schéma + smoke test 25 tools
-- J5-4 🔜 : 5 resources + tests ← **prochaine**
-- J5-5 🔜 : Audit exhaustif + tag `v0.5.0`
+- J5-4 ✅ : 5 resources + énumération D6.3 + 647 tests
+- J5-5 🔜 : Audit exhaustif + tag `v0.5.0` ← **prochaine**
 
 ---
 
@@ -342,20 +342,30 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 
 ---
 
-### J5-4 🔜 5 resources + tests
+### J5-4 ✅ 5 resources + énumération D6.3 (2026-05-04)
 
-**Périmètre** :
+**Périmètre livré** :
 
-- `resources/overview.py` → wrap `get_install_overview`
-- `resources/health.py` → wrap `get_health_summary`
-- `resources/scenario.py` → wrap `describe_scenario` + `get_scenario_log`
-- `resources/equipment.py` → wrap `get_equipment`
-- `resources/logs_today.py` → wrap `tail_log` filtré 24h
-- Énumération hybride D6.3 : 2 resources globales statiques + N scénarios/équipements plafonnés + templates `{id}`
-- D6.4 — aucune duplication de schéma tool↔resource, wrap strict
-- Tests unitaires + smoke test `resources/list` via MCP Inspector
+- `resources/holmesMcpd/resources/overview.py` → wrap strict `get_install_overview` (D6.4)
+- `resources/holmesMcpd/resources/health.py` → wrap strict `get_health_summary` (D6.4)
+- `resources/holmesMcpd/resources/scenario.py` → combine `describe_scenario` + `get_scenario_log(lines=50)` (D6.2)
+- `resources/holmesMcpd/resources/equipment.py` → wrap strict `get_equipment` (D6.4)
+- `resources/holmesMcpd/resources/logs_today.py` → wrap `tail_log('http', 500)` best-effort du jour
+- `mcp_server.py` : `_register_resources(mcp, apikey)` + factories `_make_scenario_fn`/`_make_equipment_fn`
+- Énumération hybride D6.3 : 3 statiques + 50 scénarios actifs + 50 équipements actifs + 2 templates = 103 concrètes + 2 templates
 
-**Sortie attendue** : 5 resources enregistrées, énumération D6.3 implémentée, tests verts.
+**Résultats smoke test** (box réelle Jeedom 4.5.3) :
+
+- `resources/list` → **103 resources concrètes** (3 + 50 + 50) ✅
+- `resources/templates/list` → **2 templates** (`jeedom://scenario/{scenario_id}`, `jeedom://equipment/{equipment_id}`) ✅
+- `resources/read jeedom://install/overview` → version 4.5.3, 217 eq, 62 scénarios ✅
+- `resources/read jeedom://install/health` → summary OK (0 plugins_nok) ✅
+- `resources/read jeedom://scenario/5` → has `last_run_log` ✅
+- `mcp_initialized` : `tools=25, resources=5` ✅
+
+**Bug corrigé** : FastMCP rejette les fonctions paramétrées (`_id=sid`) pour les resources concrètes (sans `{var}` dans l'URI) → fix via factories `_make_scenario_fn(sid, ak)` / `_make_equipment_fn(eid, ak)` retournant des callables sans paramètre.
+
+**Tests** : 21 nouveaux tests unitaires resources — **647/647 ✅**, ruff propre.
 
 ---
 
