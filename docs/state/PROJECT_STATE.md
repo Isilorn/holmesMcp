@@ -8,11 +8,11 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.2.0` (J1 ✅ clôturé) |
-| **Jalon en cours** | J2 — _domain + sanitiseur |
-| **Branche de travail** | `main` (J2 en cours — merge final avec tag `v0.3.0` en fin J2) |
-| **Dernière session** | `2026-05-04-j2-2` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2-1 ✅, J2-2 ✅, J2-3 prochaine |
+| **Version courante** | `v0.3.0` (J2 ✅ clôturé) |
+| **Jalon en cours** | J3-J4 — 18 tools familles 1-2-3 |
+| **Branche de travail** | `main` |
+| **Dernière session** | `2026-05-04-j2-3` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 prochaine |
 
 ---
 
@@ -131,11 +131,20 @@ Jeedom Connect (ajouté), Script (ajouté), MQTT Manager (ajouté), Virtuel (ajo
 - `tests/unit/_domain/test_scenario_walker.py` : 49 tests, **100% couverture**
 - **311 tests unitaires — 311/311 passés**. Ruff propre.
 
-**Sous-sessions restantes** :
+### J2-3 ✅ `cmd_refs.py` + intégration `_domain/` + ADR-0017 proposed (2026-05-04)
 
-- J2-3 : `_domain/cmd_refs.py` + intégration `_domain/` dans `mcp_server.py` + ADR-0017 proposed + tag `v0.3.0`
+- `_domain/cmd_refs.py` : résolveur `#cmdId#` → `#[O][E][C]#` batch SQL
+  - `resolve(text, conn)` — extraction IDs, requête batch, substitution + `#ID_NON_RÉSOLU:X#`
+  - `_fetch_names(ids, conn)` — jointure `cmd/eqLogic/object`, COALESCE objet NULL
+  - API : `db.query(conn, sql, params)` avec placeholders `%s` (PyMySQL)
+- `tests/unit/_domain/test_cmd_refs.py` : 20 tests, **100% couverture** cmd_refs.py
+- `docs/decisions/ADR-0017.md` : statut `draft` → `proposed` (implémentation complète documentée)
+- `mcp_server.py` : commentaire d'architecture `_domain/` prêt pour J3
+- **331 tests unitaires — 331/331 passés**. Couverture globale 85,87%. Ruff propre.
 
-**Pré-requis** : aucun SSH requis pour J2-3 (tests unitaires purs). Pas de snapshot Proxmox nécessaire.
+### J2 ✅ Clôturé (2026-05-04) — tag `v0.3.0`
+
+DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/` livrés avec couverture 100% sur `sanitize.py` et `cmd_refs.py`.
 
 ---
 

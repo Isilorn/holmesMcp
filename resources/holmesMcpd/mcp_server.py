@@ -3,6 +3,12 @@
 Construit l'instance FastMCP et enregistre les tools/resources.
 POC J0 : un seul tool `hello` pour valider l'intégration complète.
 J3+ : import des modules tools/ et resources/ au fur et à mesure.
+
+Couche _domain/ (J2) disponible et importable :
+  - _domain.sanitize     : sanitisation 3 mécanismes (D15.1)
+  - _domain.cmd_refs     : résolveur #cmdId# → #[O][E][C]# (pour describe_scenario J3)
+  - _domain.usage_graph  : graphe d'usage cmd/eqLogic/scenario (pour find_*_dependencies J3)
+  - _domain.scenario_walker : walker arbre scénario (pour get_scenario_structure J3)
 """
 
 from __future__ import annotations
