@@ -8,12 +8,12 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.4.0` (J3-J4 ✅, J3-4bis ✅ runtime API, J3-5 ✅ audit+fixes) |
-| **Jalon en cours** | J5 — 7 tools + query_sql + 5 resources |
+| **Version courante** | `v0.5.0` (J5 ✅ complet — 25 tools + 5 resources + audit J5-5) |
+| **Jalon en cours** | J6 — Vue UI logs + durcissement sanitisation |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j5-4` |
-| **Prochaine session** | `J5-5` — Audit exhaustif + tag `v0.5.0` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 647 ut, smoke ✅) |
+| **Dernière session** | `2026-05-04-j5-5` |
+| **Prochaine session** | `J6` — Page config PHP/JS + vue logs + sanity check sanitisation PO |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0) |
 
 ---
 
@@ -261,7 +261,7 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - J5-2 ✅ : `query_sql` + tests unitaires
 - J5-3 ✅ : Tests d'intégration live (8 tools) + corrections schéma + smoke test 25 tools
 - J5-4 ✅ : 5 resources + énumération D6.3 + 647 tests
-- J5-5 🔜 : Audit exhaustif + tag `v0.5.0` ← **prochaine**
+- J5-5 ✅ : Audit exhaustif — 6 écarts corrigés + 648 tests + tag `v0.5.0`
 
 ---
 
@@ -369,29 +369,38 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 
 ---
 
-### J5-5 🔜 Audit exhaustif + tag `v0.5.0`
+### J5-5 ✅ Audit exhaustif + tag `v0.5.0` (2026-05-04)
 
-**Méthode** : même grille que J3-5 — croisement systématique sur 3 axes.
+**Méthode** : même grille que J3-5 — 4 axes de croisement.
 
-**Axes d'audit** :
+**Écarts identifiés et traitement** :
 
-1. **Brief** — D5.3 (spec tools F4-F6), D5.6 (`query_sql` restreint), D6.2-D6.5 (resources), D15.1 (sanitisation), D15.3 (`query_sql` sécurité)
-2. **Documentation projet** — ADRs, PLANNING, `skill-coverage-matrix.md` WF1-WF13
-3. **Besoins jeedom-audit** — champs attendus par les scripts, couverture WF par les nouveaux tools
+| ID | Sévérité | Module | Écart | Fix |
+| --- | --- | --- | --- | --- |
+| E01 | 🔴 Bug | `sanitize.py` | Whitelist `scenarioExpression` avait `subElement_id` (ancien nom avant J5-3) au lieu de `scenarioSubElement_id` — champ FILTERED silencieusement dans `search_text` (WF11 impacté) | Corrigé + test ajouté |
+| E02 | 🟠 Docs | `query_sql.py` + `mcp_server.py` | Cookbook référençait table `plugin` (n'existe pas — c'est `update WHERE type='plugin'`) | Cookbook corrigé |
+| E03 | 🟠 Docs | `query_sql.py` + `mcp_server.py` | Cookbook `cron` listait `lastExecution, state` (colonnes inexistantes) — réels : `schedule, deamon, enable` | Cookbook corrigé |
+| E04 | 🟠 Docs | `query_sql.py` + `mcp_server.py` | Cookbook `scenario` listait `lastLaunch` comme colonne MySQL (uniquement via API JSON-RPC) | Cookbook corrigé |
+| E05 | 🟡 Desc | `mcp_server.py` | `get_health_summary` docstring : "crons potentiellement bloqués" → doit être "daemons actifs (deamon=1 AND enable=1)" | Description corrigée |
+| E06 | 🟡 SQL | `tools/logs.py` | Query cron ne filtrait pas `enable=1` — incluait des daemons désactivés | `AND enable=1` ajouté |
 
-**Grille de triage** :
+**Chiffres** :
 
-| Couleur | Traitement |
-|---|---|
-| 🔴 Bug silencieux / sécurité | Fix immédiat dans la session |
-| 🟠 Comportement incorrect documenté | Fix si < 30 min, sinon ADR-0007 |
-| 🟡 Fonctionnalité manquante prévue | ADR-0007 + ticket ROADMAP |
-| 🟢 Divergence bénigne | Docstring ou ADR-0007 |
+| Métrique | Avant J5-5 | Après J5-5 |
+| --- | --- | --- |
+| Tests unitaires | 647 | 648 (+1 test E01) |
+| Tests intégration live | 71 | 71 (inchangés) |
+| Bugs sanitisation corrigés | — | 1 (E01) |
+| Docs cookbook corrigées | — | 3 (E02, E03, E04) |
+| Descriptions/SQL améliorés | — | 2 (E05, E06) |
 
-**Points d'audit spécifiques J5** (absents de J3-5) :
+**DoD J5 — 5/5 ✅** :
 
-- `query_sql` : refus non-SELECT prouvé, blacklist exhaustive, LIMIT injecté, D15.3 (refus requêtes ciblant `config`/champs sensibles), cookbook présent dans description
-- Resources : D6.4 — pas de duplication schéma tool↔resource, D6.3 plafond énumération cohérent
+- [x] 25 tools implémentés et testés
+- [x] `query_sql` : refus non-SELECT + blacklist tables + LIMIT testé (100%)
+- [x] 5 resources implémentées et testées (100%)
+- [x] Smoke test J5-4 : 25 tools + 103 resources/2 templates ✅
+- [x] Tag `v0.5.0`
 - `get_health_summary` : champs retournés alignés sur appels API JSON-RPC réels de la box
 - **Markdown** : passe `markdownlint --fix` sur tous les `.md` du repo (warnings MD032/MD040/MD041/MD060 accumulés — non bloquants CI mais à solder avant v0.5.0)
 

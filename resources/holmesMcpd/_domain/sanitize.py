@@ -160,7 +160,7 @@ _TABLE_WHITELISTS: dict[str, frozenset[str]] = {
     'scenarioExpression': frozenset(
         {
             'id',
-            'subElement_id',
+            'scenarioSubElement_id',
             'type',
             'order',
             'expression',

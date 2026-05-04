@@ -59,7 +59,7 @@ def get_health_summary(conn: pymysql.connections.Connection) -> dict[str, Any]:
     Interroge trois sources MySQL :
     - Plugins avec daemon en panne (table update, status='nok')
     - 20 messages système les plus récents (table message)
-    - Crons de type daemon actifs (table cron, deamon=1)
+    - Crons de type daemon actifs et activés (table cron, deamon=1 AND enable=1)
 
     Aucune donnée sensible — résumé diagnostique sans credentials.
     Si toutes les listes sont vides, l'installation est en bonne santé.
@@ -77,7 +77,7 @@ def get_health_summary(conn: pymysql.connections.Connection) -> dict[str, Any]:
 
     crons_rows = _db.query(
         conn,
-        'SELECT class, `function`, schedule FROM cron WHERE deamon=1 ORDER BY class',
+        'SELECT class, `function`, schedule FROM cron WHERE deamon=1 AND enable=1 ORDER BY class',
     )
 
     plugins_nok = [dict(r) for r in plugins_nok_rows]

@@ -128,6 +128,14 @@ class TestSearchTextResults:
         assert 'salon' in result['expressions'][0]['expression']
         assert result['totals']['expressions'] == 1
 
+    def test_expressions_scenariosubelement_id_not_filtered(self):
+        # E01 J5-5 : whitelist doit avoir scenarioSubElement_id (vrai nom colonne DB)
+        with patch('tools.search._db.query', side_effect=_make_se(expr=[_ROW_EXPR])):
+            result = search.search_text(_MOCK_CONN, 'salon')
+
+        assert result['expressions'][0]['scenarioSubElement_id'] == 20
+        assert 'scenarioSubElement_id' not in result['_filtered_fields']
+
     def test_all_categories_found_simultaneously(self):
         with patch(
             'tools.search._db.query',

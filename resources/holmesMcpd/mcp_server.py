@@ -548,7 +548,8 @@ def _register_family5(mcp: FastMCP) -> None:
         Interroge trois sources MySQL :
         - plugins_nok       : plugins avec daemon en panne (status='nok')
         - messages_unread   : messages système non lus (20 plus récents)
-        - crons_running     : crons actuellement en état running (potentiellement bloqués)
+        - crons_running     : daemons actifs (cron.deamon=1 AND enable=1)
+                              — processus devant tourner en continu
 
         Si toutes les listes sont vides, l'installation est en bonne santé.
         Le champ summary fournit les comptages globaux.
@@ -600,7 +601,8 @@ def _register_family7(mcp: FastMCP) -> None:
         si absent (50), plafonné à 200. Résultats sanitisés (D15.1/D15.3).
 
         Tables utiles : eqLogic, cmd, scenario, object, dataStore, config,
-        history, historyArch, plugin, update, message, cron.
+        history, historyArch, update, message, cron.
+        (Pas de table 'plugin' — utiliser: SELECT * FROM `update` WHERE type='plugin')
 
         Mots réservés à backticker : `trigger`, `repeat`, `update`.
 

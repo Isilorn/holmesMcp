@@ -120,16 +120,16 @@ def query_sql(
     --------------------
     - eqLogic       : équipements (id, name, eqType_name, object_id, isEnable)
     - cmd           : commandes (id, name, eqLogic_id, type, subType, currentValue)
-    - scenario      : scénarios (id, name, isActive, mode, lastLaunch)
+    - scenario      : scénarios (id, name, isActive, mode) — lastLaunch/state via API seulement
     - object        : pièces/objets (id, name, father_id, isVisible)
     - dataStore     : variables persistantes (type, link_id, key, value)
     - config        : configuration (plugin, key, value — values sensibles filtrées)
     - history       : historique commandes (cmd_id, datetime, value)
     - historyArch   : historique archivé (cmd_id, datetime, value)
-    - plugin        : plugins installés (id, name, version, state)
-    - update        : mises à jour disponibles (name, localVersion, remoteVersion, status)
+    - update        : plugins/mises à jour (logicalId, name, localVersion, remoteVersion, type)
+                      WHERE type='plugin' = plugins installés (pas de table 'plugin')
     - message       : messages système (date, message, plugin, logicalId)
-    - cron          : tâches planifiées (class, function, lastExecution, state)
+    - cron          : tâches planifiées (class, function, schedule, deamon, enable)
 
     MOTS RÉSERVÉS
     -------------
