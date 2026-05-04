@@ -10,8 +10,8 @@
 |---|---|
 | **Version courante** | `v0.0.0` (J1 en cours) |
 | **Jalon en cours** | J1 — _core + matrice skill |
-| **Session en cours** | J1-3 prochaine (SSH + D6.3) |
-| **Dernière session** | `2026-05-03-j1-2-skill-coverage` |
+| **Session en cours** | J1-3 prochaine (SSH + fixtures + D6.3) |
+| **Dernière session** | `2026-05-04-audit-coherence` |
 | **Statut global** | 🟠 EN COURS — J0 ✅, J1-1 ✅ (_core + tests), J1-2 ✅ (matrice D5.8), J1-3 prochaine |
 
 ---
