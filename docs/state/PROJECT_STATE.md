@@ -500,7 +500,7 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ADR-0005 | Canaux d'accès aux données Jeedom | draft |
 | ADR-0006 | Périmètre fonctionnel V1 | draft |
 | ADR-0007 | Liste des 25 tools V1 | draft |
-| ADR-0008 | Liste des 5 resources V1 | draft |
+| ADR-0008 | Liste des 5 resources V1 | accepted |
 | ADR-0009 | Réutilisation scripts jeedom-audit | draft |
 | ADR-0010 | Nom et identité produit | draft |
 | ADR-0011 | Licence AGPL-3.0 | draft |
