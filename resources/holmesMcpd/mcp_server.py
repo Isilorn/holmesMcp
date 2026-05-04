@@ -5,7 +5,7 @@ J3-1 : Famille 1 — 4 tools découverte d'install.
 J3-2 : Famille 2 — 7 tools équipements/commandes.
 J3-3 : Famille 3 — 7 tools scénarios.
 J5-1 : Familles 4-6 — 7 tools dataStore/logs/recherche.
-J5-2 : query_sql (à venir).
+J5-2 : Famille 7 — query_sql.
 J5-4 : 5 resources (à venir).
 """
 
@@ -18,6 +18,7 @@ from _core import db as _db
 from mcp.server.fastmcp import FastMCP
 from tools import datastore, discovery, equipments, scenarios, search
 from tools import logs as logs_tools
+from tools import query_sql as query_sql_tools
 
 log = structlog.get_logger('holmesMcp.server')
 
@@ -46,8 +47,9 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
     _register_family4(mcp)
     _register_family5(mcp)
     _register_family6(mcp)
+    _register_family7(mcp)
 
-    log.info('mcp_initialized', families=[1, 2, 3, 4, 5, 6], tools=25)
+    log.info('mcp_initialized', families=[1, 2, 3, 4, 5, 6, 7], tools=25)
     return mcp
 
 
@@ -569,5 +571,36 @@ def _register_family6(mcp: FastMCP) -> None:
         conn = _db.connect()
         try:
             return search.search_text(conn, text, limit)
+        finally:
+            conn.close()
+
+
+def _register_family7(mcp: FastMCP) -> None:
+    """Famille 7 — Requête SQL libre (1 tool)."""
+
+    @mcp.tool()
+    def query_sql(sql: str) -> dict:
+        """Exécute une requête SELECT libre sur la base Jeedom (lecture seule).
+
+        Réservé aux requêtes que les autres tools ne couvrent pas.
+        Pour les cas courants, préférer les tools dédiés (list_equipments,
+        list_scenarios, search_text, etc.) qui sont plus sûrs et plus rapides.
+
+        SÉCURITÉ : SELECT uniquement, tables sensibles bloquées, LIMIT injecté
+        si absent (50), plafonné à 200. Résultats sanitisés (D15.1/D15.3).
+
+        Tables utiles : eqLogic, cmd, scenario, object, dataStore, config,
+        history, historyArch, plugin, update, message, cron.
+
+        Mots réservés à backticker : `trigger`, `repeat`, `update`.
+
+        Exemples :
+        - SELECT id, name FROM eqLogic WHERE object_id = 3
+        - SELECT datetime, value FROM history WHERE cmd_id = 12 ORDER BY datetime DESC
+        - SELECT key, value FROM dataStore WHERE type = 'scenario' AND link_id = 5
+        """
+        conn = _db.connect()
+        try:
+            return query_sql_tools.query_sql(conn, sql)
         finally:
             conn.close()

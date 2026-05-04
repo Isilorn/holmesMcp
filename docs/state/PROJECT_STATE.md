@@ -11,9 +11,9 @@
 | **Version courante** | `v0.4.0` (J3-J4 ✅, J3-4bis ✅ runtime API, J3-5 ✅ audit+fixes) |
 | **Jalon en cours** | J5 — 7 tools + query_sql + 5 resources |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j3-5` |
-| **Prochaine session** | `J5` — familles 4-6 + query_sql + 5 resources |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég) |
+| **Dernière session** | `2026-05-04-j5-2` |
+| **Prochaine session** | `J5-3` — tests d'intégration live (8 tools) + corrections schéma |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut) |
 
 ---
 
@@ -258,7 +258,7 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 **Plan de sous-sessions** :
 
 - J5-1 ✅ : Familles 4+5+6 (7 tools) + tests unitaires
-- J5-2 🔜 : `query_sql` + tests unitaires
+- J5-2 ✅ : `query_sql` + tests unitaires
 - J5-3 🔜 : Tests d'intégration live (8 tools) + corrections schéma
 - J5-4 🔜 : 5 resources + tests
 - J5-5 🔜 : Audit exhaustif + tag `v0.5.0`
@@ -292,23 +292,25 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 
 ---
 
-### J5-2 🔜 `query_sql` + tests unitaires
+### J5-2 ✅ `query_sql` + tests unitaires (2026-05-04)
 
 **Périmètre** :
 
 - `tools/query_sql.py` :
   - Parsing `sqlparse` — rejet de tout statement non-SELECT
   - Blacklist tables sensibles : `user`, `session`, `network`, regex `(?i).*creds?|credentials?|password|token.*`
-  - LIMIT obligatoire — injecté si absent, plafonné à une valeur max
+  - LIMIT obligatoire — injecté si absent (50), plafonné à 200
   - Sanitisation runtime systématique sur les résultats (D15.1)
-  - D15.3 — refus si la requête cible des champs/tables de config sensible
-  - Mini SQL cookbook dans la description du tool (mots réservés Jeedom, conventions, tables interdites)
-- Tests unitaires exhaustifs : refus INSERT/UPDATE/DELETE/DROP, refus tables blacklistées, LIMIT injecté, sanitisation active, D15.3
-- Registration `mcp_server.py`
+  - D15.3 — refus si le SELECT liste explicitement des colonnes sensibles (password, token, apikey, secret…)
+  - Mini SQL cookbook dans la description du tool (mots réservés Jeedom, tables utiles, exemples)
+- Tests unitaires exhaustifs : refus INSERT/UPDATE/DELETE/DROP, refus tables blacklistées, LIMIT injecté/plafonné, sanitisation active, D15.3
+- Registration `mcp_server.py` — `_register_family7` — **25 tools enregistrés**
 
-**Pourquoi session séparée** : complexité parsing SQL + surface sécurité critique — contexte propre sans bruit des 7 autres tools.
+**Livraisons** :
 
-**Sortie attendue** : `query_sql` opérationnel, tous les cas de refus couverts par tests, ruff propre.
+- `tools/query_sql.py` : `query_sql(conn, sql)` — 5 fonctions internes (`_check_select_only`, `_extract_table_names`, `_check_blacklist`, `_check_sensitive_columns`, `_ensure_limit`), regex compilées, LIMIT default=50 max=200
+- `mcp_server.py` : `_register_family7` ajouté, import `query_sql as query_sql_tools`
+- Tests : 69 nouveaux tests — **626/626 ✅**, `query_sql.py` **100% couverture**, couverture globale 98,33%, ruff propre
 
 ---
 
