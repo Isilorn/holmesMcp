@@ -4,7 +4,9 @@ Construit l'instance FastMCP et enregistre les tools/resources.
 J3-1 : Famille 1 — 4 tools découverte d'install.
 J3-2 : Famille 2 — 7 tools équipements/commandes.
 J3-3 : Famille 3 — 7 tools scénarios.
-J5   : Famille 4-6 + query_sql + 5 resources (à venir).
+J5-1 : Familles 4-6 — 7 tools dataStore/logs/recherche.
+J5-2 : query_sql (à venir).
+J5-4 : 5 resources (à venir).
 """
 
 from __future__ import annotations
@@ -14,7 +16,8 @@ import argparse
 import structlog
 from _core import db as _db
 from mcp.server.fastmcp import FastMCP
-from tools import discovery, equipments, scenarios
+from tools import datastore, discovery, equipments, scenarios, search
+from tools import logs as logs_tools
 
 log = structlog.get_logger('holmesMcp.server')
 
@@ -40,8 +43,11 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
     _register_family1(mcp)
     _register_family2(mcp, apikey)
     _register_family3(mcp, apikey)
+    _register_family4(mcp)
+    _register_family5(mcp)
+    _register_family6(mcp)
 
-    log.info('mcp_initialized', families=[1, 2, 3], tools=18)
+    log.info('mcp_initialized', families=[1, 2, 3, 4, 5, 6], tools=25)
     return mcp
 
 
@@ -432,5 +438,136 @@ def _register_family3(mcp: FastMCP, apikey: str) -> None:
         conn = _db.connect()
         try:
             return scenarios.get_scenario_log(conn, scenario_id, lines)
+        finally:
+            conn.close()
+
+
+def _register_family4(mcp: FastMCP) -> None:
+    """Famille 4 — Variables / dataStore (2 tools)."""
+
+    @mcp.tool()
+    def list_datastore_variables(
+        var_type: str | None = None,
+        link_id: int | None = None,
+        key_pattern: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> dict:
+        """Variables persistantes Jeedom (table dataStore).
+
+        Paramètres :
+        - var_type    : filtre exact sur le type ('global' ou 'scenario')
+        - link_id     : filtre sur l'identifiant lié (0 pour global, scenario_id pour scenario)
+        - key_pattern : filtre LIKE sur le nom de variable (ex. 'meteo%', '%temp%')
+        - limit       : nombre max de résultats (max 200)
+        - offset      : décalage pour la pagination
+
+        Les variables globales ont type='global' et link_id=0.
+        Les variables de scénario ont type='scenario' et link_id=<scenario_id>.
+        """
+        conn = _db.connect()
+        try:
+            return datastore.list_datastore_variables(
+                conn, var_type, link_id, key_pattern, limit, offset
+            )
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def get_datastore_variable(
+        key: str,
+        var_type: str | None = None,
+        link_id: int | None = None,
+    ) -> dict:
+        """Valeur courante d'une variable dataStore par nom de clé.
+
+        Paramètres :
+        - key      : nom exact de la variable (ex. 'temperature_salon', 'alarme_active')
+        - var_type : restreindre au type ('global' ou 'scenario') si ambiguïté
+        - link_id  : restreindre à un scenario_id si var_type='scenario'
+
+        Retourne {'error': ...} si la variable n'existe pas.
+        Si plusieurs variables partagent le même nom (global + scenario), retourne la liste.
+        """
+        conn = _db.connect()
+        try:
+            return datastore.get_datastore_variable(conn, key, var_type, link_id)
+        finally:
+            conn.close()
+
+
+def _register_family5(mcp: FastMCP) -> None:
+    """Famille 5 — Logs et diagnostic (3 tools)."""
+
+    @mcp.tool()
+    def list_log_files() -> dict:
+        """Liste des fichiers de log Jeedom disponibles avec taille et date de modification.
+
+        Retourne tous les logs accessibles dans les répertoires Jeedom connus.
+        Le champ name de chaque entrée est utilisable directement avec tail_log.
+        Les fichiers de sous-répertoires (ex. scenarioLog/scenario70.log) sont inclus.
+        """
+        return logs_tools.list_log_files()
+
+    @mcp.tool()
+    def tail_log(
+        log_name: str,
+        lines: int = 100,
+        grep: str | None = None,
+    ) -> dict:
+        """Tail d'un log Jeedom avec grep optionnel.
+
+        Paramètres :
+        - log_name : nom du fichier de log (ex. 'core', 'jMQTT', 'scenarioLog/scenario70.log')
+                     Utiliser list_log_files pour connaître les noms disponibles.
+        - lines    : nombre de lignes depuis la fin (défaut 100, max 500)
+        - grep     : filtre optionnel — seules les lignes contenant ce texte sont retournées
+                     (insensible à la casse)
+
+        Retourne {'log_file': ..., 'lines': [...], 'count': N}.
+        Retourne {'error': ..., 'lines': [], 'count': 0} si le log est introuvable.
+        """
+        return logs_tools.tail_log(log_name, lines, grep)
+
+    @mcp.tool()
+    def get_health_summary() -> dict:
+        """Résumé de santé Jeedom : daemons KO, messages système non lus, crons bloqués.
+
+        Interroge trois sources MySQL :
+        - plugins_nok       : plugins avec daemon en panne (status='nok')
+        - messages_unread   : messages système non lus (20 plus récents)
+        - crons_running     : crons actuellement en état running (potentiellement bloqués)
+
+        Si toutes les listes sont vides, l'installation est en bonne santé.
+        Le champ summary fournit les comptages globaux.
+        """
+        conn = _db.connect()
+        try:
+            return logs_tools.get_health_summary(conn)
+        finally:
+            conn.close()
+
+
+def _register_family6(mcp: FastMCP) -> None:
+    """Famille 6 — Recherche transverse (1 tool)."""
+
+    @mcp.tool()
+    def search_text(text: str, limit: int = 20) -> dict:
+        """Recherche d'une chaîne dans noms d'équipements, commandes, scénarios et expressions.
+
+        Paramètres :
+        - text  : texte à rechercher (minimum 2 caractères, insensible à la casse)
+        - limit : nombre max de résultats par catégorie (défaut 20, max 50)
+
+        Retourne quatre catégories : equipements, commandes, scenarios, expressions.
+        Le champ expressions est particulièrement utile pour retrouver les scénarios
+        qui utilisent une commande donnée (chercher '#[Objet][Équipement][Commande]#').
+
+        Exemple : search_text('salon') retrouve 'Prise Salon' (équipement),
+        'Lumière Salon ON' (commande), 'Réveil Salon' (scénario).
+        """
+        conn = _db.connect()
+        try:
+            return search.search_text(conn, text, limit)
         finally:
             conn.close()

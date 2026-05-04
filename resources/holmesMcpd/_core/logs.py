@@ -7,6 +7,7 @@ Ref jeedom-audit : logs_query.py @ commit à préciser en J1-2 (D7.4).
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from pathlib import Path
 
 import structlog
@@ -92,3 +93,42 @@ def tail(
         'lines': all_lines,
         'count': len(all_lines),
     }
+
+
+def list_files(log_dirs: list[Path] | None = None) -> list[dict]:
+    """Liste les fichiers de log Jeedom disponibles avec taille et date de modification.
+
+    Retourne une liste triée par nom.
+    Seuls les fichiers dont le nom passe validate_log_name sont inclus.
+    """
+    dirs = log_dirs if log_dirs is not None else _LOG_DIRS
+    files: list[dict] = []
+    seen: set[str] = set()
+
+    for log_dir in dirs:
+        if not log_dir.is_dir():
+            continue
+        for path in sorted(log_dir.rglob('*')):
+            if not path.is_file():
+                continue
+            try:
+                name = str(path.relative_to(log_dir))
+                validate_log_name(name)
+            except ValueError:
+                continue
+            if name in seen:
+                continue
+            seen.add(name)
+            try:
+                stat = path.stat()
+                files.append({
+                    'name': name,
+                    'size_bytes': stat.st_size,
+                    'last_modified': datetime.fromtimestamp(stat.st_mtime).isoformat(
+                        timespec='seconds'
+                    ),
+                })
+            except OSError:
+                continue
+
+    return sorted(files, key=lambda f: f['name'])

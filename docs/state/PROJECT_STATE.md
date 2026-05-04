@@ -247,7 +247,138 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - Unitaires : 29 nouveaux (3 classes `test_scenarios.py` : `TestListScenariosRuntime`, `TestGetScenarioRuntime`, `TestFetchRuntimeHelpers` ; 2 classes `test_equipments.py` : `TestGetEquipmentRuntime`, `TestFetchCmdRuntimeMap`)
 - Intégration live : 8 nouveaux (`test_state_and_last_launch_present` × 4 dans scenarios, `test_info_cmds_have_current_value` × 2 dans equipments)
 
-**93/93 tests intégration live** passés. **476/476 tests unitaires** passés. Ruff propre. Commit `82ea6ef` sur `develop`.
+**93/93 tests intégration live** passés. **476/476 tests unitaires** passés. Ruff propre. Commit `82ae6ef` sur `develop`.
+
+---
+
+## Jalon J5 — Tools familles 4, 5, 6 + `query_sql` + 5 resources
+
+**Objectif** : compléter les 7 tools restants + `query_sql` + 5 resources → 25 tools + 5 resources, tag `v0.5.0`.
+
+**Plan de sous-sessions** :
+
+- J5-1 ✅ : Familles 4+5+6 (7 tools) + tests unitaires
+- J5-2 🔜 : `query_sql` + tests unitaires
+- J5-3 🔜 : Tests d'intégration live (8 tools) + corrections schéma
+- J5-4 🔜 : 5 resources + tests
+- J5-5 🔜 : Audit exhaustif + tag `v0.5.0`
+
+---
+
+### J5-1 ✅ Familles 4, 5, 6 — 7 tools + tests unitaires (2026-05-04)
+
+**Périmètre** :
+
+- `tools/datastore.py` (F4) :
+  - `list_datastore_variables` — liste des variables persistantes (MySQL RO, table `dataStore`)
+  - `get_datastore_variable` — détail d'une variable (valeur, type, datetime)
+- `tools/logs.py` (F5) :
+  - `list_log_files` — liste des logs disponibles (réutilise `_core/logs.py`)
+  - `tail_log` — tail d'un log Jeedom avec grep optionnel (réutilise `_core/logs.py`)
+  - `get_health_summary` — daemons en panne, dépendances KO, messages système, cron en retard (API JSON-RPC)
+- `tools/search.py` (F6) :
+  - `search_text` — recherche dans noms équipements/commandes/scénarios/expressions (MySQL RO, jointures)
+- Tests unitaires pour les 7 tools (mocks DB + logs + API)
+- Registration `mcp_server.py` (_register_family4/5/6)
+
+**Livraisons** :
+
+- `_core/logs.py` : + `list_files()` (scan répertoires log, filtre `validate_log_name`, dédup multi-dirs)
+- `tools/datastore.py` : `list_datastore_variables(conn, var_type, link_id, key_pattern, limit, offset)`, `get_datastore_variable(conn, key, var_type, link_id)` — MySQL RO, whitelist `dataStore` existante
+- `tools/logs.py` : `list_log_files()` (délègue `_core/logs.list_files`), `tail_log(log_name, lines, grep)` (cap 500 lignes), `get_health_summary(conn)` — MySQL RO tables `update`/`message`/`cron`
+- `tools/search.py` : `search_text(conn, text, limit)` — 4 requêtes séparées (eqLogic, cmd, scenario, scenarioExpression), min 2 chars, limit 50 par catégorie
+- `mcp_server.py` : `_register_family4/5/6` — **25 tools enregistrés**
+- Tests : 67 nouveaux tests (19 datastore + 22 logs + 17 search + 9 `list_files` _core) — **557/557 ✅**, couverture 98,20%, ruff propre
+
+---
+
+### J5-2 🔜 `query_sql` + tests unitaires
+
+**Périmètre** :
+
+- `tools/query_sql.py` :
+  - Parsing `sqlparse` — rejet de tout statement non-SELECT
+  - Blacklist tables sensibles : `user`, `session`, `network`, regex `(?i).*creds?|credentials?|password|token.*`
+  - LIMIT obligatoire — injecté si absent, plafonné à une valeur max
+  - Sanitisation runtime systématique sur les résultats (D15.1)
+  - D15.3 — refus si la requête cible des champs/tables de config sensible
+  - Mini SQL cookbook dans la description du tool (mots réservés Jeedom, conventions, tables interdites)
+- Tests unitaires exhaustifs : refus INSERT/UPDATE/DELETE/DROP, refus tables blacklistées, LIMIT injecté, sanitisation active, D15.3
+- Registration `mcp_server.py`
+
+**Pourquoi session séparée** : complexité parsing SQL + surface sécurité critique — contexte propre sans bruit des 7 autres tools.
+
+**Sortie attendue** : `query_sql` opérationnel, tous les cas de refus couverts par tests, ruff propre.
+
+---
+
+### J5-3 🔜 Tests d'intégration live + corrections schéma
+
+**Périmètre** :
+
+- Tests SSH sur la box réelle (pattern J3-4) pour les 8 nouveaux tools (F4/F5/F6 + `query_sql`) :
+  - `tests/integration/tools/test_datastore_live.py`
+  - `tests/integration/tools/test_logs_live.py`
+  - `tests/integration/tools/test_search_live.py`
+  - `tests/integration/tools/test_query_sql_live.py`
+- Corrections de schéma si la box révèle des écarts (pattern J3-4)
+- Smoke test MCP : `tools/list` = 25 tools
+
+**Sortie attendue** : tous les tests intégration live verts, schéma aligné box réelle.
+
+---
+
+### J5-4 🔜 5 resources + tests
+
+**Périmètre** :
+
+- `resources/overview.py` → wrap `get_install_overview`
+- `resources/health.py` → wrap `get_health_summary`
+- `resources/scenario.py` → wrap `describe_scenario` + `get_scenario_log`
+- `resources/equipment.py` → wrap `get_equipment`
+- `resources/logs_today.py` → wrap `tail_log` filtré 24h
+- Énumération hybride D6.3 : 2 resources globales statiques + N scénarios/équipements plafonnés + templates `{id}`
+- D6.4 — aucune duplication de schéma tool↔resource, wrap strict
+- Tests unitaires + smoke test `resources/list` via MCP Inspector
+
+**Sortie attendue** : 5 resources enregistrées, énumération D6.3 implémentée, tests verts.
+
+---
+
+### J5-5 🔜 Audit exhaustif + tag `v0.5.0`
+
+**Méthode** : même grille que J3-5 — croisement systématique sur 3 axes.
+
+**Axes d'audit** :
+
+1. **Brief** — D5.3 (spec tools F4-F6), D5.6 (`query_sql` restreint), D6.2-D6.5 (resources), D15.1 (sanitisation), D15.3 (`query_sql` sécurité)
+2. **Documentation projet** — ADRs, PLANNING, `skill-coverage-matrix.md` WF1-WF13
+3. **Besoins jeedom-audit** — champs attendus par les scripts, couverture WF par les nouveaux tools
+
+**Grille de triage** :
+
+| Couleur | Traitement |
+|---|---|
+| 🔴 Bug silencieux / sécurité | Fix immédiat dans la session |
+| 🟠 Comportement incorrect documenté | Fix si < 30 min, sinon ADR-0007 |
+| 🟡 Fonctionnalité manquante prévue | ADR-0007 + ticket ROADMAP |
+| 🟢 Divergence bénigne | Docstring ou ADR-0007 |
+
+**Points d'audit spécifiques J5** (absents de J3-5) :
+
+- `query_sql` : refus non-SELECT prouvé, blacklist exhaustive, LIMIT injecté, D15.3 (refus requêtes ciblant `config`/champs sensibles), cookbook présent dans description
+- Resources : D6.4 — pas de duplication schéma tool↔resource, D6.3 plafond énumération cohérent
+- `get_health_summary` : champs retournés alignés sur appels API JSON-RPC réels de la box
+
+**Sorties** :
+
+- Table écarts (format J3-5 : ID / fichier / écart / fix / statut)
+- Bugs critiques corrigés en session
+- Déférés documentés dans ADR-0007
+- Chiffres avant/après (tests unitaires, intégration, bugs fixés)
+- `PROJECT_STATE.md` mis à jour
+- Session journal `docs/sessions/YYYY-MM-DD-j5-5-audit-tools.md`
+- Tag `v0.5.0`
 
 ---
 
