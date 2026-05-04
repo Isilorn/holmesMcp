@@ -569,3 +569,186 @@ class TestGetScenarioLog:
             scenarios.get_scenario_log(_MOCK_CONN, scenario_id=1)
 
         mock_q.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Runtime API enrichment — list_scenarios / find_scenarios_advanced
+# ---------------------------------------------------------------------------
+
+
+class TestListScenariosRuntime:
+    def test_enriches_with_state_and_last_launch(self):
+        rows = [_scen_row(id=1, name='S1')]
+        api_data = [{'id': '1', 'state': 'stop', 'lastLaunch': '2026-05-04 10:00:00'}]
+        with (
+            patch('tools.scenarios._db.query', return_value=rows),
+            patch('tools.scenarios._api.call', return_value={'result': api_data}),
+        ):
+            result = scenarios.list_scenarios(_MOCK_CONN, apikey='test-key')
+
+        scen = result['scenarios'][0]
+        assert scen['state'] == 'stop'
+        assert scen['lastLaunch'] == '2026-05-04 10:00:00'
+
+    def test_graceful_degradation_on_api_error(self):
+        rows = [_scen_row(id=1, name='S1', lastLaunch=None, state=None)]
+        with (
+            patch('tools.scenarios._db.query', return_value=rows),
+            patch('tools.scenarios._api.call', return_value={'error': 'timeout'}),
+        ):
+            result = scenarios.list_scenarios(_MOCK_CONN, apikey='test-key')
+
+        assert result['total'] == 1
+
+    def test_no_api_call_when_empty_apikey(self):
+        rows = [_scen_row(id=1)]
+        with (
+            patch('tools.scenarios._db.query', return_value=rows),
+            patch('tools.scenarios._api.call') as mock_api,
+        ):
+            scenarios.list_scenarios(_MOCK_CONN, apikey='')
+
+        mock_api.assert_not_called()
+
+    def test_multiple_scenarios_enriched_from_single_api_call(self):
+        rows = [_scen_row(id=1, name='S1'), _scen_row(id=2, name='S2')]
+        api_data = [
+            {'id': '1', 'state': 'stop', 'lastLaunch': '2026-05-04 08:00:00'},
+            {'id': '2', 'state': 'run', 'lastLaunch': '2026-05-04 09:00:00'},
+        ]
+        with (
+            patch('tools.scenarios._db.query', return_value=rows),
+            patch('tools.scenarios._api.call', return_value={'result': api_data}) as mock_api,
+        ):
+            result = scenarios.list_scenarios(_MOCK_CONN, apikey='test-key')
+
+        mock_api.assert_called_once()
+        assert result['scenarios'][0]['state'] == 'stop'
+        assert result['scenarios'][1]['state'] == 'run'
+
+    def test_find_scenarios_advanced_also_enriches(self):
+        rows = [_scen_row(id=5, name='S5')]
+        api_data = [{'id': '5', 'state': 'error', 'lastLaunch': '2026-05-03 22:00:00'}]
+        with (
+            patch('tools.scenarios._db.query', return_value=rows),
+            patch('tools.scenarios._api.call', return_value={'result': api_data}),
+        ):
+            result = scenarios.find_scenarios_advanced(_MOCK_CONN, apikey='test-key')
+
+        assert result['scenarios'][0]['state'] == 'error'
+
+
+# ---------------------------------------------------------------------------
+# Runtime API enrichment — get_scenario / describe_scenario
+# ---------------------------------------------------------------------------
+
+
+class TestGetScenarioRuntime:
+    def test_enriches_with_state_and_last_launch(self):
+        rows = [_scen_row(id=1)]
+        api_result = {'id': '1', 'name': 'S1', 'state': 'run', 'lastLaunch': '2026-05-04 11:00:00'}
+        with (
+            patch('tools.scenarios._db.query', return_value=rows),
+            patch('tools.scenarios._api.call', return_value={'result': api_result}),
+        ):
+            result = scenarios.get_scenario(_MOCK_CONN, scenario_id=1, apikey='test-key')
+
+        assert result['scenario']['state'] == 'run'
+        assert result['scenario']['lastLaunch'] == '2026-05-04 11:00:00'
+
+    def test_graceful_degradation_on_api_error(self):
+        rows = [_scen_row(id=1)]
+        with (
+            patch('tools.scenarios._db.query', return_value=rows),
+            patch('tools.scenarios._api.call', return_value={'error': 'timeout'}),
+        ):
+            result = scenarios.get_scenario(_MOCK_CONN, scenario_id=1, apikey='test-key')
+
+        assert 'scenario' in result
+        assert result['scenario']['name'] == 'Chauffage salon'
+
+    def test_no_api_call_when_empty_apikey(self):
+        rows = [_scen_row(id=1)]
+        with (
+            patch('tools.scenarios._db.query', return_value=rows),
+            patch('tools.scenarios._api.call') as mock_api,
+        ):
+            scenarios.get_scenario(_MOCK_CONN, scenario_id=1, apikey='')
+
+        mock_api.assert_not_called()
+
+    def test_api_not_called_when_scenario_not_found(self):
+        with (
+            patch('tools.scenarios._db.query', return_value=[]),
+            patch('tools.scenarios._api.call') as mock_api,
+        ):
+            result = scenarios.get_scenario(_MOCK_CONN, scenario_id=999, apikey='test-key')
+
+        mock_api.assert_not_called()
+        assert 'error' in result
+
+    def test_describe_scenario_enriches_with_runtime(self):
+        api_result = {'id': '1', 'state': 'stop', 'lastLaunch': '2026-05-04 12:00:00'}
+        with (
+            patch('tools.scenarios._walker.walk', return_value=_walker_result(empty_tree=True)),
+            patch('tools.scenarios._cmd_refs.resolve', return_value=_empty_cmd_refs_result()),
+            patch('tools.scenarios._api.call', return_value={'result': api_result}),
+        ):
+            result = scenarios.describe_scenario(_MOCK_CONN, scenario_id=1, apikey='test-key')
+
+        assert result['scenario']['state'] == 'stop'
+        assert result['scenario']['lastLaunch'] == '2026-05-04 12:00:00'
+
+
+# ---------------------------------------------------------------------------
+# _fetch_runtime_map / _fetch_runtime_single — internal helpers
+# ---------------------------------------------------------------------------
+
+
+class TestFetchRuntimeHelpers:
+    def test_fetch_map_returns_empty_on_empty_apikey(self):
+        with patch('tools.scenarios._api.call') as mock_api:
+            result = scenarios._fetch_runtime_map('')
+
+        mock_api.assert_not_called()
+        assert result == {}
+
+    def test_fetch_map_returns_empty_on_api_error(self):
+        with patch('tools.scenarios._api.call', return_value={'error': 'ko'}):
+            result = scenarios._fetch_runtime_map('key')
+
+        assert result == {}
+
+    def test_fetch_map_returns_empty_when_result_not_list(self):
+        with patch('tools.scenarios._api.call', return_value={'result': {'id': '1'}}):
+            result = scenarios._fetch_runtime_map('key')
+
+        assert result == {}
+
+    def test_fetch_map_parses_ids_as_int(self):
+        api_data = [{'id': '42', 'state': 'stop', 'lastLaunch': '2026-05-04'}]
+        with patch('tools.scenarios._api.call', return_value={'result': api_data}):
+            result = scenarios._fetch_runtime_map('key')
+
+        assert 42 in result
+        assert result[42]['state'] == 'stop'
+
+    def test_fetch_single_returns_empty_on_empty_apikey(self):
+        with patch('tools.scenarios._api.call') as mock_api:
+            result = scenarios._fetch_runtime_single('', 1)
+
+        mock_api.assert_not_called()
+        assert result == {}
+
+    def test_fetch_single_returns_empty_on_api_error(self):
+        with patch('tools.scenarios._api.call', return_value={'error': 'ko'}):
+            result = scenarios._fetch_runtime_single('key', 1)
+
+        assert result == {}
+
+    def test_fetch_single_returns_state_and_last_launch(self):
+        api_result = {'id': '1', 'state': 'run', 'lastLaunch': '2026-05-04 08:00:00'}
+        with patch('tools.scenarios._api.call', return_value={'result': api_result}):
+            result = scenarios._fetch_runtime_single('key', 1)
+
+        assert result == {'state': 'run', 'lastLaunch': '2026-05-04 08:00:00'}

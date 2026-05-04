@@ -495,3 +495,137 @@ class TestGetCommandHistory:
         calls = mock_q.call_args_list
         assert 42 in calls[0][0][2]
         assert 42 in calls[1][0][2]
+
+
+# ---------------------------------------------------------------------------
+# Runtime API enrichment — get_equipment / list_commands
+# ---------------------------------------------------------------------------
+
+
+class TestGetEquipmentRuntime:
+    def test_injects_current_value_in_info_cmds(self):
+        eq_rows = [_eq_detail_row()]
+        cmd_rows = [_cmd_row(id=10, type='info')]
+        api_result = {
+            'id': '1',
+            'cmds': [{'id': '10', 'currentValue': '21.5', 'collectDate': '2026-05-04 10:00:00'}],
+        }
+        with (
+            patch('tools.equipments._db.query', side_effect=[eq_rows, cmd_rows]),
+            patch('tools.equipments._api.call', return_value={'result': api_result}),
+        ):
+            result = equipments.get_equipment(_MOCK_CONN, equipment_id=1, apikey='test-key')
+
+        cmd = result['commandes'][0]
+        assert cmd['currentValue'] == '21.5'
+        assert cmd['collectDate'] == '2026-05-04 10:00:00'
+
+    def test_does_not_inject_current_value_in_action_cmds(self):
+        eq_rows = [_eq_detail_row()]
+        cmd_rows = [_cmd_row(id=20, type='action')]
+        api_result = {
+            'cmds': [{'id': '20', 'currentValue': 'ignored', 'collectDate': 'ignored'}],
+        }
+        with (
+            patch('tools.equipments._db.query', side_effect=[eq_rows, cmd_rows]),
+            patch('tools.equipments._api.call', return_value={'result': api_result}),
+        ):
+            result = equipments.get_equipment(_MOCK_CONN, equipment_id=1, apikey='test-key')
+
+        cmd = result['commandes'][0]
+        assert 'currentValue' not in cmd
+
+    def test_graceful_degradation_on_api_error(self):
+        eq_rows = [_eq_detail_row()]
+        cmd_rows = [_cmd_row(id=10)]
+        with (
+            patch('tools.equipments._db.query', side_effect=[eq_rows, cmd_rows]),
+            patch('tools.equipments._api.call', return_value={'error': 'timeout'}),
+        ):
+            result = equipments.get_equipment(_MOCK_CONN, equipment_id=1, apikey='test-key')
+
+        assert 'equipment' in result
+        assert result['nb_commandes'] == 1
+
+    def test_no_api_call_when_empty_apikey(self):
+        eq_rows = [_eq_detail_row()]
+        cmd_rows = [_cmd_row(id=10)]
+        with (
+            patch('tools.equipments._db.query', side_effect=[eq_rows, cmd_rows]),
+            patch('tools.equipments._api.call') as mock_api,
+        ):
+            equipments.get_equipment(_MOCK_CONN, equipment_id=1, apikey='')
+
+        mock_api.assert_not_called()
+
+    def test_list_commands_also_enriches(self):
+        cmd_rows = [_cmd_row(id=10, type='info')]
+        api_result = {
+            'cmds': [{'id': '10', 'currentValue': '19.3', 'collectDate': '2026-05-04 09:00:00'}],
+        }
+        with (
+            patch('tools.equipments._db.query', return_value=cmd_rows),
+            patch('tools.equipments._api.call', return_value={'result': api_result}),
+        ):
+            result = equipments.list_commands(_MOCK_CONN, equipment_id=1, apikey='test-key')
+
+        assert result['commandes'][0]['currentValue'] == '19.3'
+
+    def test_list_commands_no_api_when_empty_apikey(self):
+        cmd_rows = [_cmd_row(id=10)]
+        with (
+            patch('tools.equipments._db.query', return_value=cmd_rows),
+            patch('tools.equipments._api.call') as mock_api,
+        ):
+            equipments.list_commands(_MOCK_CONN, equipment_id=1, apikey='')
+
+        mock_api.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _fetch_cmd_runtime_map — internal helper
+# ---------------------------------------------------------------------------
+
+
+class TestFetchCmdRuntimeMap:
+    def test_returns_empty_on_empty_apikey(self):
+        with patch('tools.equipments._api.call') as mock_api:
+            result = equipments._fetch_cmd_runtime_map('', 1)
+
+        mock_api.assert_not_called()
+        assert result == {}
+
+    def test_returns_empty_on_api_error(self):
+        with patch('tools.equipments._api.call', return_value={'error': 'ko'}):
+            result = equipments._fetch_cmd_runtime_map('key', 1)
+
+        assert result == {}
+
+    def test_returns_empty_when_result_not_dict(self):
+        with patch('tools.equipments._api.call', return_value={'result': []}):
+            result = equipments._fetch_cmd_runtime_map('key', 1)
+
+        assert result == {}
+
+    def test_returns_empty_when_cmds_not_list(self):
+        with patch('tools.equipments._api.call', return_value={'result': {'cmds': 'bad'}}):
+            result = equipments._fetch_cmd_runtime_map('key', 1)
+
+        assert result == {}
+
+    def test_parses_cmd_ids_as_int(self):
+        api_result = {
+            'cmds': [{'id': '42', 'currentValue': '100', 'collectDate': '2026-05-04'}],
+        }
+        with patch('tools.equipments._api.call', return_value={'result': api_result}):
+            result = equipments._fetch_cmd_runtime_map('key', 1)
+
+        assert 42 in result
+        assert result[42]['currentValue'] == '100'
+
+    def test_skips_cmds_with_zero_id(self):
+        api_result = {'cmds': [{'id': '0', 'currentValue': 'x'}]}
+        with patch('tools.equipments._api.call', return_value={'result': api_result}):
+            result = equipments._fetch_cmd_runtime_map('key', 1)
+
+        assert result == {}

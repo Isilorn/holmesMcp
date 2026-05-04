@@ -36,9 +36,10 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
         port=args.port,
     )
 
+    apikey = args.jeedom_apikey
     _register_family1(mcp)
-    _register_family2(mcp)
-    _register_family3(mcp)
+    _register_family2(mcp, apikey)
+    _register_family3(mcp, apikey)
 
     log.info('mcp_initialized', families=[1, 2, 3], tools=18)
     return mcp
@@ -109,7 +110,7 @@ def _register_family1(mcp: FastMCP) -> None:
             conn.close()
 
 
-def _register_family2(mcp: FastMCP) -> None:
+def _register_family2(mcp: FastMCP, apikey: str) -> None:
     """Famille 2 — Équipements et commandes (7 tools)."""
 
     @mcp.tool()
@@ -168,18 +169,20 @@ def _register_family2(mcp: FastMCP) -> None:
 
     @mcp.tool()
     def get_equipment(equipment_id: int) -> dict:
-        """Détail complet d'un équipement : structure, config sanitisée et commandes.
+        """Détail complet d'un équipement : commandes, config sanitisée et valeurs courantes.
 
         Paramètres :
         - equipment_id : identifiant numérique de l'équipement (table eqLogic.id)
 
         Retourne l'équipement avec toutes ses métadonnées (configuration sanitisée,
         statut, tags) et la liste complète de ses commandes.
+        Pour les commandes info, currentValue et collectDate indiquent la dernière
+        valeur mesurée et sa date de collecte.
         Si l'équipement n'existe pas, retourne {'error': 'Équipement non trouvé'}.
         """
         conn = _db.connect()
         try:
-            return equipments.get_equipment(conn, equipment_id)
+            return equipments.get_equipment(conn, equipment_id, apikey)
         finally:
             conn.close()
 
@@ -206,7 +209,7 @@ def _register_family2(mcp: FastMCP) -> None:
         limit: int = 200,
         offset: int = 0,
     ) -> dict:
-        """Liste des commandes d'un équipement.
+        """Liste des commandes d'un équipement avec valeurs courantes.
 
         Paramètres :
         - equipment_id : identifiant de l'équipement (eqLogic.id)
@@ -214,11 +217,13 @@ def _register_family2(mcp: FastMCP) -> None:
         - limit        : max 200 commandes
         - offset       : décalage pour la pagination
 
+        Pour les commandes info, currentValue et collectDate indiquent la dernière
+        valeur mesurée et sa date de collecte.
         Pour la recherche transverse de commandes, utilisez find_commands_advanced.
         """
         conn = _db.connect()
         try:
-            return equipments.list_commands(conn, equipment_id, cmd_type, limit, offset)
+            return equipments.list_commands(conn, equipment_id, cmd_type, limit, offset, apikey)
         finally:
             conn.close()
 
@@ -271,7 +276,7 @@ def _register_family2(mcp: FastMCP) -> None:
             conn.close()
 
 
-def _register_family3(mcp: FastMCP) -> None:
+def _register_family3(mcp: FastMCP, apikey: str) -> None:
     """Famille 3 — Scénarios (7 tools)."""
 
     @mcp.tool()
@@ -281,7 +286,7 @@ def _register_family3(mcp: FastMCP) -> None:
         limit: int = 100,
         offset: int = 0,
     ) -> dict:
-        """Liste des scénarios filtrables par groupe ou état d'activation.
+        """Liste des scénarios avec état runtime (state, lastLaunch).
 
         Paramètres :
         - group     : filtre exact sur le groupe du scénario
@@ -289,11 +294,15 @@ def _register_family3(mcp: FastMCP) -> None:
         - limit     : nombre max de résultats (max 100)
         - offset    : décalage pour la pagination
 
+        Champs runtime enrichis via API JSON-RPC :
+        - state     : état d'exécution ('run', 'stop', 'error', 'in progress')
+        - lastLaunch : datetime du dernier déclenchement
+
         Pour le détail d'un scénario (déclencheurs, structure), utilisez get_scenario.
         """
         conn = _db.connect()
         try:
-            return scenarios.list_scenarios(conn, group, is_active, limit, offset)
+            return scenarios.list_scenarios(conn, group, is_active, limit, offset, apikey)
         finally:
             conn.close()
 
@@ -305,7 +314,7 @@ def _register_family3(mcp: FastMCP) -> None:
         trigger_type: str | None = None,
         limit: int = 50,
     ) -> dict:
-        """Recherche avancée de scénarios avec filtres combinables.
+        """Recherche avancée de scénarios avec filtres combinables et état runtime.
 
         Paramètres :
         - name_contains : fragment de nom (insensible à la casse, LIKE %fragment%)
@@ -313,30 +322,36 @@ def _register_family3(mcp: FastMCP) -> None:
         - is_active     : True = actifs uniquement
         - trigger_type  : fragment dans le champ trigger (ex. 'schedule', 'event')
         - limit         : max 50 résultats
+
+        Champs runtime enrichis via API JSON-RPC : state, lastLaunch.
         """
         conn = _db.connect()
         try:
             return scenarios.find_scenarios_advanced(
-                conn, name_contains, group, is_active, trigger_type, limit
+                conn, name_contains, group, is_active, trigger_type, limit, apikey
             )
         finally:
             conn.close()
 
     @mcp.tool()
     def get_scenario(scenario_id: int) -> dict:
-        """Détail complet d'un scénario : métadonnées, déclencheurs, dernier run.
+        """Détail complet d'un scénario : métadonnées, déclencheurs, état runtime.
 
         Paramètres :
         - scenario_id : identifiant numérique du scénario (table scenario.id)
 
-        Retourne les métadonnées complètes du scénario (sanitisées).
+        Retourne les métadonnées complètes du scénario (sanitisées) enrichies avec :
+        - state     : état d'exécution ('run', 'stop', 'error', 'in progress')
+        - lastLaunch : datetime du dernier déclenchement
+
+        Ces champs proviennent de l'API JSON-RPC (absents de la base MySQL).
         Pour l'arbre structurel, utilisez get_scenario_structure.
         Pour la description LLM-friendly, utilisez describe_scenario.
         Si le scénario n'existe pas, retourne {'error': 'Scénario non trouvé'}.
         """
         conn = _db.connect()
         try:
-            return scenarios.get_scenario(conn, scenario_id)
+            return scenarios.get_scenario(conn, scenario_id, apikey)
         finally:
             conn.close()
 
@@ -373,11 +388,12 @@ def _register_family3(mcp: FastMCP) -> None:
 
         Résout automatiquement toutes les références #cmdId# en #[Objet][Équipement][Commande]#
         dans les déclencheurs et les expressions du scénario.
+        Enrichit aussi avec state et lastLaunch via API JSON-RPC.
         Pour l'arbre brut (machine-friendly), utilisez get_scenario_structure.
         """
         conn = _db.connect()
         try:
-            return scenarios.describe_scenario(conn, scenario_id)
+            return scenarios.describe_scenario(conn, scenario_id, apikey)
         finally:
             conn.close()
 

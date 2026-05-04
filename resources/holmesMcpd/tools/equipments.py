@@ -4,6 +4,7 @@ Tools : list_equipments, find_equipments_advanced, get_equipment,
         find_equipment_by_name, list_commands, find_commands_advanced,
         get_command_history.
 Canal : MySQL RO exclusivement (tables eqLogic, cmd, history, historyArch).
+        Enrichissement runtime : API JSON-RPC (currentValue, collectDate) via _core/api.
 Sanitisation : sanitize_rows / wrap_result via _domain.sanitize.
 """
 
@@ -11,6 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from _core import api as _api
 from _core import db as _db
 from _domain.sanitize import sanitize_rows, wrap_result
 
@@ -22,6 +24,50 @@ _EQ_LIMIT_ADV = 50
 _CMD_LIMIT = 200
 _CMD_LIMIT_ADV = 50
 _HISTORY_LIMIT = 100
+
+
+# ── Helpers runtime API ───────────────────────────────────────────────────────
+
+
+def _fetch_cmd_runtime_map(apikey: str, equipment_id: int) -> dict[int, dict]:
+    """One call to eqLogic::fullById → {cmd_id: {currentValue, collectDate}}. Returns {} on error.
+    """
+    if not apikey:
+        return {}
+    resp = _api.call(apikey, 'eqLogic::fullById', {'id': equipment_id})
+    result = resp.get('result')
+    if not isinstance(result, dict):
+        return {}
+    cmds = result.get('cmds', [])
+    if not isinstance(cmds, list):
+        return {}
+    mapping: dict[int, dict] = {}
+    for cmd in cmds:
+        try:
+            cid = int(cmd.get('id', 0))
+            if cid:
+                mapping[cid] = {
+                    'currentValue': cmd.get('currentValue'),
+                    'collectDate': cmd.get('collectDate'),
+                }
+        except (TypeError, ValueError):
+            pass
+    return mapping
+
+
+def _inject_cmd_runtime(cmds: list[dict], runtime_map: dict[int, dict]) -> None:
+    """Injects currentValue/collectDate for info cmds in place."""
+    for cmd in cmds:
+        if cmd.get('type') != 'info':
+            continue
+        cid = cmd.get('id')
+        if cid is not None and cid in runtime_map:
+            rt = runtime_map[cid]
+            cmd['currentValue'] = rt['currentValue']
+            cmd['collectDate'] = rt['collectDate']
+
+
+# ── Tools ─────────────────────────────────────────────────────────────────────
 
 
 def list_equipments(
@@ -137,15 +183,18 @@ def find_equipments_advanced(
 def get_equipment(
     conn: pymysql.connections.Connection,
     equipment_id: int,
+    apikey: str = '',
 ) -> dict[str, Any]:
-    """Détail complet d'un équipement : structure, config sanitisée et commandes.
+    """Détail complet d'un équipement : structure, config sanitisée, commandes et valeurs courantes.
 
     Paramètres :
     - equipment_id : identifiant numérique de l'équipement (table eqLogic.id)
+    - apikey       : clé API JSON-RPC Jeedom (enrichit currentValue + collectDate si fournie)
 
     Retourne l'équipement avec :
     - toutes ses métadonnées (configuration sanitisée, statut, tags)
     - la liste complète de ses commandes
+    - pour les commandes de type info : currentValue et collectDate (via API JSON-RPC)
 
     Si l'équipement n'existe pas, retourne {'error': 'Équipement non trouvé'}.
     """
@@ -173,6 +222,10 @@ def get_equipment(
         (equipment_id,),
     )
     cmd_sanitized, cmd_filtered = sanitize_rows(cmd_rows, 'cmd')
+
+    runtime_map = _fetch_cmd_runtime_map(apikey, equipment_id)
+    if runtime_map:
+        _inject_cmd_runtime(cmd_sanitized, runtime_map)
 
     all_filtered = sorted(set(eq_filtered + cmd_filtered))
     return wrap_result(
@@ -219,15 +272,19 @@ def list_commands(
     cmd_type: str | None = None,
     limit: int = _CMD_LIMIT,
     offset: int = 0,
+    apikey: str = '',
 ) -> dict[str, Any]:
-    """Liste des commandes d'un équipement.
+    """Liste des commandes d'un équipement avec valeurs courantes.
 
     Paramètres :
     - equipment_id : identifiant de l'équipement (eqLogic.id)
     - cmd_type     : filtre optionnel sur le type ('info' ou 'action')
     - limit        : max 200 commandes
     - offset       : décalage pour la pagination
+    - apikey       : clé API JSON-RPC Jeedom (enrichit currentValue + collectDate si fournie)
 
+    Pour les commandes de type info, currentValue et collectDate sont ajoutés
+    via l'API JSON-RPC (données runtime absentes de MySQL).
     Pour la recherche transverse de commandes, utilisez find_commands_advanced.
     """
     params: list[Any] = [equipment_id]
@@ -247,6 +304,11 @@ def list_commands(
         params,
     )
     sanitized, filtered = sanitize_rows(rows, 'cmd')
+
+    runtime_map = _fetch_cmd_runtime_map(apikey, equipment_id)
+    if runtime_map:
+        _inject_cmd_runtime(sanitized, runtime_map)
+
     return wrap_result(
         {
             'commandes': sanitized,

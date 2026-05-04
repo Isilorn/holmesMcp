@@ -5,6 +5,7 @@ Tools : list_scenarios, find_scenarios_advanced, get_scenario,
         find_scenario_dependencies, get_scenario_log.
 Canal : MySQL RO (tables scenario, scenarioElement, scenarioSubElement,
         scenarioExpression) + _domain walker/graph/cmd_refs + _core/logs.
+        Enrichissement runtime : API JSON-RPC (state, lastLaunch) via _core/api.
 Sanitisation : sanitize_rows / wrap_result via _domain.sanitize.
 """
 
@@ -13,6 +14,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any
 
+from _core import api as _api
 from _core import db as _db
 from _core import logs as _logs
 from _domain import cmd_refs as _cmd_refs
@@ -32,12 +34,65 @@ _ID_RE = re.compile(r'#(\d+)#')
 _SCEN_COLS = 'id, name, `group`, isActive, mode, `trigger`, timeout, description'
 
 
+# ── Helpers runtime API ───────────────────────────────────────────────────────
+
+
+def _fetch_runtime_map(apikey: str) -> dict[int, dict]:
+    """One call to scenario::all → {id: {state, lastLaunch}}. Returns {} on error."""
+    if not apikey:
+        return {}
+    resp = _api.call(apikey, 'scenario::all')
+    result = resp.get('result')
+    if not isinstance(result, list):
+        return {}
+    mapping: dict[int, dict] = {}
+    for scen in result:
+        try:
+            sid = int(scen.get('id', 0))
+            if sid:
+                mapping[sid] = {
+                    'state': scen.get('state'),
+                    'lastLaunch': scen.get('lastLaunch'),
+                }
+        except (TypeError, ValueError):
+            pass
+    return mapping
+
+
+def _fetch_runtime_single(apikey: str, scenario_id: int) -> dict:
+    """Call scenario::byId → {state, lastLaunch}. Returns {} on error."""
+    if not apikey:
+        return {}
+    resp = _api.call(apikey, 'scenario::byId', {'id': scenario_id})
+    result = resp.get('result')
+    if not isinstance(result, dict):
+        return {}
+    return {
+        'state': result.get('state'),
+        'lastLaunch': result.get('lastLaunch'),
+    }
+
+
+def _merge_runtime(scenarios_list: list[dict], runtime_map: dict[int, dict]) -> None:
+    """Injects state/lastLaunch from runtime_map into scenario dicts in place."""
+    for scen in scenarios_list:
+        sid = scen.get('id')
+        if sid is not None and sid in runtime_map:
+            rt = runtime_map[sid]
+            scen['state'] = rt['state']
+            scen['lastLaunch'] = rt['lastLaunch']
+
+
+# ── Tools ─────────────────────────────────────────────────────────────────────
+
+
 def list_scenarios(
     conn: pymysql.connections.Connection,
     group: str | None = None,
     is_active: bool | None = None,
     limit: int = _SCEN_LIMIT,
     offset: int = 0,
+    apikey: str = '',
 ) -> dict[str, Any]:
     """Liste des scénarios filtrables par groupe ou état d'activation.
 
@@ -46,6 +101,7 @@ def list_scenarios(
     - is_active : True = uniquement les actifs, False = uniquement les désactivés
     - limit     : nombre max de résultats (max 100)
     - offset    : décalage pour la pagination
+    - apikey    : clé API JSON-RPC Jeedom (enrichit state + lastLaunch si fournie)
 
     Pour le détail d'un scénario (déclencheurs, structure), utilisez get_scenario.
     """
@@ -69,6 +125,8 @@ def list_scenarios(
         params,
     )
     sanitized, filtered = sanitize_rows(rows, 'scenario')
+    runtime_map = _fetch_runtime_map(apikey)
+    _merge_runtime(sanitized, runtime_map)
     return wrap_result(
         {'scenarios': sanitized, 'total': len(sanitized), 'offset': offset},
         filtered,
@@ -82,6 +140,7 @@ def find_scenarios_advanced(
     is_active: bool | None = None,
     trigger_type: str | None = None,
     limit: int = _SCEN_LIMIT_ADV,
+    apikey: str = '',
 ) -> dict[str, Any]:
     """Recherche avancée de scénarios avec filtres combinables.
 
@@ -91,6 +150,7 @@ def find_scenarios_advanced(
     - is_active     : True = actifs uniquement
     - trigger_type  : fragment dans le champ trigger (ex. 'schedule', 'event')
     - limit         : max 50 résultats
+    - apikey        : clé API JSON-RPC Jeedom (enrichit state + lastLaunch si fournie)
     """
     conditions: list[str] = []
     params: list[Any] = []
@@ -118,19 +178,24 @@ def find_scenarios_advanced(
         params,
     )
     sanitized, filtered = sanitize_rows(rows, 'scenario')
+    runtime_map = _fetch_runtime_map(apikey)
+    _merge_runtime(sanitized, runtime_map)
     return wrap_result({'scenarios': sanitized, 'total': len(sanitized)}, filtered)
 
 
 def get_scenario(
     conn: pymysql.connections.Connection,
     scenario_id: int,
+    apikey: str = '',
 ) -> dict[str, Any]:
     """Détail complet d'un scénario : métadonnées, déclencheurs, dernier run.
 
     Paramètres :
     - scenario_id : identifiant numérique du scénario (table scenario.id)
+    - apikey      : clé API JSON-RPC Jeedom (enrichit state + lastLaunch si fournie)
 
-    Retourne les métadonnées complètes du scénario (sanitisées).
+    Retourne les métadonnées complètes du scénario (sanitisées) avec state et lastLaunch
+    obtenus via l'API JSON-RPC (données runtime absentes de MySQL).
     Pour l'arbre structurel, utilisez get_scenario_structure.
     Pour la description LLM-friendly, utilisez describe_scenario.
     Si le scénario n'existe pas, retourne {'error': 'Scénario non trouvé'}.
@@ -148,6 +213,9 @@ def get_scenario(
         }
 
     sanitized, filtered = sanitize_rows(rows, 'scenario')
+    rt = _fetch_runtime_single(apikey, scenario_id)
+    if rt:
+        sanitized[0].update(rt)
     return wrap_result({'scenario': sanitized[0]}, filtered)
 
 
@@ -178,11 +246,13 @@ def get_scenario_structure(
 def describe_scenario(
     conn: pymysql.connections.Connection,
     scenario_id: int,
+    apikey: str = '',
 ) -> dict[str, Any]:
     """Description LLM-friendly d'un scénario avec résolution systématique des #[O][E][C]#.
 
     Paramètres :
     - scenario_id : identifiant du scénario
+    - apikey      : clé API JSON-RPC Jeedom (enrichit state + lastLaunch si fournie)
 
     Résout automatiquement toutes les références #cmdId# en #[Objet][Équipement][Commande]#
     dans les déclencheurs et les expressions du scénario.
@@ -194,6 +264,11 @@ def describe_scenario(
         return tree_result
 
     scenario = tree_result['scenario']
+
+    rt = _fetch_runtime_single(apikey, scenario_id)
+    if rt:
+        scenario = {**scenario, **rt}
+
     trigger_text = scenario.get('trigger', '') or ''
 
     texts: list[str] = []

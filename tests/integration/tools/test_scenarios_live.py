@@ -51,6 +51,13 @@ class TestListScenariosLive:
             ids_p1 = {s['id'] for s in page1['scenarios']}
             assert ids_p0.isdisjoint(ids_p1), 'Chevauchement entre pages'
 
+    def test_state_and_last_launch_present(self, db_conn, jeedom_apikey):
+        result = scenarios.list_scenarios(db_conn, apikey=jeedom_apikey)
+        assert result['total'] >= 1, 'Aucun scénario sur la box'
+        scen = result['scenarios'][0]
+        assert 'state' in scen, 'state absent du résultat list_scenarios'
+        assert 'lastLaunch' in scen, 'lastLaunch absent du résultat list_scenarios'
+
 
 # ---------------------------------------------------------------------------
 # find_scenarios_advanced
@@ -75,6 +82,13 @@ class TestFindScenariosAdvancedLive:
             assert 'a' in scen['name'].lower(), (
                 f"Nom {scen['name']!r} ne contient pas 'a'"
             )
+
+    def test_state_and_last_launch_present(self, db_conn, jeedom_apikey):
+        result = scenarios.find_scenarios_advanced(db_conn, apikey=jeedom_apikey)
+        if result['total'] >= 1:
+            scen = result['scenarios'][0]
+            assert 'state' in scen, 'state absent du résultat find_scenarios_advanced'
+            assert 'lastLaunch' in scen, 'lastLaunch absent du résultat find_scenarios_advanced'
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +116,12 @@ class TestGetScenarioLive:
         result = scenarios.get_scenario(db_conn, 999999)
         assert 'error' in result
         assert result['scenario_id'] == 999999
+
+    def test_state_and_last_launch_present(self, db_conn, first_scenario, jeedom_apikey):
+        result = scenarios.get_scenario(db_conn, first_scenario, apikey=jeedom_apikey)
+        scen = result['scenario']
+        assert 'state' in scen, 'state absent du résultat get_scenario'
+        assert 'lastLaunch' in scen, 'lastLaunch absent du résultat get_scenario'
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +175,14 @@ class TestDescribeScenarioLive:
         result = scenarios.describe_scenario(db_conn, first_scenario)
         if 'scenario' in result:
             assert 'trigger_resolved' in result['scenario']
+
+    def test_state_and_last_launch_present(self, db_conn, first_scenario, jeedom_apikey):
+        result = scenarios.describe_scenario(db_conn, first_scenario, apikey=jeedom_apikey)
+        if 'scenario' in result:
+            assert 'state' in result['scenario'], 'state absent du résultat describe_scenario'
+            assert 'lastLaunch' in result['scenario'], (
+                'lastLaunch absent du résultat describe_scenario'
+            )
 
 
 # ---------------------------------------------------------------------------
