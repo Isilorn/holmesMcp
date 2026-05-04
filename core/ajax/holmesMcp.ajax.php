@@ -28,6 +28,19 @@ try {
         ajax::success(holmesMcp::getTokenForUser($user_id));
     }
 
+    if ($action === 'getLogs') {
+        $filters = [];
+        $user   = init('user',   '');
+        $tool   = init('tool',   '');
+        $status = init('status', '');
+        $window = intval(init('window', 86400));
+        if ($user   !== '') { $filters['user']   = $user; }
+        if ($tool   !== '') { $filters['tool']   = $tool; }
+        if ($status !== '') { $filters['status'] = $status; }
+        if ($window  >  0)  { $filters['since']  = time() - $window; }
+        ajax::success(holmesMcp::getActivityLogs(200, $filters));
+    }
+
     throw new Exception(__('Action non reconnue : ' . $action, __FILE__));
 } catch (Exception $e) {
     ajax::error(displayException($e), $e->getCode());

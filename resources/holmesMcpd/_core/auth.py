@@ -10,6 +10,7 @@ import json
 from typing import TYPE_CHECKING
 
 import structlog
+import structlog.contextvars
 
 if TYPE_CHECKING:
     import pymysql.connections
@@ -89,6 +90,8 @@ class BearerAuthMiddleware:
             return
 
         scope['user'] = login
+        structlog.contextvars.clear_contextvars()
+        structlog.contextvars.bind_contextvars(user=login)
         log.debug('auth_ok', user=login, path=scope.get('path', ''))
         await self._app(scope, receive, send)
 

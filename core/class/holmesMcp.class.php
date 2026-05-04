@@ -131,6 +131,60 @@ class holmesMcp extends eqLogic {
         return $token;
     }
 
+    // ── Activity log ─────────────────────────────────────────────────────────
+
+    /**
+     * Retourne les événements tool_call du log daemon (JSON Lines structlog).
+     *
+     * @param int   $limit   Nombre max d'entrées retournées
+     * @param array $filters Clés optionnelles : user, tool, status, since (timestamp Unix)
+     */
+    public static function getActivityLogs($limit = 200, $filters = []) {
+        $log_path = log::getPathToLog(__CLASS__);
+        if (!file_exists($log_path) || !is_readable($log_path)) {
+            return [];
+        }
+        $lines = @file($log_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!$lines) {
+            return [];
+        }
+        $entries = [];
+        foreach (array_reverse($lines) as $line) {
+            $data = json_decode(trim($line), true);
+            if (!is_array($data) || ($data['event'] ?? '') !== 'tool_call') {
+                continue;
+            }
+            if (!empty($filters['user']) && ($data['user'] ?? '') !== $filters['user']) {
+                continue;
+            }
+            if (!empty($filters['tool']) && ($data['tool'] ?? '') !== $filters['tool']) {
+                continue;
+            }
+            if (!empty($filters['status']) && ($data['status'] ?? '') !== $filters['status']) {
+                continue;
+            }
+            if (!empty($filters['since'])) {
+                $ts = strtotime($data['timestamp'] ?? '');
+                if ($ts === false || $ts < (int)$filters['since']) {
+                    continue;
+                }
+            }
+            $entries[] = [
+                'timestamp'      => $data['timestamp']      ?? '',
+                'user'           => $data['user']           ?? '?',
+                'tool'           => $data['tool']           ?? '?',
+                'params_summary' => $data['params_summary'] ?? '',
+                'duration_ms'    => (int)($data['duration_ms'] ?? 0),
+                'status'         => $data['status']         ?? 'ok',
+                'error'          => $data['error']          ?? null,
+            ];
+            if (count($entries) >= $limit) {
+                break;
+            }
+        }
+        return $entries;
+    }
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     private static function _isPythonReady() {

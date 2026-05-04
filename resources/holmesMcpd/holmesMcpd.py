@@ -83,6 +83,7 @@ def main() -> None:
 
     try:
         import uvicorn
+        from _core.activity import McpActivityLogger
         from _core.auth import BearerAuthMiddleware, TokenStore
         from _core.db import connect
         from mcp_server import build_mcp
@@ -95,9 +96,10 @@ def main() -> None:
         # Construction du serveur MCP
         mcp = build_mcp(ARGS)
 
-        # Récupération de l'app ASGI Streamable HTTP et ajout du middleware auth
+        # Pile middleware : BearerAuth → McpActivityLogger → FastMCP ASGI
         mcp_asgi = mcp.streamable_http_app()
-        authed_app = BearerAuthMiddleware(mcp_asgi, token_store=token_store)
+        activity_logged = McpActivityLogger(mcp_asgi)
+        authed_app = BearerAuthMiddleware(activity_logged, token_store=token_store)
 
         log.info('daemon_listening', host='0.0.0.0', port=ARGS.port, path='/mcp')
         uvicorn.run(authed_app, host='0.0.0.0', port=ARGS.port, log_config=None)
