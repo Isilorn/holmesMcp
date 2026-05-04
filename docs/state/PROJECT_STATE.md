@@ -10,9 +10,9 @@
 |---|---|
 | **Version courante** | `v0.3.0` (J2 ✅ clôturé) |
 | **Jalon en cours** | J3-J4 — 18 tools familles 1-2-3 |
-| **Branche de travail** | `main` |
-| **Dernière session** | `2026-05-04-j2-3` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 prochaine |
+| **Branche de travail** | `develop` |
+| **Dernière session** | `2026-05-04-j3-1` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-1 ✅ (4 tools F1) |
 
 ---
 
@@ -145,6 +145,30 @@ Jeedom Connect (ajouté), Script (ajouté), MQTT Manager (ajouté), Virtuel (ajo
 ### J2 ✅ Clôturé (2026-05-04) — tag `v0.3.0`
 
 DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/` livrés avec couverture 100% sur `sanitize.py` et `cmd_refs.py`.
+
+---
+
+## Jalon J3-J4 — Tools familles 1, 2, 3 (18 tools)
+
+**Objectif** : implémenter les 18 tools en 3 familles avec intégration `_core/` + `_domain/`, tests unitaires, puis tests d'intégration sur box réelle (J3-4).
+
+**Plan de sous-sessions** :
+
+- J3-1 ✅ : Famille 1 (4 tools découverte)
+- J3-2 : Famille 2 (7 tools équipements/commandes)
+- J3-3 : Famille 3 (7 tools scénarios)
+- J3-4 : mcp_server.py complet + tests intégration + déploiement SSH + smoke tests
+
+### J3-1 ✅ Famille 1 — 4 tools découverte d'install (2026-05-04)
+
+- `tools/discovery.py` : 4 tools MySQL RO
+  - `get_install_overview` : version Jeedom + comptages (eq/scen/plugins/objets/cmds)
+  - `list_objects` : hiérarchie objets/pièces, paginé (LIMIT 500), sanitisé
+  - `list_plugins` : plugins installés (id/name/version/state/logical_id), sanitisé
+  - `get_config` : config par namespace plugin + filtre LIKE optionnel, sanitisé — valeurs sensibles masquées, clé visible (transparence LLM)
+- `mcp_server.py` : registration famille 1, tool POC `hello` retiré
+- `tests/unit/tools/test_discovery.py` : 27 tests — 358/358 passés, ruff propre
+- Commit `413f3e0`
 
 ---
 
