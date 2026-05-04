@@ -371,6 +371,7 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - `query_sql` : refus non-SELECT prouvé, blacklist exhaustive, LIMIT injecté, D15.3 (refus requêtes ciblant `config`/champs sensibles), cookbook présent dans description
 - Resources : D6.4 — pas de duplication schéma tool↔resource, D6.3 plafond énumération cohérent
 - `get_health_summary` : champs retournés alignés sur appels API JSON-RPC réels de la box
+- **Markdown** : passe `markdownlint --fix` sur tous les `.md` du repo (warnings MD032/MD040/MD041/MD060 accumulés — non bloquants CI mais à solder avant v0.5.0)
 
 **Sorties** :
 
