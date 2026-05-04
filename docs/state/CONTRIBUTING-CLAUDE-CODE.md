@@ -76,12 +76,58 @@ Le PO ne mémorise pas les détails techniques entre sessions. L'**axe documenta
 
 ### Routine de fin de sous-session
 
-**À la fin de chaque sous-session** — que la session Claude Code continue ou non :
+**À la fin de chaque sous-session** — que la session Claude Code continue ou non.
 
-1. Mettre à jour les ADRs impactées (règle ADR on commit)
-2. Créer `docs/sessions/AAAA-MM-JJ-{Jx-y-slug}.md`
-3. Mettre à jour `docs/state/PROJECT_STATE.md` (sous-session ✅, prochaine sous-session)
-4. **Commit** (code + ADRs + session + PROJECT_STATE dans le même commit)
+#### Étape 1 — Qualité code (bloquante)
+
+```bash
+# Lint + format sur tous les fichiers modifiés
+ruff check <fichiers>
+ruff format --check <fichiers>
+
+# Suite de tests unitaires + couverture
+python -m pytest tests/unit/ --cov --cov-report=term-missing -q
+```
+
+- Ruff doit être propre (0 erreur). Appliquer `ruff format` si nécessaire.
+- Le module implémenté dans la sous-session doit atteindre son objectif de couverture
+  (100% pour `sanitize.py`, >80% pour les autres).
+- Si un test échoue → corriger avant de passer aux étapes suivantes.
+
+#### Étape 2 — Documentation (dans le même commit que le code)
+
+1. **ADRs impactées** : toute implémentation qui concerne une décision met à jour l'ADR
+   correspondante (statut, contenu). Règle ADR on commit.
+2. **Fichier de session** : créer `docs/sessions/AAAA-MM-JJ-{Jx-y-slug}.md` avec :
+   - Objectif de la sous-session
+   - Livrables produits (fichiers, fonctions, tests)
+   - Décisions prises en session (choix non triviaux)
+   - Résultats des tests (nb tests, couverture)
+   - Prochaine sous-session (objectif + pré-requis)
+3. **PROJECT_STATE.md** : marquer la sous-session ✅, mettre à jour la prochaine,
+   ajouter le commit hash, mettre à jour le risque actif si besoin.
+
+#### Étape 3 — Commit
+
+```bash
+# Ajouter explicitement les fichiers (pas git add .)
+git add <fichiers code> <ADRs> <session file> PROJECT_STATE.md
+
+# Message de commit : convention "Jx-y : livrable principal"
+git commit -m "J2-1 : _domain/sanitize.py — 3 mécanismes + couverture 100%"
+```
+
+Le pre-commit hook scanne les credentials — si refus, inspecter avant de bypasser.
+
+#### Étape 4 — Mémoire Claude Code (si la session Claude Code se ferme)
+
+Mettre à jour les fichiers mémoire dans
+`~/.claude/projects/-home-gtillit-Github-holmesMcp/memory/` :
+- `project_holmes_mcp.md` : état courant (dernier commit, sous-session ✅, prochaine)
+- Tout autre fichier mémoire pertinent (nouveau risque, nouvelle décision structurante)
+
+Si la session Claude Code continue vers la sous-session suivante, la mémoire peut
+attendre la fermeture de fenêtre.
 
 ### Routine de fin de jalon
 

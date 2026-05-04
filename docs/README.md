@@ -74,6 +74,6 @@ Détail complet dans `docs/state/CONTRIBUTING-CLAUDE-CODE.md §3`. Résumé :
 
 **Début de session Claude Code** → lire README → PROJECT_STATE → ADRs accepted récentes → dernière session → annoncer état + objectifs au PO. Si > 2 semaines sans session : relire toutes les ADRs accepted.
 
-**Fin de chaque sous-session** (J0-1, J1-2…) → ADRs impactées mises à jour dans le même commit + fichier session créé + PROJECT_STATE mis à jour + commit. **Règle ADR on commit : toute implémentation qui concerne une décision met à jour l'ADR dans le même commit.**
+**Fin de chaque sous-session** (J0-1, J1-2…) → (1) ruff propre + tests verts + couverture objectif atteint → (2) ADRs impactées + fichier session + PROJECT_STATE → (3) commit groupé → (4) mémoire Claude Code si fermeture de fenêtre. Détail : `CONTRIBUTING-CLAUDE-CODE.md §3`.
 
 **Fin de jalon** → DoD coché ligne par ligne dans PLANNING.md → commit + tag pre-release (`v0.x.0`).
