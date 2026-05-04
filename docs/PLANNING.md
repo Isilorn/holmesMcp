@@ -116,7 +116,7 @@ Pré-releases jalons internes : `v0.1.0`, `v0.2.0`, etc.
 1. POC J0 D2.3 validé sur la box du PO ✅
 2. 25 tools implémentés et testés (unit + intégration synthétique + tests live SSH) ✅
 3. 5 resources implémentées et testées ✅
-4. Auth Bearer fonctionnel sur **Claude Desktop ET au moins un autre client MCP** (Cursor ou MCP Inspector) ✅
+4. Auth Bearer fonctionnel sur **Claude Code ET MCP Inspector** ✅ (ADR-0018 : Claude Desktop remplacé par Claude Code + MCP Inspector comme clients de validation V1 — Claude Desktop supporté via `mcp-remote`)
 5. Sanitisation validée par le PO sur sa propre installation (sanity check à l'œil humain — D15.6) ✅
 6. Matrice de couverture skill jeedom-audit D5.8 produite et lue par le PO ✅
 7. README + identité produit Holmes MCP rédigés ✅

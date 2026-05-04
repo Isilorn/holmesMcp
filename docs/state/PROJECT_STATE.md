@@ -8,11 +8,11 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.0.0` (J1 à venir) |
+| **Version courante** | `v0.0.0` (J1 en cours) |
 | **Jalon en cours** | J1 — _core + matrice skill |
-| **Session en cours** | J1 prochaine |
-| **Dernière session** | `2026-05-03-j0-3-claude-desktop` |
-| **Statut global** | 🟢 J0 ✅ TERMINÉ — J0-1 ✅, J0-2 ✅, J0-3 ✅ (ADR-0018 accepted, HTTP LAN retenu) |
+| **Session en cours** | J1-3 prochaine (SSH + D6.3) |
+| **Dernière session** | `2026-05-03-j1-2-skill-coverage` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1-1 ✅ (_core + tests), J1-2 ✅ (matrice D5.8), J1-3 prochaine |
 
 ---
 
@@ -51,6 +51,33 @@
 Toutes les hypothèses D2.3 validées. Plan B HTTPS self-signed abandonné (HTTP suffisant). ADR-0018 accepted. J0-3bis annulée.
 
 **Stratégie de test validée (ADR-0018) :** les tests d'intégration V1 sont réalisés en priorité depuis **Claude Code**. C'est Claude Code qui les exécute via SSH sur la box PO — sans intervention du PO pour les tests techniques. Le PO intervient uniquement pour les validations de matière (sanity check UI, critère D8.3 #5).
+
+### J1-1 ✅ Couche `_core` + tests unitaires (2026-05-03)
+
+- `_core/db.py` : PyMySQL read-only, config `/etc/holmes_mcp_ro.conf`, escape mots réservés MySQL
+- `_core/auth.py` : `TokenStore` (résolution token→login via tables `config`+`user`), `BearerAuthMiddleware` ASGI pur
+- `_core/api.py` : JSON-RPC localhost, blacklist 12 verbes écriture V1, retry transport
+- `_core/logs.py` : lecture fichiers directe, validation nom anti-traversée, tail+grep
+- `holmesMcpd.py` : structlog JSON Lines (D9.1), `--jeedom-apikey`, uvicorn direct + middleware auth injecté
+- `holmesMcp.class.php` : passage `--jeedom-apikey jeedom::getApiKey()` au démarrage daemon
+- `pyproject.toml` : dépendances test ajoutées (`pymysql`, `structlog`, `pytest-asyncio`, `pytest-cov`)
+- 72 tests unitaires — 72/72 passés
+- D1.2 ✅ spec MCP 2025-03-26 | D14.4 ✅ HTML natif Jeedom + AJAX | D15.2 ✅ 10 plugins hard-codés
+
+### J1-2 ✅ Matrice couverture D5.8 (2026-05-03)
+
+- `docs/skill-coverage-matrix.md` : 13/13 WF jeedom-audit couverts — 0 tool manquant
+- ADR-0019 accepted : bascule jeedom-audit → consommatrice Holmes MCP validée sans ajout V1
+- Simplifications vs jeedom-audit : `router.py` non porté (daemon sur la box), `resolve_cmd_refs.py` intégré dans `describe_scenario`
+- D5.8 ✅ tranché
+
+### J1-3 prochaine — D6.3 + intégration live (SSH requis)
+
+**Pré-requis PO :** snapshot Proxmox avant de commencer.
+
+- D6.3 : mesure empirique du plafond resources sur la box (combien d'entités énumérables sans latence perceptible dans Claude Desktop / MCP Inspector)
+- Tests d'intégration `_core/` sur box réelle : connexion MySQL, chargement token store, appel API JSON-RPC, lecture log
+- Commit sur box : redémarrage daemon avec nouvelle version (`--jeedom-apikey` + structlog + auth middleware)
 
 ---
 
