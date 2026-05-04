@@ -216,6 +216,35 @@ class TestFindScenariosAdvanced:
         sql = mock_q.call_args[0][1]
         assert 'WHERE' not in sql
 
+    # E03 (J3-5) : filtre mode
+    def test_mode_filter_adds_param(self):
+        with patch('tools.scenarios._db.query', return_value=[]) as mock_q:
+            scenarios.find_scenarios_advanced(_MOCK_CONN, mode='schedule')
+
+        sql = mock_q.call_args[0][1]
+        params = mock_q.call_args[0][2]
+        assert 'mode' in sql
+        assert 'schedule' in params
+
+    def test_mode_none_no_mode_where_clause(self):
+        with patch('tools.scenarios._db.query', return_value=[]) as mock_q:
+            scenarios.find_scenarios_advanced(_MOCK_CONN, mode=None)
+
+        sql = mock_q.call_args[0][1]
+        # 'mode' apparaît dans le SELECT (_SCEN_COLS) mais pas dans la clause WHERE
+        assert 'WHERE' not in sql
+
+    def test_mode_combined_with_is_active(self):
+        with patch('tools.scenarios._db.query', return_value=[]) as mock_q:
+            scenarios.find_scenarios_advanced(_MOCK_CONN, is_active=True, mode='provoke')
+
+        sql = mock_q.call_args[0][1]
+        params = mock_q.call_args[0][2]
+        assert 'isActive' in sql
+        assert 'mode' in sql
+        assert 1 in params
+        assert 'provoke' in params
+
 
 # ---------------------------------------------------------------------------
 # get_scenario

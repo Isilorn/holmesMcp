@@ -138,6 +138,7 @@ def find_scenarios_advanced(
     name_contains: str | None = None,
     group: str | None = None,
     is_active: bool | None = None,
+    mode: str | None = None,
     trigger_type: str | None = None,
     limit: int = _SCEN_LIMIT_ADV,
     apikey: str = '',
@@ -148,6 +149,7 @@ def find_scenarios_advanced(
     - name_contains : fragment de nom (insensible à la casse, LIKE %fragment%)
     - group         : filtre exact sur le groupe
     - is_active     : True = actifs uniquement
+    - mode          : filtre exact sur le mode ('schedule', 'provoke', 'all')
     - trigger_type  : fragment dans le champ trigger (ex. 'schedule', 'event')
     - limit         : max 50 résultats
     - apikey        : clé API JSON-RPC Jeedom (enrichit state + lastLaunch si fournie)
@@ -164,6 +166,9 @@ def find_scenarios_advanced(
     if is_active is not None:
         conditions.append('isActive = %s')
         params.append(1 if is_active else 0)
+    if mode is not None:
+        conditions.append('mode = %s')
+        params.append(mode)
     if trigger_type is not None:
         conditions.append('`trigger` LIKE %s')
         params.append(f'%{trigger_type}%')
@@ -348,12 +353,14 @@ def find_scenario_dependencies(
     conn: pymysql.connections.Connection,
     scenario_id: int,
 ) -> dict[str, Any]:
-    """Graphe d'usage d'un scénario : qui l'appelle, qui est appelé par lui.
+    """Callers d'un scénario : quels scénarios l'appellent via scenario/start.
 
     Paramètres :
     - scenario_id : identifiant du scénario
 
-    Retourne les scénarios qui appellent ce scénario (via scenario/start).
+    Retourne les scénarios qui appellent ce scénario (callers).
+    Pour les callees (scénarios appelés par ce scénario), utiliser
+    get_scenario_structure(scenario_id, follow_scenario_calls=1).
     """
     return _usage_graph.resolve('scenario', scenario_id, conn)
 

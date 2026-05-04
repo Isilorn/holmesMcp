@@ -91,14 +91,15 @@ def list_plugins(conn: pymysql.connections.Connection) -> dict[str, Any]:
 
 def get_config(
     conn: pymysql.connections.Connection,
-    plugin: str,
+    plugin: str | None = None,
     key_pattern: str | None = None,
 ) -> dict[str, Any]:
     """Configuration Jeedom par namespace plugin (sanitisée).
 
     Paramètres :
     - plugin      : namespace du plugin dans la table config
-                    (ex. 'core', 'jMQTT', 'holmesMcp', 'agenda')
+                    (ex. 'core', 'jMQTT', 'holmesMcp', 'agenda').
+                    None ou '*' retourne tous les namespaces.
     - key_pattern : filtre LIKE optionnel sur la colonne key
                     (ex. 'mqtt%', '%port%') — None retourne toutes les clés
 
@@ -107,7 +108,22 @@ def get_config(
     que le LLM puisse expliquer à l'utilisateur que le champ existe.
     Limite : 200 entrées par appel.
     """
-    if key_pattern:
+    all_plugins = plugin is None or plugin == '*'
+
+    if all_plugins and key_pattern:
+        rows = _db.query(
+            conn,
+            'SELECT plugin, `key`, value FROM config'
+            ' WHERE `key` LIKE %s ORDER BY plugin, `key` LIMIT %s',
+            (key_pattern, _CONFIG_LIMIT),
+        )
+    elif all_plugins:
+        rows = _db.query(
+            conn,
+            'SELECT plugin, `key`, value FROM config ORDER BY plugin, `key` LIMIT %s',
+            (_CONFIG_LIMIT,),
+        )
+    elif key_pattern:
         rows = _db.query(
             conn,
             'SELECT plugin, `key`, value FROM config'
@@ -123,7 +139,7 @@ def get_config(
     sanitized, filtered = sanitize_rows(rows, 'config')
     return wrap_result(
         {
-            'plugin': plugin,
+            'plugin': plugin if not all_plugins else '*',
             'key_pattern': key_pattern,
             'config': sanitized,
             'total': len(sanitized),

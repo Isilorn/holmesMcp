@@ -940,3 +940,62 @@ class TestInternals:
         ]
         for plugin in po_plugins:
             assert plugin in _PLUGIN_EXTRA_KEYS, f'{plugin} absent de _PLUGIN_EXTRA_KEYS'
+
+    # E01 (J3-5) : position dans le whitelist object (J3-4 avait conservé 'order' par erreur)
+    def test_object_whitelist_has_position_not_order(self) -> None:
+        wl = _TABLE_WHITELISTS['object']
+        assert 'position' in wl, "'position' doit être dans le whitelist 'object'"
+        assert 'order' not in wl, "'order' est stale depuis J3-4 et ne doit plus figurer"
+        assert 'image' not in wl, "'image' est stale (jamais sélectionnée) et ne doit plus figurer"
+
+    def test_object_position_not_filtered(self) -> None:
+        row = {'id': 1, 'name': 'Salon', 'father_id': None, 'isVisible': 1, 'position': 2}
+        sanitized, filtered = sanitize_row(row, 'object')
+        assert sanitized['position'] == 2
+        assert 'position' not in filtered
+
+    # E06 (J3-5) : currentValue/collectDate dans le whitelist cmd
+    def test_cmd_whitelist_has_current_value_and_collect_date(self) -> None:
+        wl = _TABLE_WHITELISTS['cmd']
+        assert 'currentValue' in wl, "'currentValue' doit être dans le whitelist 'cmd'"
+        assert 'collectDate' in wl, "'collectDate' doit être dans le whitelist 'cmd'"
+
+    def test_cmd_current_value_not_filtered(self) -> None:
+        row = {
+            'id': 10,
+            'name': 'Température',
+            'eqLogic_id': 1,
+            'type': 'info',
+            'subType': 'numeric',
+            'logicalId': '',
+            'generic_type': 'TEMPERATURE',
+            'isVisible': 1,
+            'unite': '°C',
+            'isHistorized': 1,
+            'display': None,
+            'order': 1,
+            'value': None,
+            'configuration': None,
+            'template': None,
+            'currentValue': '21.3',
+            'collectDate': '2026-05-04 10:00:00',
+        }
+        sanitized, filtered = sanitize_row(row, 'cmd')
+        assert sanitized['currentValue'] == '21.3'
+        assert sanitized['collectDate'] == '2026-05-04 10:00:00'
+        assert 'currentValue' not in filtered
+        assert 'collectDate' not in filtered
+
+    # E07 (J3-5) : id stale retiré des whitelists history / historyArch
+    def test_history_whitelist_has_no_id(self) -> None:
+        assert 'id' not in _TABLE_WHITELISTS['history'], \
+            "'id' stale (supprimé du SELECT en J3-4) ne doit plus figurer dans 'history'"
+        assert 'id' not in _TABLE_WHITELISTS['historyArch'], \
+            "'id' stale ne doit plus figurer dans 'historyArch'"
+
+    def test_history_whitelist_has_expected_fields(self) -> None:
+        for table in ('history', 'historyArch'):
+            wl = _TABLE_WHITELISTS[table]
+            assert 'cmd_id' in wl
+            assert 'datetime' in wl
+            assert 'value' in wl

@@ -90,12 +90,13 @@ def _register_family1(mcp: FastMCP) -> None:
             conn.close()
 
     @mcp.tool()
-    def get_config(plugin: str, key_pattern: str | None = None) -> dict:
+    def get_config(plugin: str | None = None, key_pattern: str | None = None) -> dict:
         """Configuration Jeedom par namespace plugin (sanitisée).
 
         Paramètres :
         - plugin      : namespace du plugin dans la table config
-                        (ex. 'core', 'jMQTT', 'holmesMcp', 'agenda')
+                        (ex. 'core', 'jMQTT', 'holmesMcp', 'agenda').
+                        None ou '*' retourne tous les namespaces.
         - key_pattern : filtre LIKE optionnel sur la colonne key
                         (ex. 'mqtt%', '%port%') — None retourne toutes les clés
 
@@ -311,6 +312,7 @@ def _register_family3(mcp: FastMCP, apikey: str) -> None:
         name_contains: str | None = None,
         group: str | None = None,
         is_active: bool | None = None,
+        mode: str | None = None,
         trigger_type: str | None = None,
         limit: int = 50,
     ) -> dict:
@@ -320,6 +322,7 @@ def _register_family3(mcp: FastMCP, apikey: str) -> None:
         - name_contains : fragment de nom (insensible à la casse, LIKE %fragment%)
         - group         : filtre exact sur le groupe
         - is_active     : True = actifs uniquement
+        - mode          : filtre exact sur le mode ('schedule', 'provoke', 'all')
         - trigger_type  : fragment dans le champ trigger (ex. 'schedule', 'event')
         - limit         : max 50 résultats
 
@@ -328,7 +331,7 @@ def _register_family3(mcp: FastMCP, apikey: str) -> None:
         conn = _db.connect()
         try:
             return scenarios.find_scenarios_advanced(
-                conn, name_contains, group, is_active, trigger_type, limit, apikey
+                conn, name_contains, group, is_active, mode, trigger_type, limit, apikey
             )
         finally:
             conn.close()
@@ -341,10 +344,11 @@ def _register_family3(mcp: FastMCP, apikey: str) -> None:
         - scenario_id : identifiant numérique du scénario (table scenario.id)
 
         Retourne les métadonnées complètes du scénario (sanitisées) enrichies avec :
-        - state     : état d'exécution ('run', 'stop', 'error', 'in progress')
+        - state      : état d'exécution ('run', 'stop', 'error', 'in progress')
         - lastLaunch : datetime du dernier déclenchement
 
         Ces champs proviennent de l'API JSON-RPC (absents de la base MySQL).
+        Pour le log du dernier run, utilisez get_scenario_log(scenario_id).
         Pour l'arbre structurel, utilisez get_scenario_structure.
         Pour la description LLM-friendly, utilisez describe_scenario.
         Si le scénario n'existe pas, retourne {'error': 'Scénario non trouvé'}.
@@ -399,12 +403,14 @@ def _register_family3(mcp: FastMCP, apikey: str) -> None:
 
     @mcp.tool()
     def find_scenario_dependencies(scenario_id: int) -> dict:
-        """Graphe d'usage d'un scénario : qui l'appelle, qui est appelé par lui.
+        """Callers d'un scénario : quels scénarios l'appellent via scenario/start.
 
         Paramètres :
         - scenario_id : identifiant du scénario
 
-        Retourne les scénarios qui appellent ce scénario (via scenario/start).
+        Retourne les scénarios qui appellent ce scénario (callers).
+        Pour voir les scénarios appelés par ce scénario (callees), utiliser
+        get_scenario_structure(scenario_id, follow_scenario_calls=1).
         """
         conn = _db.connect()
         try:
