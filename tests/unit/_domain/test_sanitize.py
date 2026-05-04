@@ -232,18 +232,18 @@ class TestSanitizeJsonBlob:
         assert 'password' in filtered
 
     def test_clean_blob_no_filter(self) -> None:
-        blob = json.dumps({'mqtt_host': '192.168.1.1', 'mqtt_port': '1883'})
+        blob = json.dumps({'mqtt_host': '192.0.2.1', 'mqtt_port': '1883'})
         result, filtered = sanitize_json_blob(blob)
         assert isinstance(result, dict)
-        assert result['mqtt_host'] == '192.168.1.1'
+        assert result['mqtt_host'] == '192.0.2.1'
         assert result['mqtt_port'] == '1883'
         assert filtered == []
 
     def test_password_key_masked(self) -> None:
-        blob = json.dumps({'mqtt_host': '192.168.1.1', 'mqtt_password': 'supersecret'})
+        blob = json.dumps({'mqtt_host': '192.0.2.1', 'mqtt_password': 'supersecret'})
         result, filtered = sanitize_json_blob(blob)
         assert result['mqtt_password'] == FILTERED
-        assert result['mqtt_host'] == '192.168.1.1'
+        assert result['mqtt_host'] == '192.0.2.1'
         assert 'mqtt_password' in filtered
 
     def test_token_key_masked(self) -> None:
@@ -401,10 +401,10 @@ class TestSanitizeRow:
         assert filtered == []
 
     def test_unknown_table_blob_column_filtered(self) -> None:
-        row = {'id': 1, 'configuration': json.dumps({'token': 'tok123', 'host': '192.168.1.1'})}
+        row = {'id': 1, 'configuration': json.dumps({'token': 'tok123', 'host': '192.0.2.1'})}
         result, filtered = sanitize_row(row)
         assert result['configuration']['token'] == FILTERED
-        assert result['configuration']['host'] == '192.168.1.1'
+        assert result['configuration']['host'] == '192.0.2.1'
         assert 'configuration.token' in filtered
 
     # --- Table connue : whitelist mech 1 ---
@@ -423,10 +423,10 @@ class TestSanitizeRow:
         assert 'internal_field' in filtered
 
     def test_known_table_blob_column_parsed(self) -> None:
-        config = json.dumps({'mqtt_host': '192.168.1.1', 'mqttpassword': 'pass123'})
+        config = json.dumps({'mqtt_host': '192.0.2.1', 'mqttpassword': 'pass123'})
         row = {'id': 1, 'name': 'Eq', 'eqType_name': 'jMQTT', 'configuration': config}
         result, filtered = sanitize_row(row, table='eqLogic')
-        assert result['configuration']['mqtt_host'] == '192.168.1.1'
+        assert result['configuration']['mqtt_host'] == '192.0.2.1'
         assert result['configuration']['mqttpassword'] == FILTERED
         assert 'configuration.mqttpassword' in filtered
 
@@ -710,7 +710,7 @@ CREDENTIAL_FIXTURES = [
             'isVisible': 1,
             'configuration': json.dumps(
                 {
-                    'mqtt_host': '192.168.1.100',
+                    'mqtt_host': '192.0.2.100',
                     'mqtt_port': '1883',
                     'mqttpassword': 'SuperSecret123!',
                     'mqttuser': 'jeedom_user',
@@ -784,7 +784,7 @@ CREDENTIAL_FIXTURES = [
             'isVisible': 1,
             'configuration': json.dumps(
                 {
-                    'host': '192.168.1.50',
+                    'host': '192.0.2.50',
                     'port': '1883',
                     'username': 'mqtt_admin',
                     'password': 'BrokerPass!2026',
@@ -868,7 +868,7 @@ CREDENTIAL_FIXTURES = [
             'isVisible': 1,
             'configuration': json.dumps(
                 {
-                    'bridge_ip': '192.168.1.200',
+                    'bridge_ip': '192.0.2.200',
                     'username': 'hue_bridge_api_user_xyz',
                 }
             ),
