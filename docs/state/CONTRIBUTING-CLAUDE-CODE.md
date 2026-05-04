@@ -44,7 +44,45 @@ Demandes au PO : **explicites, timées, groupées** ("À l'étape J7, j'ai besoi
 
 Le PO ne mémorise pas les détails techniques entre sessions. L'**axe documentaire** assure la persistance — `docs/state/PROJECT_STATE.md` et `docs/sessions/*.md` mis à jour à chaque session significative.
 
-**Routine de début de session Claude Code** :
+### Vocabulaire
+
+| Terme | Définition |
+|---|---|
+| **Sous-session** (J0-1, J1-2…) | Unité de travail et de livrable — correspond à un bloc cohérent du jalon |
+| **Session Claude Code** | Fenêtre de conversation — peut couvrir 1 ou N sous-sessions |
+| **Jalon** (J0, J1…) | Ensemble de sous-sessions partageant un objectif, avec DoD et tag semver |
+
+### Règle — ADR on commit
+
+**Toute implémentation qui concerne une décision met à jour l'ADR correspondante dans le même commit que le code.** Une ADR `draft` ou `proposed` qui décrit ce qui vient d'être livré passe à `accepted` (ou est corrigée si la réalité diverge du draft). On ne livre pas de code avec une ADR en désaccord avec lui.
+
+### Routine de début de jalon
+
+**Avant de démarrer la première sous-session d'un jalon**, planifier les sous-sessions du jalon :
+
+1. Lire le bloc jalon dans `docs/PLANNING.md` (livrables + DoD)
+2. Décomposer en sous-sessions nommées (J2-1, J2-2…) avec objectif et dépendances
+3. Lister les sous-sessions dans `docs/state/PROJECT_STATE.md` (bloc jalon en cours)
+4. Identifier lesquelles nécessitent SSH et demander le snapshot Proxmox en amont
+
+### Routine de fin de sous-session
+
+**À la fin de chaque sous-session** — que la session Claude Code continue ou non :
+
+1. Mettre à jour les ADRs impactées (règle ADR on commit)
+2. Créer `docs/sessions/AAAA-MM-JJ-{Jx-y-slug}.md`
+3. Mettre à jour `docs/state/PROJECT_STATE.md` (sous-session ✅, prochaine sous-session)
+4. **Commit** (code + ADRs + session + PROJECT_STATE dans le même commit)
+
+### Routine de fin de jalon
+
+**Quand toutes les sous-sessions d'un jalon sont ✅** :
+
+1. Vérifier le DoD du jalon dans `docs/PLANNING.md` — cocher chaque critère
+2. Si tout est coché → commit + **tag pre-release** (`v0.x.0`)
+3. Mettre à jour `docs/state/PROJECT_STATE.md` (jalon ✅, prochain jalon)
+
+### Routine de début de session Claude Code
 
 1. Lire `docs/README.md`
 2. Lire `docs/state/PROJECT_STATE.md`
@@ -53,13 +91,6 @@ Le PO ne mémorise pas les détails techniques entre sessions. L'**axe documenta
 5. Annoncer au PO : état courant + objectifs de la session
 
 Si la dernière session date de plus de 2 semaines → mention explicite, relecture complète des ADRs accepted.
-
-**Routine de fin de session significative** :
-
-1. Mettre à jour `docs/state/PROJECT_STATE.md`
-2. Créer une entrée `docs/sessions/AAAA-MM-JJ-{slug}.md`
-3. ADR(s) si décisions non triviales prises en session
-4. Commit + tag pre-release si jalon atteint
 
 ---
 

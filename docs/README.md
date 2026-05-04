@@ -66,19 +66,14 @@ Statuts possibles :
 
 ---
 
-## Routine de début de session Claude Code
+## Routines opérationnelles
 
-1. Lire ce fichier (`docs/README.md`)
-2. Lire `docs/state/PROJECT_STATE.md` (état courant, jalon, blocages)
-3. Lire les ADRs `accepted` récentes dans `docs/decisions/`
-4. Lire la dernière entrée `docs/sessions/`
-5. Annoncer au PO : état du projet + objectifs de la session
+Détail complet dans `docs/state/CONTRIBUTING-CLAUDE-CODE.md §3`. Résumé :
 
-Si la dernière session date de plus de 2 semaines : mentionner explicitement au PO et relire l'ensemble des ADRs `accepted` (D13.8).
+**Début de jalon** → planifier les sous-sessions (J2-1, J2-2…) et les documenter dans `PROJECT_STATE.md` avant de commencer.
 
-## Routine de fin de session significative
+**Début de session Claude Code** → lire README → PROJECT_STATE → ADRs accepted récentes → dernière session → annoncer état + objectifs au PO. Si > 2 semaines sans session : relire toutes les ADRs accepted.
 
-1. Mettre à jour `docs/state/PROJECT_STATE.md`
-2. Créer une entrée `docs/sessions/AAAA-MM-JJ-{slug}.md`
-3. Rédiger les ADRs pour les décisions non triviales prises en session
-4. Commit + tag pre-release si jalon atteint
+**Fin de chaque sous-session** (J0-1, J1-2…) → ADRs impactées mises à jour dans le même commit + fichier session créé + PROJECT_STATE mis à jour + commit. **Règle ADR on commit : toute implémentation qui concerne une décision met à jour l'ADR dans le même commit.**
+
+**Fin de jalon** → DoD coché ligne par ligne dans PLANNING.md → commit + tag pre-release (`v0.x.0`).
