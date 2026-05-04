@@ -8,11 +8,11 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.0.0` (J1 en cours) |
-| **Jalon en cours** | J1 — _core + matrice skill |
-| **Session en cours** | J1-3 ✅ terminée — J2 prochaine (_domain + sanitiseur) |
+| **Version courante** | `v0.2.0` (J1 ✅ clôturé) |
+| **Jalon en cours** | J2 — _domain + sanitiseur |
+| **Branche de travail** | `develop` (J2 et au-delà — main figé sur v0.2.0) |
 | **Dernière session** | `2026-05-04-j1-3` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1-1 ✅, J1-2 ✅, J1-3 ✅ |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 prochaine |
 
 ---
 
@@ -85,6 +85,27 @@ Toutes les hypothèses D2.3 validées. Plan B HTTPS self-signed abandonné (HTTP
   - `db.py` : `query()` passait `params=()` vide → PyMySQL formatait `%_` dans LIKE → fix `None`
 - Déploiement daemon avec `--jeedom-apikey` (manquant en prod) — UP et authentifié ✅
 - 74 tests unitaires (100% passés), ruff propre
+- ADR-0012 accepted, ci.yml corrigé (job Docker supprimé, cohérent ADR-0012+ADR-0018)
+
+### J1 ✅ Clôturé (2026-05-04) — tag `v0.2.0`
+
+DoD intégralement coché (voir `docs/PLANNING.md` §J1). Branche `develop` créée pour J2.
+
+---
+
+## Jalon J2 — _domain + sanitiseur (prochain)
+
+**Objectif** : implémenter les 4 modules `_domain/` dérivés des scripts jeedom-audit, avec couverture 100% sur `sanitize.py`.
+
+**Sous-sessions prévues** :
+
+- J2-1 : `_domain/sanitize.py` complet (3 mécanismes) + tests 100% couverture
+- J2-2 : `_domain/usage_graph.py` + `_domain/scenario_walker.py` + tests unitaires
+- J2-3 : `_domain/cmd_refs.py` + intégration `_domain/` dans `mcp_server.py` + tests
+
+**Pré-requis** : aucun SSH requis (tests unitaires purs). Pas de snapshot Proxmox nécessaire pour J2-1 et J2-2.
+
+**Branche** : `develop` (merge vers `main` uniquement en fin J2 avec tag `v0.3.0`).
 
 ---
 

@@ -211,12 +211,13 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 **Dépendances** : J0 validé (POC + décisions 🔵 J0 tranchées)
 
 **Critères d'avancement (DoD)** :
-- [ ] 4 modules `_core/` implémentés, tests >80% sur chacun
-- [ ] `_core/db.py` testé sur fixtures synthétiques MySQL (container Docker CI)
-- [ ] `_core/auth.py` testé (token valide / invalide / absent → 401)
-- [ ] `_core/api.py` blacklist méthodes modifiantes vérifiée par test
-- [ ] Matrice D5.8 livrée dans `docs/skill-coverage-matrix.md` et validée par le PO
-- [ ] Pré-release tag `v0.2.0`
+
+- [x] 4 modules `_core/` implémentés, tests >80% sur chacun — 74 tests unitaires (100%), 18 tests intégration live (J1-3)
+- [x] `_core/db.py` testé sur box réelle via SSH (ADR-0012 pivot : SSH > Docker CI — ADR-0018) + 2 bugs corrigés (socket unix, LIKE params)
+- [x] `_core/auth.py` testé (token valide / invalide / absent → 401) — unit + intégration live
+- [x] `_core/api.py` blacklist méthodes modifiantes vérifiée par test — unit + intégration live
+- [x] Matrice D5.8 livrée dans `docs/skill-coverage-matrix.md` et validée par le PO (go J1-3 accordé)
+- [x] Pré-release tag `v0.2.0` ← posé en fin J1
 
 ---
 
