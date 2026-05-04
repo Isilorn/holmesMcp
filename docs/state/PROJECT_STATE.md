@@ -204,6 +204,7 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ID `holmesMcp` pris sur market (D10.8) | 🟡 Moyen | Vérification J0, alternatives préparées |
 | Validateur market Jeedom (critères partiellement publics) | 🟡 Moyen | Pre-submit checklist en J0/J7 |
 | Dérive de scope V1 | 🟡 Moyen | Discipline anti-drift D8.2, ROADMAP.md comme exutoire |
+| Extras sanitiseur non vérifiés (jMQTT, Alarme, Jeedom Connect, MQTT Manager) | 🟡 Moyen | ADR-0021 : vérification live obligatoire en J6 (D15.6), patch v1.0.x si delta |
 
 ---
 
@@ -230,3 +231,5 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ADR-0017 | Sanitisation et guardrails | draft |
 | ADR-0018 | Résultat POC D2.3 | accepted |
 | ADR-0019 | Couverture skill jeedom-audit D5.8 | accepted |
+| ADR-0020 | Holmes MCP projet séparé de jeedom-skills | accepted |
+| ADR-0021 | Stratégie adressage et test par plugin (install PO) | accepted |
