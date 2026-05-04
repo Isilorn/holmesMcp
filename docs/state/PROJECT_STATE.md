@@ -11,8 +11,8 @@
 | **Version courante** | `v0.2.0` (J1 ✅ clôturé) |
 | **Jalon en cours** | J2 — _domain + sanitiseur |
 | **Branche de travail** | `main` (J2 en cours — merge final avec tag `v0.3.0` en fin J2) |
-| **Dernière session** | `2026-05-04-j2-1` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2-1 ✅, J2-2 et J2-3 prochaines |
+| **Dernière session** | `2026-05-04-j2-2` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2-1 ✅, J2-2 ✅, J2-3 prochaine |
 
 ---
 
@@ -117,12 +117,25 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J1). Branche `develop` cré
 Plugins install PO confirmés : jMQTT ✅, Agenda ✅, Alarme (ajouté), Thermostat ✅,
 Jeedom Connect (ajouté), Script (ajouté), MQTT Manager (ajouté), Virtuel (ajouté).
 
+### J2-2 ✅ `usage_graph.py` + `scenario_walker.py` — 100% coverage (2026-05-04)
+
+- `_domain/usage_graph.py` : graphe d'usage pour cmd, eqLogic, scénario
+  - `resolve(target_type, target_id, conn)` — dispatch cmd / eqLogic / scenario
+  - Déduplication triggers/conditions/actions inter-commandes (cible eqLogic)
+  - `false_positive_warnings` pour les blocs code PHP
+- `_domain/scenario_walker.py` : parcours récursif d'un scénario Jeedom
+  - `walk(scenario_id, conn, max_depth, follow_scenario_calls)` — API publique
+  - Anti-cycle inter-scénarios (`_visited_scenarios`), troncature à 100 sous-éléments
+  - Suivi des appels `scenario/start` avec profondeur configurable
+- `tests/unit/_domain/test_usage_graph.py` : 30 tests, **100% couverture**
+- `tests/unit/_domain/test_scenario_walker.py` : 49 tests, **100% couverture**
+- **311 tests unitaires — 311/311 passés**. Ruff propre.
+
 **Sous-sessions restantes** :
 
-- J2-2 : `_domain/usage_graph.py` + `_domain/scenario_walker.py` + tests unitaires
 - J2-3 : `_domain/cmd_refs.py` + intégration `_domain/` dans `mcp_server.py` + ADR-0017 proposed + tag `v0.3.0`
 
-**Pré-requis** : aucun SSH requis (tests unitaires purs). Pas de snapshot Proxmox nécessaire.
+**Pré-requis** : aucun SSH requis pour J2-3 (tests unitaires purs). Pas de snapshot Proxmox nécessaire.
 
 ---
 
