@@ -11,8 +11,8 @@
 | **Version courante** | `v0.3.0` (J2 ✅ clôturé) |
 | **Jalon en cours** | J3-J4 — 18 tools familles 1-2-3 |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j3-1` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-1 ✅ (4 tools F1) |
+| **Dernière session** | `2026-05-04-j3-2` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-1 ✅ (4 tools F1), J3-2 ✅ (7 tools F2) |
 
 ---
 
@@ -155,7 +155,7 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 **Plan de sous-sessions** :
 
 - J3-1 ✅ : Famille 1 (4 tools découverte)
-- J3-2 : Famille 2 (7 tools équipements/commandes)
+- J3-2 ✅ : Famille 2 (7 tools équipements/commandes)
 - J3-3 : Famille 3 (7 tools scénarios)
 - J3-4 : mcp_server.py complet + tests intégration + déploiement SSH + smoke tests
 
@@ -169,6 +169,19 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - `mcp_server.py` : registration famille 1, tool POC `hello` retiré
 - `tests/unit/tools/test_discovery.py` : 27 tests — 358/358 passés, ruff propre
 - Commit `413f3e0`
+
+### J3-2 ✅ Famille 2 — 7 tools équipements/commandes (2026-05-04)
+
+- `tools/equipments.py` : 7 tools MySQL RO (tables eqLogic, cmd, history, historyArch)
+  - `list_equipments` : liste filtrable (object_id, plugin/eqType_name, is_enable), paginée (LIMIT 100)
+  - `find_equipments_advanced` : filtres combinables (name LIKE, object_id, plugin, is_enable, generic_type, tags LIKE), LIMIT 50
+  - `get_equipment` : détail complet eqLogic + ses commandes, config sanitisée (blobs configuration/status inclus)
+  - `find_equipment_by_name` : recherche LIKE %name%, LIMIT 50
+  - `list_commands` : commandes d'un équipement, filtre optionnel type (info/action), paginée (LIMIT 200)
+  - `find_commands_advanced` : filtres combinables (name, equipment_id, type, subType, generic_type, isHistorized), LIMIT 50
+  - `get_command_history` : historique récent (table `history`) + archivé (`historyArch`), LIMIT 100 par table
+- `mcp_server.py` : `_register_family2` ajouté — 11 tools enregistrés (4 F1 + 7 F2)
+- `tests/unit/tools/test_equipments.py` : 43 tests — **401/401 passés**. Ruff propre.
 
 ---
 

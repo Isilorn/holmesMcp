@@ -2,7 +2,7 @@
 
 Construit l'instance FastMCP et enregistre les tools/resources.
 J3-1 : Famille 1 — 4 tools découverte d'install.
-J3-2 : Famille 2 — 7 tools équipements/commandes (à venir).
+J3-2 : Famille 2 — 7 tools équipements/commandes.
 J3-3 : Famille 3 — 7 tools scénarios (à venir).
 J5   : Famille 4-6 + query_sql + 5 resources (à venir).
 """
@@ -14,7 +14,7 @@ import argparse
 import structlog
 from _core import db as _db
 from mcp.server.fastmcp import FastMCP
-from tools import discovery
+from tools import discovery, equipments
 
 log = structlog.get_logger('holmesMcp.server')
 
@@ -37,8 +37,9 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
     )
 
     _register_family1(mcp)
+    _register_family2(mcp)
 
-    log.info('mcp_initialized', families=[1], tools=4)
+    log.info('mcp_initialized', families=[1, 2], tools=11)
     return mcp
 
 
@@ -103,5 +104,167 @@ def _register_family1(mcp: FastMCP) -> None:
         conn = _db.connect()
         try:
             return discovery.get_config(conn, plugin, key_pattern)
+        finally:
+            conn.close()
+
+
+def _register_family2(mcp: FastMCP) -> None:
+    """Famille 2 — Équipements et commandes (7 tools)."""
+
+    @mcp.tool()
+    def list_equipments(
+        object_id: int | None = None,
+        plugin: str | None = None,
+        is_enable: bool | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> dict:
+        """Liste des équipements filtrables par objet, plugin ou état actif.
+
+        Paramètres :
+        - object_id : filtre sur l'objet/pièce (id de la table object)
+        - plugin     : filtre sur eqType_name (ex. 'jMQTT', 'thermostat')
+        - is_enable  : True = uniquement les actifs, False = uniquement les désactivés
+        - limit      : nombre max de résultats (max 100)
+        - offset     : décalage pour la pagination
+
+        Pour le détail d'un équipement (commandes + config), utilisez get_equipment.
+        """
+        conn = _db.connect()
+        try:
+            return equipments.list_equipments(conn, object_id, plugin, is_enable, limit, offset)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def find_equipments_advanced(
+        name_contains: str | None = None,
+        object_id: int | None = None,
+        plugin: str | None = None,
+        is_enable: bool | None = None,
+        generic_type: str | None = None,
+        tags: str | None = None,
+        limit: int = 50,
+    ) -> dict:
+        """Recherche avancée d'équipements avec filtres combinables.
+
+        Paramètres :
+        - name_contains : fragment de nom (insensible à la casse, LIKE %fragment%)
+        - object_id     : filtre sur l'objet/pièce
+        - plugin        : filtre sur eqType_name
+        - is_enable     : True = actifs uniquement
+        - generic_type  : type générique exact (ex. 'LIGHT', 'THERMOSTAT')
+        - tags          : fragment de tag (LIKE %tag%)
+        - limit         : max 50 résultats
+        """
+        conn = _db.connect()
+        try:
+            return equipments.find_equipments_advanced(
+                conn, name_contains, object_id, plugin, is_enable, generic_type, tags, limit
+            )
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def get_equipment(equipment_id: int) -> dict:
+        """Détail complet d'un équipement : structure, config sanitisée et commandes.
+
+        Paramètres :
+        - equipment_id : identifiant numérique de l'équipement (table eqLogic.id)
+
+        Retourne l'équipement avec toutes ses métadonnées (configuration sanitisée,
+        statut, tags) et la liste complète de ses commandes.
+        Si l'équipement n'existe pas, retourne {'error': 'Équipement non trouvé'}.
+        """
+        conn = _db.connect()
+        try:
+            return equipments.get_equipment(conn, equipment_id)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def find_equipment_by_name(name: str, limit: int = 10) -> dict:
+        """Recherche un équipement par son nom (partiel, insensible à la casse).
+
+        Paramètres :
+        - name  : fragment de nom à rechercher
+        - limit : max de résultats (par défaut 10, max 50)
+
+        Exemple : name='salon' trouve 'Thermostat Salon', 'Prise Salon', etc.
+        """
+        conn = _db.connect()
+        try:
+            return equipments.find_equipment_by_name(conn, name, limit)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def list_commands(
+        equipment_id: int,
+        cmd_type: str | None = None,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> dict:
+        """Liste des commandes d'un équipement.
+
+        Paramètres :
+        - equipment_id : identifiant de l'équipement (eqLogic.id)
+        - cmd_type     : filtre optionnel sur le type ('info' ou 'action')
+        - limit        : max 200 commandes
+        - offset       : décalage pour la pagination
+
+        Pour la recherche transverse de commandes, utilisez find_commands_advanced.
+        """
+        conn = _db.connect()
+        try:
+            return equipments.list_commands(conn, equipment_id, cmd_type, limit, offset)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def find_commands_advanced(
+        name_contains: str | None = None,
+        equipment_id: int | None = None,
+        cmd_type: str | None = None,
+        subtype: str | None = None,
+        generic_type: str | None = None,
+        is_historized: bool | None = None,
+        limit: int = 50,
+    ) -> dict:
+        """Recherche avancée de commandes avec filtres combinables.
+
+        Paramètres :
+        - name_contains : fragment de nom (LIKE %fragment%)
+        - equipment_id  : restreindre à un équipement
+        - cmd_type      : 'info' ou 'action'
+        - subtype       : sous-type (ex. 'numeric', 'binary', 'string', 'slider', 'message')
+        - generic_type  : type générique (ex. 'TEMPERATURE', 'HUMIDITY', 'LIGHT_STATE')
+        - is_historized : True = uniquement les commandes historisées
+        - limit         : max 50 résultats
+        """
+        conn = _db.connect()
+        try:
+            return equipments.find_commands_advanced(
+                conn, name_contains, equipment_id, cmd_type,
+                subtype, generic_type, is_historized, limit,
+            )
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def get_command_history(cmd_id: int, limit: int = 100) -> dict:
+        """Historique d'une commande info : récent (history) + archivé (historyArch).
+
+        Paramètres :
+        - cmd_id : identifiant de la commande (cmd.id)
+        - limit  : max de lignes par table (défaut 100, max 100)
+
+        Retourne deux listes séparées triées par datetime décroissant :
+        - history_recent   : entrées de la table history (plus récentes)
+        - history_archived : entrées de la table historyArch (plus anciennes)
+        """
+        conn = _db.connect()
+        try:
+            return equipments.get_command_history(conn, cmd_id, limit)
         finally:
             conn.close()
