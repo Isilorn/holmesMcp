@@ -11,8 +11,8 @@
 | **Version courante** | `v0.3.0` (J2 ✅ clôturé) |
 | **Jalon en cours** | J3-J4 — 18 tools familles 1-2-3 |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j3-2` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-1 ✅ (4 tools F1), J3-2 ✅ (7 tools F2) |
+| **Dernière session** | `2026-05-04-j3-3` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-1 ✅ (4 tools F1), J3-2 ✅ (7 tools F2), J3-3 ✅ (7 tools F3) |
 
 ---
 
@@ -182,6 +182,19 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
   - `get_command_history` : historique récent (table `history`) + archivé (`historyArch`), LIMIT 100 par table
 - `mcp_server.py` : `_register_family2` ajouté — 11 tools enregistrés (4 F1 + 7 F2)
 - `tests/unit/tools/test_equipments.py` : 43 tests — **401/401 passés**. Ruff propre.
+
+### J3-3 ✅ Famille 3 — 7 tools scénarios (2026-05-04)
+
+- `tools/scenarios.py` : 7 tools (MySQL RO + `_domain/` + `_core/logs`)
+  - `list_scenarios(group, is_active, limit=100, offset)` : liste paginée filtrable, sanitisée
+  - `find_scenarios_advanced(name_contains, group, is_active, trigger_type, limit=50)` : filtres combinables
+  - `get_scenario(scenario_id)` : détail complet (state, lastLaunch, trigger, group…), sanitisé
+  - `get_scenario_structure(scenario_id, max_depth=3, follow_scenario_calls=0)` : arbre brut via `scenario_walker`, machine-friendly
+  - `describe_scenario(scenario_id)` : LLM-friendly, résolution `#cmdId#` → `#[O][E][C]#` systématique via `cmd_refs` + `_humanize` closures
+  - `find_scenario_dependencies(scenario_id)` : graphe callers via `usage_graph.resolve('scenario', …)`
+  - `get_scenario_log(scenario_id, lines=100)` : `scenarioLog/scenario{id}.log`, max 500 lignes
+- `mcp_server.py` : `_register_family3` ajouté — **18 tools enregistrés** (4 F1 + 7 F2 + 7 F3)
+- `tests/unit/tools/test_scenarios.py` : 44 tests — **445/445 passés**. Ruff propre. Commit `3385dca`
 
 ---
 
