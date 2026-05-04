@@ -10,9 +10,9 @@
 |---|---|
 | **Version courante** | `v0.2.0` (J1 ✅ clôturé) |
 | **Jalon en cours** | J2 — _domain + sanitiseur |
-| **Branche de travail** | `develop` (J2 et au-delà — main figé sur v0.2.0) |
-| **Dernière session** | `2026-05-04-j1-3` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 prochaine |
+| **Branche de travail** | `main` (J2 en cours — merge final avec tag `v0.3.0` en fin J2) |
+| **Dernière session** | `2026-05-04-j2-1` |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2-1 ✅, J2-2 et J2-3 prochaines |
 
 ---
 
@@ -93,19 +93,36 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J1). Branche `develop` cré
 
 ---
 
-## Jalon J2 — _domain + sanitiseur (prochain)
+## Jalon J2 — _domain + sanitiseur (en cours)
 
 **Objectif** : implémenter les 4 modules `_domain/` dérivés des scripts jeedom-audit, avec couverture 100% sur `sanitize.py`.
 
-**Sous-sessions prévues** :
+### J2-1 ✅ `sanitize.py` — 3 mécanismes + couverture 100% (2026-05-04)
 
-- J2-1 : `_domain/sanitize.py` complet (3 mécanismes) + tests 100% couverture
+- `_domain/sanitize.py` : 3 mécanismes cumulatifs (D15.1-D15.2)
+  - Mech 1 : whitelist par table (13 tables : eqLogic, cmd, scenario, object, dataStore,
+    config, plugin, history, historyArch, scenarioElement, scenarioSubElement,
+    scenarioExpression, interactDef)
+  - Mech 2 : regex `_BLOB_KEY_RE` sur clés JSON des blobs (configuration, options)
+  - Mech 3 : extras par plugin — 15 plugins (10 initiaux D15.2 + 5 install PO :
+    Alarme, Jeedom Connect, MQTT Manager, Script, Virtuel)
+- Comportement mask+count : `FILTERED = "***FILTERED***"` + `_filtered_fields`
+- Cas spécial config table : key visible, value masquée si key sensible (transparence LLM)
+- Parsing récursif des blobs JSON imbriqués
+- `tests/unit/_domain/test_sanitize.py` : 158 tests, **100% couverture** sanitize.py (D15.5)
+  - 10 fixtures "no credential in output" couvrant tous les emplacements connus
+- Ruff propre — commit `7ce211e`
+
+**Liste plugins hard-codés validée par le PO (D15.2 enrichi J2-1)** : 15 plugins.
+Plugins install PO confirmés : jMQTT ✅, Agenda ✅, Alarme (ajouté), Thermostat ✅,
+Jeedom Connect (ajouté), Script (ajouté), MQTT Manager (ajouté), Virtuel (ajouté).
+
+**Sous-sessions restantes** :
+
 - J2-2 : `_domain/usage_graph.py` + `_domain/scenario_walker.py` + tests unitaires
-- J2-3 : `_domain/cmd_refs.py` + intégration `_domain/` dans `mcp_server.py` + tests
+- J2-3 : `_domain/cmd_refs.py` + intégration `_domain/` dans `mcp_server.py` + ADR-0017 proposed + tag `v0.3.0`
 
-**Pré-requis** : aucun SSH requis (tests unitaires purs). Pas de snapshot Proxmox nécessaire pour J2-1 et J2-2.
-
-**Branche** : `develop` (merge vers `main` uniquement en fin J2 avec tag `v0.3.0`).
+**Pré-requis** : aucun SSH requis (tests unitaires purs). Pas de snapshot Proxmox nécessaire.
 
 ---
 
