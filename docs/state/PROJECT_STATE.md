@@ -8,12 +8,12 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.4.0` (J3-J4 ✅ clôturé, J3-4bis ✅ runtime API) |
+| **Version courante** | `v0.4.0` (J3-J4 ✅, J3-4bis ✅ runtime API, J3-5 ✅ audit+fixes) |
 | **Jalon en cours** | J5 — 7 tools + query_sql + 5 resources |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j3-4bis` |
-| **Prochaine session** | `J3-5` — audit exhaustif 18 tools (brief + doc + jeedom-audit) |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API, 476 ut, 93 intég) |
+| **Dernière session** | `2026-05-04-j3-5` |
+| **Prochaine session** | `J5` — familles 4-6 + query_sql + 5 resources |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég) |
 
 ---
 
