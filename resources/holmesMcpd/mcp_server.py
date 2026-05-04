@@ -3,7 +3,7 @@
 Construit l'instance FastMCP et enregistre les tools/resources.
 J3-1 : Famille 1 — 4 tools découverte d'install.
 J3-2 : Famille 2 — 7 tools équipements/commandes.
-J3-3 : Famille 3 — 7 tools scénarios (à venir).
+J3-3 : Famille 3 — 7 tools scénarios.
 J5   : Famille 4-6 + query_sql + 5 resources (à venir).
 """
 
@@ -14,7 +14,7 @@ import argparse
 import structlog
 from _core import db as _db
 from mcp.server.fastmcp import FastMCP
-from tools import discovery, equipments
+from tools import discovery, equipments, scenarios
 
 log = structlog.get_logger('holmesMcp.server')
 
@@ -38,8 +38,9 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
 
     _register_family1(mcp)
     _register_family2(mcp)
+    _register_family3(mcp)
 
-    log.info('mcp_initialized', families=[1, 2], tools=11)
+    log.info('mcp_initialized', families=[1, 2, 3], tools=18)
     return mcp
 
 
@@ -266,5 +267,148 @@ def _register_family2(mcp: FastMCP) -> None:
         conn = _db.connect()
         try:
             return equipments.get_command_history(conn, cmd_id, limit)
+        finally:
+            conn.close()
+
+
+def _register_family3(mcp: FastMCP) -> None:
+    """Famille 3 — Scénarios (7 tools)."""
+
+    @mcp.tool()
+    def list_scenarios(
+        group: str | None = None,
+        is_active: bool | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> dict:
+        """Liste des scénarios filtrables par groupe ou état d'activation.
+
+        Paramètres :
+        - group     : filtre exact sur le groupe du scénario
+        - is_active : True = uniquement les actifs, False = uniquement les désactivés
+        - limit     : nombre max de résultats (max 100)
+        - offset    : décalage pour la pagination
+
+        Pour le détail d'un scénario (déclencheurs, structure), utilisez get_scenario.
+        """
+        conn = _db.connect()
+        try:
+            return scenarios.list_scenarios(conn, group, is_active, limit, offset)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def find_scenarios_advanced(
+        name_contains: str | None = None,
+        group: str | None = None,
+        is_active: bool | None = None,
+        trigger_type: str | None = None,
+        limit: int = 50,
+    ) -> dict:
+        """Recherche avancée de scénarios avec filtres combinables.
+
+        Paramètres :
+        - name_contains : fragment de nom (insensible à la casse, LIKE %fragment%)
+        - group         : filtre exact sur le groupe
+        - is_active     : True = actifs uniquement
+        - trigger_type  : fragment dans le champ trigger (ex. 'schedule', 'event')
+        - limit         : max 50 résultats
+        """
+        conn = _db.connect()
+        try:
+            return scenarios.find_scenarios_advanced(
+                conn, name_contains, group, is_active, trigger_type, limit
+            )
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def get_scenario(scenario_id: int) -> dict:
+        """Détail complet d'un scénario : métadonnées, déclencheurs, dernier run.
+
+        Paramètres :
+        - scenario_id : identifiant numérique du scénario (table scenario.id)
+
+        Retourne les métadonnées complètes du scénario (sanitisées).
+        Pour l'arbre structurel, utilisez get_scenario_structure.
+        Pour la description LLM-friendly, utilisez describe_scenario.
+        Si le scénario n'existe pas, retourne {'error': 'Scénario non trouvé'}.
+        """
+        conn = _db.connect()
+        try:
+            return scenarios.get_scenario(conn, scenario_id)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def get_scenario_structure(
+        scenario_id: int,
+        max_depth: int = 3,
+        follow_scenario_calls: int = 0,
+    ) -> dict:
+        """Arbre structurel brut d'un scénario (machine-friendly).
+
+        Paramètres :
+        - scenario_id           : identifiant du scénario
+        - max_depth             : profondeur max de récursion des éléments (défaut 3)
+        - follow_scenario_calls : niveaux de suivi des appels inter-scénarios (0 = désactivé)
+
+        Retourne l'arbre de scenarioElement/scenarioSubElement/scenarioExpression.
+        Pour une description lisible avec résolution des #[O][E][C]#, utilisez describe_scenario.
+        """
+        conn = _db.connect()
+        try:
+            return scenarios.get_scenario_structure(
+                conn, scenario_id, max_depth, follow_scenario_calls
+            )
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def describe_scenario(scenario_id: int) -> dict:
+        """Description LLM-friendly d'un scénario avec résolution systématique des #[O][E][C]#.
+
+        Paramètres :
+        - scenario_id : identifiant du scénario
+
+        Résout automatiquement toutes les références #cmdId# en #[Objet][Équipement][Commande]#
+        dans les déclencheurs et les expressions du scénario.
+        Pour l'arbre brut (machine-friendly), utilisez get_scenario_structure.
+        """
+        conn = _db.connect()
+        try:
+            return scenarios.describe_scenario(conn, scenario_id)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def find_scenario_dependencies(scenario_id: int) -> dict:
+        """Graphe d'usage d'un scénario : qui l'appelle, qui est appelé par lui.
+
+        Paramètres :
+        - scenario_id : identifiant du scénario
+
+        Retourne les scénarios qui appellent ce scénario (via scenario/start).
+        """
+        conn = _db.connect()
+        try:
+            return scenarios.find_scenario_dependencies(conn, scenario_id)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def get_scenario_log(scenario_id: int, lines: int = 100) -> dict:
+        """Log du dernier run d'un scénario.
+
+        Paramètres :
+        - scenario_id : identifiant du scénario
+        - lines       : nombre de lignes à retourner (défaut 100, max 500)
+
+        Les logs de scénario sont stockés dans scenarioLog/scenario<id>.log.
+        Retourne {'error': ...} si le fichier n'existe pas.
+        """
+        conn = _db.connect()
+        try:
+            return scenarios.get_scenario_log(conn, scenario_id, lines)
         finally:
             conn.close()
