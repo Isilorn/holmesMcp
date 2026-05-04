@@ -39,7 +39,9 @@ def get_install_overview(conn: pymysql.connections.Connection) -> dict[str, Any]
     scen_active: int = _db.query(conn, 'SELECT COUNT(*) AS n FROM scenario WHERE isActive=1')[0][
         'n'
     ]
-    plugin_count: int = _db.query(conn, 'SELECT COUNT(*) AS n FROM plugin')[0]['n']
+    plugin_count: int = _db.query(
+        conn, "SELECT COUNT(*) AS n FROM `update` WHERE type='plugin'"
+    )[0]['n']
     object_count: int = _db.query(conn, 'SELECT COUNT(*) AS n FROM object')[0]['n']
     cmd_count: int = _db.query(conn, 'SELECT COUNT(*) AS n FROM cmd')[0]['n']
 
@@ -63,7 +65,7 @@ def list_objects(conn: pymysql.connections.Connection) -> dict[str, Any]:
     """
     rows = _db.query(
         conn,
-        'SELECT id, name, father_id, isVisible, `order` FROM object ORDER BY `order` LIMIT %s',
+        'SELECT id, name, father_id, isVisible, position FROM object ORDER BY position LIMIT %s',
         (_OBJECTS_LIMIT,),
     )
     sanitized, filtered = sanitize_rows(rows, 'object')
@@ -79,7 +81,8 @@ def list_plugins(conn: pymysql.connections.Connection) -> dict[str, Any]:
     """
     rows = _db.query(
         conn,
-        'SELECT id, name, version, state, logical_id FROM plugin ORDER BY name LIMIT %s',
+        'SELECT id, name, localVersion AS version, status AS state, logicalId AS logical_id'
+        " FROM `update` WHERE type='plugin' ORDER BY name LIMIT %s",
         (_PLUGINS_LIMIT,),
     )
     sanitized, filtered = sanitize_rows(rows, 'plugin')

@@ -30,7 +30,6 @@ from _domain.usage_graph import (
     resolve,
 )
 
-
 # ── Fixture commune ───────────────────────────────────────────────────────────
 
 
@@ -68,7 +67,8 @@ def test_classify_single_condition():
 
 
 def test_classify_single_action():
-    rows = [{'scenario_id': '2', 'scenario_name': 'S2', 'ss_type': 'action', 'ss_subtype': 'action'}]
+    rows = [{'scenario_id': '2', 'scenario_name': 'S2', 'ss_type': 'action',
+             'ss_subtype': 'action'}]
     cond, act = _classify_expr_rows(rows)
     assert cond == []
     assert act == [{'id': 2, 'name': 'S2'}]
@@ -196,7 +196,8 @@ def test_resolve_cmd_found_with_all_refs(conn):
     with patch('_domain.usage_graph.db.query', side_effect=[
         cmd_row,
         [{'id': '5', 'name': 'ScénA'}],
-        [{'scenario_id': '6', 'scenario_name': 'ScénB', 'ss_type': 'if', 'ss_subtype': 'condition'}],
+        [{'scenario_id': '6', 'scenario_name': 'ScénB', 'ss_type': 'if',
+          'ss_subtype': 'condition'}],
         [{'id': '1', 'name': 'DS1', 'type': 'scenario'}],
         [{'scenario_id': '8', 'scenario_name': 'ScénD'}],
     ]):
@@ -243,7 +244,8 @@ def test_resolve_eqlogic_dedup_triggers(conn):
 def test_resolve_eqlogic_dedup_conditions(conn):
     eq_row = [{'id': 20, 'name': 'EQ2', 'eqType_name': 'P', 'isEnable': 1}]
     cmd_ids = [{'id': 201}, {'id': 202}]
-    cond_row = [{'scenario_id': '5', 'scenario_name': 'S5', 'ss_type': 'if', 'ss_subtype': 'condition'}]
+    cond_row = [{'scenario_id': '5', 'scenario_name': 'S5', 'ss_type': 'if',
+                 'ss_subtype': 'condition'}]
     with patch('_domain.usage_graph.db.query', side_effect=[
         eq_row, cmd_ids,
         [], cond_row, [], [],
@@ -256,7 +258,8 @@ def test_resolve_eqlogic_dedup_conditions(conn):
 def test_resolve_eqlogic_dedup_actions(conn):
     eq_row = [{'id': 30, 'name': 'EQ3', 'eqType_name': 'P', 'isEnable': 1}]
     cmd_ids = [{'id': 301}, {'id': 302}]
-    act_row = [{'scenario_id': '6', 'scenario_name': 'S6', 'ss_type': 'action', 'ss_subtype': 'action'}]
+    act_row = [{'scenario_id': '6', 'scenario_name': 'S6', 'ss_type': 'action',
+                'ss_subtype': 'action'}]
     with patch('_domain.usage_graph.db.query', side_effect=[
         eq_row, cmd_ids,
         [], act_row, [], [],

@@ -29,9 +29,7 @@ _LOG_LINES = 100
 
 _ID_RE = re.compile(r'#(\d+)#')
 
-_SCEN_COLS = (
-    'id, name, `group`, isActive, mode, `trigger`, lastLaunch, timeout, description, state'
-)
+_SCEN_COLS = 'id, name, `group`, isActive, mode, `trigger`, timeout, description'
 
 
 def list_scenarios(

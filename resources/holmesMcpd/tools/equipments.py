@@ -335,13 +335,13 @@ def get_command_history(
 
     recent_rows = _db.query(
         conn,
-        'SELECT id, cmd_id, datetime, value FROM history'
+        'SELECT cmd_id, datetime, value FROM history'
         ' WHERE cmd_id = %s ORDER BY datetime DESC LIMIT %s',
         (cmd_id, limit),
     )
     arch_rows = _db.query(
         conn,
-        'SELECT id, cmd_id, datetime, value FROM historyArch'
+        'SELECT cmd_id, datetime, value FROM historyArch'
         ' WHERE cmd_id = %s ORDER BY datetime DESC LIMIT %s',
         (cmd_id, limit),
     )
