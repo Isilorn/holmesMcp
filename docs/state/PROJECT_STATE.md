@@ -8,11 +8,12 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.4.0` (J3-J4 ✅ clôturé) |
+| **Version courante** | `v0.4.0` (J3-J4 ✅ clôturé, J3-4bis ✅ runtime API) |
 | **Jalon en cours** | J5 — 7 tools + query_sql + 5 resources |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j3-4` |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools, 68 tests intégration live) |
+| **Dernière session** | `2026-05-04-j3-4bis` |
+| **Prochaine session** | `J3-5` — audit exhaustif 18 tools (brief + doc + jeedom-audit) |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API, 476 ut, 93 intég) |
 
 ---
 
@@ -158,6 +159,8 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - J3-2 ✅ : Famille 2 (7 tools équipements/commandes)
 - J3-3 ✅ : Famille 3 (7 tools scénarios)
 - J3-4 ✅ : tests intégration live + corrections schema + déploiement + smoke tests
+- J3-4bis ✅ : enrichissement runtime API JSON-RPC (state/lastLaunch + currentValue/collectDate)
+- J3-5 🔜 : audit exhaustif 18 tools (brief + documentation + besoins jeedom-audit)
 
 ### J3-1 ✅ Famille 1 — 4 tools découverte d'install (2026-05-04)
 
@@ -213,6 +216,38 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
   - `list_scenarios(limit=3)` → 3 scénarios retournés ✅
 - **68/68 tests intégration live** passés. **447/447 tests unitaires** passés. Ruff propre.
 - Tag `v0.4.0` — J3-J4 ✅ clôturé.
+
+### J3-4bis ✅ Enrichissement runtime API JSON-RPC (2026-05-04)
+
+**Contexte** : audit post-J3-4 révèle que `lastLaunch`/`state` (scénarios) et `currentValue`/`collectDate` (commandes info) sont absents des retours tools. Ces champs sont PHP runtime-only — absents de la table MySQL `scenario`. D4bis.6 les planifiait via API JSON-RPC, mais `_core/api.py` (déjà implémenté) n'était jamais appelé par les tools.
+
+**Enrichissement scénarios (`tools/scenarios.py`)** :
+
+- `_fetch_runtime_map(apikey)` : un appel `scenario::all` → `{id: {state, lastLaunch}}`. Retourne `{}` si apikey vide ou API KO.
+- `_fetch_runtime_single(apikey, scenario_id)` : un appel `scenario::byId` pour un scénario unique.
+- `_merge_runtime(scenarios_list, runtime_map)` : injection in-place `state` + `lastLaunch`.
+- 4 tools enrichis : `list_scenarios`, `find_scenarios_advanced`, `get_scenario`, `describe_scenario` — signature `apikey: str = ''` (dégradation gracieuse si absent).
+
+**Enrichissement équipements (`tools/equipments.py`)** :
+
+- `_fetch_cmd_runtime_map(apikey, equipment_id)` : un appel `eqLogic::fullById` → `{cmd_id: {currentValue, collectDate}}`.
+- `_inject_cmd_runtime(cmds, runtime_map)` : injection sur commandes `type == 'info'` uniquement.
+- 2 tools enrichis : `get_equipment`, `list_commands` — signature `apikey: str = ''`.
+- `list_equipments`, `find_equipments_advanced`, `find_commands_advanced` : non enrichis (appels liste, coût prohibitif N×API).
+
+**`mcp_server.py`** : `build_mcp` passe `apikey = args.jeedom_apikey` à `_register_family2` et `_register_family3` ; closures capturent `apikey`.
+
+**Fixture `jeedom_apikey` réécrite (`tests/integration/conftest.py`)** :
+
+- Lit la clé déchiffrée depuis `/proc/<pid>/cmdline` du daemon holmesMcp (PID dans `/tmp/jeedom/holmesMcp/daemon.pid`).
+- Raison : la table `config` stocke la clé chiffrée `crypt:...` (inutilisable pour les appels API directs).
+
+**Nouveaux tests** :
+
+- Unitaires : 29 nouveaux (3 classes `test_scenarios.py` : `TestListScenariosRuntime`, `TestGetScenarioRuntime`, `TestFetchRuntimeHelpers` ; 2 classes `test_equipments.py` : `TestGetEquipmentRuntime`, `TestFetchCmdRuntimeMap`)
+- Intégration live : 8 nouveaux (`test_state_and_last_launch_present` × 4 dans scenarios, `test_info_cmds_have_current_value` × 2 dans equipments)
+
+**93/93 tests intégration live** passés. **476/476 tests unitaires** passés. Ruff propre. Commit `82ea6ef` sur `develop`.
 
 ---
 
