@@ -291,11 +291,11 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 **Dépendances** : J2 validé (couche `_domain/` + sanitiseur testés)
 
 **Critères d'avancement (DoD)** :
-- [ ] 18 tools implémentés avec schémas in/out stables
-- [ ] Tests d'intégration sur fixtures synthétiques pour les 18 tools
-- [ ] Sanitisation systématique appliquée dans tous les tools (vérifiée par test)
-- [ ] `mcp_server.py` avec registration + invocation des 18 tools fonctionnelle (via MCP Inspector)
-- [ ] Pré-release tag `v0.4.0`
+- [x] 18 tools implémentés avec schémas in/out stables — F1+F2+F3 livrés (J3-1 à J3-3)
+- [x] Tests d'intégration live sur box réelle — 93/93 (ADR-0018 accepted : SSH > Docker CI)
+- [x] Sanitisation systématique vérifiée par test — 490 ut, 100% sanitize.py, bugs whitelist corrigés J3-5
+- [x] `mcp_server.py` registration + invocation 18 tools — smoke tests MCP validés (`tools/list` = 18)
+- [x] Pré-release tag `v0.4.0` (J3-4) + `v0.4.1` (J3-5 audit fixes)
 
 ---
 
