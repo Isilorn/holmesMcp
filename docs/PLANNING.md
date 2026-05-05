@@ -398,20 +398,17 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 - `docs/market/forum-developers-lounge.md` : post Developers' Lounge prêt à publier
 - Commit `0eb3122`
 
-#### J7-3 — Polish UI page configuration
+#### J7-3 ✅ Polish UI page configuration (2026-05-05)
 
-**Objectif** : améliorer le rendu de la page de configuration du plugin (masquage tokens, hiérarchie visuelle).
-
-**Livrables** :
-
-- `desktop/php/holmesMcp.php` : masquage partiel des tokens (8 premiers chars + `••••`), icônes sections, séparateurs
-- Tests visuels sur box PO
+- `desktop/php/holmesMcp.php` : tokens masqués (8 chars + `••••••••••••••••`), bouton `fa-eye`, icônes `fa-cog` / `fa-key` / `fa-list-alt`
+- `desktop/js/holmesMcp.js` : `toggleToken()` + `generateToken()` masque le nouveau token
+- Commit `1da6f67` — rendu validé PO (capture)
 
 **DoD** :
 
-- [ ] Tokens masqués par défaut avec bouton révéler
-- [ ] Sections avec icônes Font Awesome cohérentes avec le thème Jeedom
-- [ ] Rendu validé sur box PO (capture PO)
+- [x] Tokens masqués par défaut avec bouton révéler
+- [x] Sections avec icônes Font Awesome cohérentes avec le thème Jeedom
+- [x] Rendu validé sur box PO (capture PO)
 
 ---
 

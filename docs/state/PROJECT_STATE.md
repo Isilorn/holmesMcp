@@ -11,9 +11,9 @@
 | **Version courante** | `v1.0.0` (J7-2 ✅ — packaging market, icône conforme, changelog, README) |
 | **Jalon en cours** | J7 — Doc utilisateur + bêta privée + release market |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-05-j7-2` |
-| **Prochaine session** | J7-3 — Polish UI page configuration (masquage tokens, icônes sections) |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt) |
+| **Dernière session** | `2026-05-05-j7-3` |
+| **Prochaine session** | J8 — Bêta privée (discussion méthode en J8-1) |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO) |
 
 ---
 
@@ -448,6 +448,40 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - [x] Liste plugins hard-codés finalisée (ADR-0017 accepted)
 - [x] Tests live exécutés + résumés
 - [x] Tag `v0.6.0` posé et pushé (commit `3733f4f`)
+
+---
+
+## Jalon J7 — Doc utilisateur + bêta privée + release market
+
+### J7-1 ✅ Documentation utilisateur MkDocs (2026-05-05)
+
+- `docs/user/` : 12 sections MkDocs complètes (index, presentation, installation, configuration, clients-mcp, securite, tools, resources, diagnostic, faq, jeedom-audit, contribuer)
+- `plugin_info/holmesMcp_icon.png` : icône market hibou Holmes 200×200 (watermark supprimé)
+- `docs/user/img/holmes-icon.png` : illustration 300×300 page d'accueil doc
+- `mkdocs build --strict` OK — commits `593665e`, `af09fc0`, `5bb8063`, `adeca47`
+
+### J7-2 ✅ Packaging market (2026-05-05)
+
+- `plugin_info/info.json` : version 1.0.0, catégorie `programming`
+- `plugin_info/changelog.md` : historique complet v0.0.0→v1.0.0 (langage utilisateur)
+- `plugin_info/holmesMcp_icon.png` : format Jeedom conforme (309×348, zone 309×309 coins arrondis r=54, 39px transparent bas)
+- `README.md` : market-ready v1.0.0
+- `docs/market/forum-developers-lounge.md` : post Developers' Lounge prêt à publier
+- Commits `0eb3122` à `011d03a`
+
+### J7-3 ✅ Polish UI page configuration (2026-05-05)
+
+- `desktop/php/holmesMcp.php` : tokens masqués par défaut (8 premiers chars + `••••••••••••••••`), bouton révéler `fa-eye` (désactivé si aucun token) ; icônes Font Awesome sur les 3 sections (`fa-cog` Configuration daemon, `fa-key` Tokens d'accès, `fa-list-alt` Activité MCP)
+- `desktop/js/holmesMcp.js` : `toggleToken()` bascule masked/revealed + `generateToken()` masque le nouveau token après génération
+- Rendu validé PO sur box réelle (capture session) — commit `1da6f67`
+
+**DoD J7-3 ✅** :
+
+- [x] Tokens masqués par défaut avec bouton révéler
+- [x] Sections avec icônes Font Awesome cohérentes avec le thème Jeedom
+- [x] Rendu validé sur box PO (capture PO — session 2026-05-05)
+
+**J7 ✅ Clôturé.** Les 9 critères de sortie V1.0.0 (D8.3) sont tous cochés. Prochaine étape : J8 — Bêta privée.
 
 ---
 
