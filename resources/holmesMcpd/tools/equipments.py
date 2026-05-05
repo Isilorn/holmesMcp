@@ -1,9 +1,10 @@
-"""Famille 2 — Équipements et commandes (7 tools).
+"""Famille 2 — Équipements et commandes (8 tools).
 
 Tools : list_equipments, find_equipments_advanced, get_equipment,
         find_equipment_by_name, list_commands, find_commands_advanced,
-        get_command_history.
-Canal : MySQL RO exclusivement (tables eqLogic, cmd, history, historyArch).
+        get_command_history, find_command_usages.
+Canal : MySQL RO exclusivement (tables eqLogic, cmd, history, historyArch,
+        scenario, scenarioExpression, scenarioSubElement, scenarioElement, dataStore).
         Enrichissement runtime : API JSON-RPC (currentValue, collectDate) via _core/api.
 Sanitisation : sanitize_rows / wrap_result via _domain.sanitize.
 """
@@ -24,6 +25,7 @@ _EQ_LIMIT_ADV = 50
 _CMD_LIMIT = 200
 _CMD_LIMIT_ADV = 50
 _HISTORY_LIMIT = 100
+_CMD_USAGES_LIMIT = 50
 
 
 # ── Helpers runtime API ───────────────────────────────────────────────────────
@@ -419,6 +421,74 @@ def get_command_history(
             'history_archived': arch_sanitized,
             'total_recent': len(recent_sanitized),
             'total_archived': len(arch_sanitized),
+        },
+        all_filtered,
+    )
+
+
+def find_command_usages(
+    conn: pymysql.connections.Connection,
+    cmd_id: int,
+    limit: int = _CMD_USAGES_LIMIT,
+) -> dict[str, Any]:
+    """Retourne tous les endroits où une commande est référencée dans l'installation.
+
+    Paramètres :
+    - cmd_id : identifiant de la commande (cmd.id)
+    - limit  : max de résultats par catégorie (défaut 50, max 50)
+
+    Retourne trois catégories :
+    - triggers    : scénarios qui ont cette commande en déclencheur (champ trigger)
+    - expressions : scénarios qui l'utilisent dans conditions ou actions
+    - datastore   : variables dataStore dont la valeur référence cette commande
+
+    Le pattern de recherche est #cmdId# (format de référence Jeedom).
+    Pour explorer les expressions détaillées, utilisez get_scenario_structure(scenario_id).
+    """
+    limit = min(limit, _CMD_USAGES_LIMIT)
+    pattern = f'%#{cmd_id}#%'
+
+    trigger_rows = _db.query(
+        conn,
+        'SELECT id, name, isActive, `trigger`'
+        ' FROM scenario WHERE `trigger` LIKE %s LIMIT %s',
+        (pattern, limit),
+    )
+    trigger_sanitized, trigger_filtered = sanitize_rows(trigger_rows, 'scenario')
+
+    expr_rows = _db.query(
+        conn,
+        'SELECT DISTINCT s.id, s.name, s.isActive,'
+        ' expr.type AS expr_type, expr.expression'
+        ' FROM scenarioExpression expr'
+        ' JOIN scenarioSubElement ss ON expr.scenarioSubElement_id = ss.id'
+        ' JOIN scenarioElement sel   ON ss.scenarioElement_id = sel.id'
+        ' JOIN scenario s            ON JSON_CONTAINS(s.scenarioElement, CAST(sel.id AS JSON))'
+        ' WHERE expr.expression LIKE %s'
+        ' LIMIT %s',
+        (pattern, limit),
+    )
+    expr_sanitized, expr_filtered = sanitize_rows(expr_rows)
+
+    datastore_rows = _db.query(
+        conn,
+        'SELECT `key`, value, type, link_id'
+        ' FROM dataStore WHERE value LIKE %s LIMIT %s',
+        (pattern, limit),
+    )
+    datastore_sanitized, datastore_filtered = sanitize_rows(datastore_rows, 'dataStore')
+
+    all_filtered = sorted(set(trigger_filtered + expr_filtered + datastore_filtered))
+
+    return wrap_result(
+        {
+            'cmd_id': cmd_id,
+            'triggers': trigger_sanitized,
+            'expressions': expr_sanitized,
+            'datastore': datastore_sanitized,
+            'total_triggers': len(trigger_sanitized),
+            'total_expressions': len(expr_sanitized),
+            'total_datastore': len(datastore_sanitized),
         },
         all_filtered,
     )

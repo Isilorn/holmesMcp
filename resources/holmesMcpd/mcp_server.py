@@ -7,6 +7,7 @@ J3-3 : Famille 3 — 7 tools scénarios.
 J5-1 : Familles 4-6 — 7 tools dataStore/logs/recherche.
 J5-2 : Famille 7 — query_sql.
 J5-4 : 5 resources + énumération hybride D6.3.
+J7bis-1 : Famille 2 — find_command_usages (8e tool équipements).
 """
 
 from __future__ import annotations
@@ -59,7 +60,7 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
     _register_family7(mcp)
     _register_resources(mcp, apikey)
 
-    log.info('mcp_initialized', families=[1, 2, 3, 4, 5, 6, 7], tools=25, resources=5)
+    log.info('mcp_initialized', families=[1, 2, 3, 4, 5, 6, 7], tools=26, resources=5)
     return mcp
 
 
@@ -130,7 +131,7 @@ def _register_family1(mcp: FastMCP) -> None:
 
 
 def _register_family2(mcp: FastMCP, apikey: str) -> None:
-    """Famille 2 — Équipements et commandes (7 tools)."""
+    """Famille 2 — Équipements et commandes (8 tools)."""
 
     @mcp.tool()
     def list_equipments(
@@ -291,6 +292,29 @@ def _register_family2(mcp: FastMCP, apikey: str) -> None:
         conn = _db.connect()
         try:
             return equipments.get_command_history(conn, cmd_id, limit)
+        finally:
+            conn.close()
+
+    @mcp.tool()
+    def find_command_usages(cmd_id: int, limit: int = 50) -> dict:
+        """Toutes les références à une commande dans l'installation Jeedom.
+
+        Paramètres :
+        - cmd_id : identifiant de la commande (cmd.id)
+        - limit  : max de résultats par catégorie (défaut 50, max 50)
+
+        Retourne trois catégories :
+        - triggers    : scénarios déclenchés par cette commande (champ trigger)
+        - expressions : scénarios qui l'utilisent en condition ou action
+        - datastore   : variables dataStore dont la valeur la référence
+
+        Utilise le pattern #cmdId# (format de référence Jeedom).
+        Pour le détail des expressions d'un scénario trouvé, utilisez
+        get_scenario_structure(scenario_id) ou describe_scenario(scenario_id).
+        """
+        conn = _db.connect()
+        try:
+            return equipments.find_command_usages(conn, cmd_id, limit)
         finally:
             conn.close()
 

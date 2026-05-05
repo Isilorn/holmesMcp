@@ -127,6 +127,30 @@ tail_log(log_name="holmesMcp", lines=200, grep="error")
 
 ---
 
+### query_sql retourne moins de résultats que prévu
+
+**Symptôme :** `query_sql` retourne exactement 50 lignes alors que vous attendez plus.
+
+**Cause :** `query_sql` injecte automatiquement `LIMIT 50` si votre requête n'en spécifie pas. Le plafond absolu est `LIMIT 200`, même si vous indiquez une valeur plus grande.
+
+**Comportement exact :**
+
+| Cas | LIMIT injecté |
+| --- | --- |
+| Aucun LIMIT dans la requête | `LIMIT 50` ajouté automatiquement |
+| `LIMIT N` avec N ≤ 200 | conservé tel quel |
+| `LIMIT N` avec N > 200 | remplacé par `LIMIT 200` |
+
+**Solution :** spécifiez explicitement `LIMIT N` dans votre requête (max 200) :
+
+```sql
+SELECT id, name FROM eqLogic ORDER BY name LIMIT 200
+```
+
+Si vous avez besoin de plus de 200 lignes, utilisez les tools dédiés (`list_equipments`, `find_commands_advanced`, etc.) qui gèrent la pagination via `offset`.
+
+---
+
 ## Commandes de diagnostic utiles (SSH)
 
 ```bash

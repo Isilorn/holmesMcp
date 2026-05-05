@@ -240,3 +240,46 @@ class TestGetCommandHistoryLive:
         result = equipments.get_command_history(db_conn, 999999)
         assert result['total_recent'] == 0
         assert result['total_archived'] == 0
+
+
+# ---------------------------------------------------------------------------
+# find_command_usages
+# ---------------------------------------------------------------------------
+
+
+class TestFindCommandUsagesLive:
+    def test_structure(self, db_conn, first_historized_cmd):
+        result = equipments.find_command_usages(db_conn, first_historized_cmd)
+        assert 'cmd_id' in result
+        assert 'triggers' in result
+        assert 'expressions' in result
+        assert 'datastore' in result
+        assert 'total_triggers' in result
+        assert 'total_expressions' in result
+        assert 'total_datastore' in result
+        assert '_filtered_fields' in result
+        assert result['cmd_id'] == first_historized_cmd
+        assert isinstance(result['triggers'], list)
+        assert isinstance(result['expressions'], list)
+        assert isinstance(result['datastore'], list)
+        assert isinstance(result['_filtered_fields'], list)
+
+    def test_totaux_coherents(self, db_conn, first_historized_cmd):
+        result = equipments.find_command_usages(db_conn, first_historized_cmd)
+        assert result['total_triggers'] == len(result['triggers'])
+        assert result['total_expressions'] == len(result['expressions'])
+        assert result['total_datastore'] == len(result['datastore'])
+
+    def test_cmd_inexistante_retourne_zero_partout(self, db_conn):
+        result = equipments.find_command_usages(db_conn, 999999)
+        assert result['total_triggers'] == 0
+        assert result['total_expressions'] == 0
+        assert result['total_datastore'] == 0
+
+    def test_triggers_contiennent_pattern(self, db_conn, first_historized_cmd):
+        result = equipments.find_command_usages(db_conn, first_historized_cmd)
+        pattern = f'#{first_historized_cmd}#'
+        for scen in result['triggers']:
+            assert pattern in str(scen.get('trigger', '')), (
+                f"Pattern {pattern} absent du trigger du scénario {scen.get('id')}"
+            )

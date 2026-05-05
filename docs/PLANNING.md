@@ -418,7 +418,7 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 **Démarrage** : à la clôture de J7 (J7-3 ✅) et après l'audit J8-audit ✅.
 
-#### J7bis-1 — Nouvel outil + qualité query_sql + doc
+#### J7bis-1 — Nouvel outil + qualité query_sql + doc ✅
 
 **Livraisons :**
 
@@ -429,14 +429,40 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 **DoD J7bis-1** :
 
-- [ ] `find_command_usages(cmd_id)` implémenté, testé (unit + intégration live), documenté
-- [ ] `query_sql()` docstring mise à jour (comportement LIMIT)
-- [ ] Parser `query_sql.py` : auto-backtick `trigger` / `repeat` / `update`
-- [ ] `docs/user/faq.md` : entrée Jeedom 4.4.x ajoutée
-- [ ] Tests unitaires 100% verts, ruff propre
-- [ ] `plugin_info/changelog.md` — entrée J7bis ajoutée
-- [ ] `plugin_info/info.json` — version incrémentée (`1.1.0`)
-- [ ] `docs/market/forum-developers-lounge.md` — relu, mis à jour si besoin
+- [x] `find_command_usages(cmd_id)` implémenté, testé (unit + intégration live), documenté
+- [x] `query_sql()` docstring mise à jour (comportement LIMIT)
+- [x] Parser `query_sql.py` : auto-backtick `trigger` / `repeat` / `update`
+- [x] `docs/user/faq.md` : entrée Jeedom 4.4.x ajoutée
+- [x] Tests unitaires 100% verts, ruff propre
+- [x] `plugin_info/changelog.md` — entrée J7bis ajoutée
+- [x] `plugin_info/info.json` — version incrémentée (`1.1.0`)
+- [x] `docs/market/forum-developers-lounge.md` — relu, mis à jour si besoin
+
+#### J7bis-2 — Audit live Holmes MCP + jeedom-audit
+
+**Objectif** : valider Holmes MCP v1.1.0 en conditions réelles sur la box et auditer la couverture des 13 workflows jeedom-audit avec Holmes MCP comme source de données exclusive. Même nature que J8-audit, mais avec le nouvel outil `find_command_usages` disponible et les corrections J7bis-1 intégrées.
+
+**Pré-requis** :
+
+- Snapshot Proxmox avant la session (SSH + tests live)
+- Daemon Holmes MCP démarré sur la box (`v1.1.0` déployé)
+- SSH alias `Jeedom` opérationnel
+
+**Livrables :**
+
+- **Audit A — Tests d'intégration live complets** : lancer la suite `pytest tests/integration/` sur la box via SSH. Valider les 4 tests `TestFindCommandUsagesLive` (nouveau). Documenter tous les échecs/écarts.
+- **Audit B — WF jeedom-audit × Holmes MCP** : pour chacun des 13 workflows de `docs/skill-coverage-matrix.md`, vérifier que Holmes MCP (v1.1.0) couvre le besoin end-to-end depuis Claude Code. Identifier les gaps résiduels.
+- **Audit C — Qualité des réponses MCP** : sanity check sur 5-10 requêtes réelles depuis Claude Code sur la box du PO. Vérifier : sanitisation, pertinence, absence de crash.
+- **Audit D — Rapport d'audit** : document `docs/state/audit-J7bis-2.md` listant : items ✅ / ⚠️ / 🔴, bugs identifiés, gaps résiduels, recommandations pour J8.
+
+**DoD J7bis-2** :
+
+- [ ] Suite intégration live exécutée — résultats documentés
+- [ ] `find_command_usages` validé live sur la box
+- [ ] 13 WF jeedom-audit revus — matrice mise à jour si besoin
+- [ ] Rapport `docs/state/audit-J7bis-2.md` rédigé
+- [ ] Zéro crash daemon pendant la session
+- [ ] Items bloquants pour J8 identifiés (ou confirmation : aucun)
 
 ---
 

@@ -8,12 +8,12 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v1.0.0` (J7-2 ✅ — packaging market, icône conforme, changelog, README) |
+| **Version courante** | `v1.1.0` (J7bis-1 ✅ — find_command_usages, auto-backtick query_sql, doc) |
 | **Jalon en cours** | J7bis — Améliorations Holmes MCP pré-migration jeedom-audit |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-05-j8-1-discussion-methode-beta` |
-| **Prochaine session** | J7bis-1 — Nouvel outil `find_command_usages` + qualité `query_sql` + doc |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé) |
+| **Dernière session** | `2026-05-05-j7bis-1-find-command-usages-query-sql` |
+| **Prochaine session** | J7bis-2 — Audit live Holmes MCP + jeedom-audit (snapshot Proxmox requis) |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé), J7bis-1 ✅ (find_command_usages, auto-backtick query_sql, doc LIMIT, FAQ, v1.1.0, 686 ut) |
 
 ---
 
@@ -489,25 +489,40 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 
 **Déclencheur** : audit de migration jeedom-audit → Holmes MCP (session J8-audit, 2026-05-05) — 4 items identifiés, traités avant la bêta.
 
-### J7bis-1 — Nouvel outil + qualité query_sql + doc
+### J7bis-1 — Nouvel outil + qualité query_sql + doc ✅
 
-**Livraisons prévues :**
+**Livraisons (2026-05-05) :**
 
 - Item A : `find_command_usages(cmd_id)` — triggers, conditions/actions, refs dataStore d'une commande
-- Item B : `query_sql()` — documenter comportement LIMIT auto-injecté (docstring + doc MkDocs)
-- Item C : `query_sql()` — auto-backtick mots réservés MySQL (`trigger`, `repeat`, `update`)
-- Item D : FAQ — entrée "Jeedom 4.4.x supporté ?" → Non, cible 4.5+ Bookworm
+- Item B : `query_sql()` — comportement LIMIT documenté (docstring + section diagnostic MkDocs)
+- Item C : `query_sql()` — auto-backtick `trigger`/`repeat`/`update` (split littéraux)
+- Item D : FAQ — entrée Jeedom 4.4.x mise à jour, Bookworm x86_64 précisé
 
-**DoD J7bis-1** :
+**Résultats** : 686 tests unitaires ✅, ruff propre, version `1.1.0`, 26 tools MCP.
 
-- [ ] `find_command_usages(cmd_id)` implémenté, testé (unit + intégration live), documenté
-- [ ] `query_sql()` docstring mise à jour (comportement LIMIT)
-- [ ] Parser `query_sql.py` : auto-backtick `trigger` / `repeat` / `update`
-- [ ] `docs/user/faq.md` : entrée Jeedom 4.4.x ajoutée
-- [ ] Tests unitaires 100% verts, ruff propre
-- [ ] `plugin_info/changelog.md` — entrée J7bis ajoutée
-- [ ] `plugin_info/info.json` — version `1.1.0`
-- [ ] `docs/market/forum-developers-lounge.md` — relu, mis à jour si besoin
+---
+
+### J7bis-2 — Audit live Holmes MCP + jeedom-audit
+
+**Objectif** : valider Holmes MCP v1.1.0 en conditions réelles et auditer la couverture des 13 WF jeedom-audit avec Holmes MCP comme source de données exclusive.
+
+**Pré-requis** : snapshot Proxmox + daemon v1.1.0 déployé + SSH opérationnel.
+
+**Livrables prévus :**
+
+- Audit A : suite `pytest tests/integration/` live — dont `find_command_usages` (4 nouveaux tests)
+- Audit B : 13 WF jeedom-audit × Holmes MCP — gaps résiduels identifiés
+- Audit C : sanity check 5-10 requêtes réelles Claude Code sur box PO
+- Audit D : rapport `docs/state/audit-J7bis-2.md`
+
+**DoD J7bis-2** :
+
+- [ ] Suite intégration live exécutée — résultats documentés
+- [ ] `find_command_usages` validé live sur la box
+- [ ] 13 WF jeedom-audit revus — matrice mise à jour si besoin
+- [ ] Rapport `docs/state/audit-J7bis-2.md` rédigé
+- [ ] Zéro crash daemon pendant la session
+- [ ] Items bloquants pour J8 identifiés (ou confirmation : aucun)
 
 ---
 

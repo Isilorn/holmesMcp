@@ -417,3 +417,86 @@ class TestQuerySqlResults:
             result = qsql.query_sql(_MOCK_CONN, sql)
         # Multi-table → table=None → pas de whitelist, mais regex sur field names
         assert result['count'] == 1
+
+
+# ---------------------------------------------------------------------------
+# _auto_backtick_reserved
+# ---------------------------------------------------------------------------
+
+
+class TestAutoBacktickReserved:
+    def test_trigger_as_column_backticked(self):
+        sql = 'SELECT trigger, mode FROM scenario'
+        result = qsql._auto_backtick_reserved(sql)
+        assert '`trigger`' in result
+        assert 'trigger,' not in result
+
+    def test_repeat_as_column_backticked(self):
+        sql = 'SELECT id, repeat FROM calendar_event'
+        result = qsql._auto_backtick_reserved(sql)
+        assert '`repeat`' in result
+
+    def test_update_as_table_backticked(self):
+        sql = "SELECT id FROM update WHERE type='plugin'"
+        result = qsql._auto_backtick_reserved(sql)
+        assert '`update`' in result
+
+    def test_trigger_in_string_literal_not_backticked(self):
+        sql = "SELECT id FROM scenario WHERE name LIKE '%trigger%'"
+        result = qsql._auto_backtick_reserved(sql)
+        assert "'%trigger%'" in result
+        assert "'%`trigger`%'" not in result
+
+    def test_repeat_in_string_literal_not_backticked(self):
+        sql = "SELECT id FROM dataStore WHERE value LIKE '%repeat%'"
+        result = qsql._auto_backtick_reserved(sql)
+        assert "'%repeat%'" in result
+
+    def test_already_backticked_not_doubled(self):
+        sql = 'SELECT `trigger`, mode FROM scenario'
+        result = qsql._auto_backtick_reserved(sql)
+        assert '``trigger``' not in result
+        assert result.count('`trigger`') == 1
+
+    def test_no_reserved_words_unchanged(self):
+        sql = 'SELECT id, name FROM eqLogic WHERE isEnable = 1'
+        result = qsql._auto_backtick_reserved(sql)
+        assert result == sql
+
+    def test_case_insensitive(self):
+        sql = 'SELECT TRIGGER, MODE FROM scenario'
+        result = qsql._auto_backtick_reserved(sql)
+        assert '`TRIGGER`' in result
+
+    def test_update_in_like_not_backticked(self):
+        sql = "SELECT id FROM scenario WHERE name LIKE '%update%'"
+        result = qsql._auto_backtick_reserved(sql)
+        assert "'%update%'" in result
+        assert "'%`update`%'" not in result
+
+    def test_multiple_reserved_words_all_backticked(self):
+        sql = 'SELECT trigger, repeat FROM scenario'
+        result = qsql._auto_backtick_reserved(sql)
+        assert '`trigger`' in result
+        assert '`repeat`' in result
+
+
+# ---------------------------------------------------------------------------
+# query_sql — intégration auto-backtick dans le pipeline
+# ---------------------------------------------------------------------------
+
+
+class TestQuerySqlAutoBacktick:
+    def test_trigger_column_auto_backticked_before_execution(self):
+        with patch('tools.query_sql._db.query', return_value=[]) as mock_q:
+            qsql.query_sql(_MOCK_CONN, 'SELECT trigger, mode FROM scenario')
+
+        executed_sql = mock_q.call_args[0][1]
+        assert '`trigger`' in executed_sql
+
+    def test_update_table_auto_backticked_before_execution(self):
+        with patch('tools.query_sql._db.query', return_value=[]) as mock_q:
+            qsql.query_sql(_MOCK_CONN, "SELECT id, name FROM update WHERE type = 'plugin'")
+
+        executed_sql = mock_q.call_args[0][1]
+        assert '`update`' in executed_sql

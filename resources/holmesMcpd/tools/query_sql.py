@@ -43,6 +43,13 @@ _SELECT_CLAUSE_RE = re.compile(r'SELECT\s+(.+?)\s+FROM\b', re.IGNORECASE | re.DO
 # LIMIT dans la requête externe (pas dans une sous-requête — approximation V1)
 _LIMIT_RE = re.compile(r'\bLIMIT\s+(\d+)\b', re.IGNORECASE)
 
+# Auto-backtick — mots réservés MySQL courants dans le contexte Jeedom
+_QUOTED_STR_RE = re.compile(r"'(?:[^'\\]|\\.)*'")
+_RESERVED_BARE_RE = re.compile(
+    r'(?<![`\w])\b(trigger|repeat|update)\b(?![`\w])',
+    re.IGNORECASE,
+)
+
 
 def _check_select_only(sql: str) -> str | None:
     """Retourne None si OK, sinon un message d'erreur."""
@@ -84,6 +91,18 @@ def _check_sensitive_columns(sql: str) -> str | None:
     if _SENSITIVE_COL_RE.search(cols_part):
         return 'Requête refusée — colonnes sensibles détectées dans SELECT (D15.3)'
     return None
+
+
+def _auto_backtick_reserved(sql: str) -> str:
+    """Backticks trigger/repeat/update comme identifiants, sans toucher aux littéraux 'string'."""
+    parts: list[str] = []
+    last = 0
+    for m in _QUOTED_STR_RE.finditer(sql):
+        parts.append(_RESERVED_BARE_RE.sub(r'`\1`', sql[last:m.start()]))
+        parts.append(m.group(0))
+        last = m.end()
+    parts.append(_RESERVED_BARE_RE.sub(r'`\1`', sql[last:]))
+    return ''.join(parts)
 
 
 def _ensure_limit(sql: str) -> str:
@@ -163,6 +182,7 @@ def query_sql(
     if error:
         return {'error': error, '_filtered_fields': []}
 
+    sql = _auto_backtick_reserved(sql)
     sql = _ensure_limit(sql)
 
     rows = _db.query(conn, sql)

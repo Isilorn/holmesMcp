@@ -22,7 +22,7 @@ Cas d'usage typiques :
 
 ### Caractéristiques techniques
 
-- **25 tools MCP** en lecture seule : équipements, commandes, scénarios, plugins, logs, datastore, configuration, SQL restreint
+- **26 tools MCP** en lecture seule : équipements, commandes, scénarios, plugins, logs, datastore, configuration, SQL restreint
 - **5 resources MCP** : overview, health, scenario, equipment, logs du jour
 - **Authentification Bearer** par utilisateur Jeedom (token stocké dans les options utilisateur)
 - **Accès données** : MySQL via user dédié `jeedom_mcp_ro` (SELECT only) + API JSON-RPC localhost + logs fichier

@@ -1,5 +1,14 @@
 # Changelog Holmes MCP
 
+## v1.1.0 — 2026-05-05
+
+Améliorations pré-bêta (J7bis-1) — qualité query_sql et nouvel outil d'analyse de dépendances.
+
+- Nouvel outil `find_command_usages(cmd_id)` : retourne les scénarios déclenchés par une commande, les scénarios qui l'utilisent en condition/action, et les variables dataStore qui la référencent
+- `query_sql` : auto-backtick des mots réservés MySQL `trigger`, `repeat`, `update` dans les requêtes utilisateur (plus besoin de les écrire manuellement)
+- Documentation : comportement LIMIT de `query_sql` explicité dans le diagnostic MkDocs (LIMIT 50 auto-injecté, max 200)
+- FAQ : précision plateforme cible — Jeedom 4.5+ sur Debian 12 Bookworm x86_64
+
 ## v1.0.0 — 2026-05-05
 
 Première version stable — soumission market.

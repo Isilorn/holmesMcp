@@ -27,9 +27,9 @@ Ce qui est envoyé à Anthropic (ou votre provider LLM) : les données retourné
 
 ---
 
-### Holmes MCP est-il compatible avec Jeedom 4.4 ou antérieur ?
+### Holmes MCP est-il compatible avec Jeedom 4.4.x ou antérieur ?
 
-**Non.** Jeedom 4.5 minimum est requis pour la gestion du virtualenv Python (`system::update()`). Jeedom 4.4 et antérieur ne sont pas supportés.
+**Non.** Holmes MCP cible **Jeedom 4.5+ sur Debian 12 Bookworm (x86_64)**. Jeedom 4.5 minimum est requis pour la gestion du virtualenv Python (`system::update()`). Jeedom 4.4.x et antérieur ne sont pas supportés.
 
 ---
 
@@ -46,6 +46,7 @@ Holmes MCP a été développé et testé sur **Debian 12 (Bookworm)**. D'autres 
 Le token est stocké dans la base Jeedom (chiffré via `User->setOption()`). Il est transmis en HTTP sur votre réseau local. En V1, HTTPS n'est pas supporté — le token est donc visible sur votre réseau LAN si quelqu'un écoute le trafic (attaque man-in-the-middle locale).
 
 **Recommandations :**
+
 - Réservez l'usage à votre réseau local de confiance
 - N'exposez pas le port 8765 sur Internet
 - Utilisez un VPN pour accéder à distance

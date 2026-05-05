@@ -629,3 +629,114 @@ class TestFetchCmdRuntimeMap:
             result = equipments._fetch_cmd_runtime_map('key', 1)
 
         assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# find_command_usages
+# ---------------------------------------------------------------------------
+
+
+def _scenario_trigger_row(**kwargs) -> dict:
+    base = {
+        'id': 10,
+        'name': 'Réveil Salon',
+        'isActive': 1,
+        'trigger': '["#42#"]',
+    }
+    return {**base, **kwargs}
+
+
+def _expr_row(**kwargs) -> dict:
+    base = {
+        'id': 10,
+        'name': 'Réveil Salon',
+        'isActive': 1,
+        'expr_type': 'condition',
+        'expression': 'if (#42# > 20)',
+    }
+    return {**base, **kwargs}
+
+
+def _datastore_row(**kwargs) -> dict:
+    base = {
+        'key': 'cmd_ref',
+        'value': '#42#',
+        'type': 'scenario',
+        'link_id': 5,
+    }
+    return {**base, **kwargs}
+
+
+class TestFindCommandUsages:
+    def _call(self, trigger_rows=None, expr_rows=None, datastore_rows=None, cmd_id=42, limit=50):
+        side = [trigger_rows or [], expr_rows or [], datastore_rows or []]
+        with patch('tools.equipments._db.query', side_effect=side):
+            return equipments.find_command_usages(_MOCK_CONN, cmd_id=cmd_id, limit=limit)
+
+    def test_empty_db_returns_empty_categories(self):
+        result = self._call()
+
+        assert result['cmd_id'] == 42
+        assert result['triggers'] == []
+        assert result['expressions'] == []
+        assert result['datastore'] == []
+        assert result['total_triggers'] == 0
+        assert result['total_expressions'] == 0
+        assert result['total_datastore'] == 0
+        assert result['_filtered_fields'] == []
+
+    def test_returns_trigger_scenario(self):
+        result = self._call(trigger_rows=[_scenario_trigger_row()])
+
+        assert result['total_triggers'] == 1
+        assert result['triggers'][0]['name'] == 'Réveil Salon'
+        assert '#42#' in result['triggers'][0]['trigger']
+
+    def test_returns_expression_scenario(self):
+        result = self._call(expr_rows=[_expr_row()])
+
+        assert result['total_expressions'] == 1
+        assert result['expressions'][0]['name'] == 'Réveil Salon'
+        assert result['expressions'][0]['expr_type'] == 'condition'
+
+    def test_returns_datastore_ref(self):
+        result = self._call(datastore_rows=[_datastore_row()])
+
+        assert result['total_datastore'] == 1
+        assert result['datastore'][0]['key'] == 'cmd_ref'
+        assert result['datastore'][0]['value'] == '#42#'
+
+    def test_pattern_uses_cmd_id(self):
+        with patch('tools.equipments._db.query', side_effect=[[], [], []]) as mock_q:
+            equipments.find_command_usages(_MOCK_CONN, cmd_id=99)
+
+        for call in mock_q.call_args_list:
+            params = call[0][2]
+            assert '%#99#%' in params, f'Pattern #99# absent des params : {params}'
+
+    def test_limit_capped_at_max(self):
+        with patch('tools.equipments._db.query', side_effect=[[], [], []]) as mock_q:
+            equipments.find_command_usages(_MOCK_CONN, cmd_id=1, limit=9999)
+
+        for call in mock_q.call_args_list:
+            params = call[0][2]
+            assert equipments._CMD_USAGES_LIMIT in params
+
+    def test_three_queries_executed(self):
+        with patch('tools.equipments._db.query', side_effect=[[], [], []]) as mock_q:
+            equipments.find_command_usages(_MOCK_CONN, cmd_id=1)
+
+        assert mock_q.call_count == 3
+
+    def test_trigger_query_uses_backtick(self):
+        with patch('tools.equipments._db.query', side_effect=[[], [], []]) as mock_q:
+            equipments.find_command_usages(_MOCK_CONN, cmd_id=1)
+
+        trigger_sql = mock_q.call_args_list[0][0][1]
+        assert '`trigger`' in trigger_sql
+
+    def test_returns_combined_filtered_fields(self):
+        trigger_rows = [_scenario_trigger_row(secret_col='leak')]
+        result = self._call(trigger_rows=trigger_rows)
+
+        assert 'secret_col' in result['_filtered_fields']
