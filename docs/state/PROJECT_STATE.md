@@ -8,12 +8,12 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v0.5.0` (J5 ✅ complet — 25 tools + 5 resources + audit J5-5) |
-| **Jalon en cours** | J6 — Vue UI logs + durcissement sanitisation |
+| **Version courante** | `v0.6.0` (J6 ✅ complet — vue activité MCP + sanitisation live + ADR-0017) |
+| **Jalon en cours** | J7 — Doc utilisateur + bêta privée + release market |
 | **Branche de travail** | `develop` |
 | **Dernière session** | `2026-05-05-j6-2` |
-| **Prochaine session** | J7 ou tag v0.6.0 (après sanity check PO) |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted) |
+| **Prochaine session** | J7-1 (doc MkDocs) |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué) |
 
 ---
 
@@ -441,13 +441,13 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - **665 tests unitaires**, `sanitize.py` 100%, ruff propre
 - Rapport sanity check D15.6 produit (voir session `2026-05-05-j6-2-sanitize-live-verification.md`)
 
-**DoD J6 — en attente sanity check PO** :
+**DoD J6 ✅** :
 
 - [x] Vue dédiée logs opérationnelle (J6-1)
-- [ ] **Sanity check PO** : lire le rapport de session J6-2 + confirmer qu'aucun credential connu ne transparaît
+- [x] Sanity check PO : aucun credential connu dans les sorties sanitisées (confirmé fin J6-2)
 - [x] Liste plugins hard-codés finalisée (ADR-0017 accepted)
 - [x] Tests live exécutés + résumés
-- [ ] Tag `v0.6.0` (après sanity check PO)
+- [x] Tag `v0.6.0` posé et pushé (commit `3733f4f`)
 
 ---
 
