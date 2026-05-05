@@ -186,14 +186,23 @@ _BLOB_COLUMNS: frozenset[str] = frozenset({'configuration', 'options'})
 # Liste V1 : 10 plugins initiaux (D15.2 J1-1) + 5 plugins install PO (J2-1).
 _PLUGIN_EXTRA_KEYS: dict[str, frozenset[str]] = {
     # Plugins install PO — eqType_name et champs vérifiés live J6-2
-    'jMQTT': frozenset({
-        # Vrais champs camelCase broker (vérifiés live J6-2 — non couverts par regex mech 2)
-        'mqttUser', 'mqttPass', 'mqttTlsClientKey',
-        # Variantes défensives pour autres versions jMQTT
-        'mqttuser', 'mqttlogin', 'broker_user', 'login', 'user', 'username',
-    }),
-    'calendar': frozenset(),   # Agenda (eqType_name réel : 'calendar')
-    'alarm': frozenset(),      # Alarme (eqType_name réel : 'alarm') — pas de credentials dans blob
+    'jMQTT': frozenset(
+        {
+            # Vrais champs camelCase broker (vérifiés live J6-2 — non couverts par regex mech 2)
+            'mqttUser',
+            'mqttPass',
+            'mqttTlsClientKey',
+            # Variantes défensives pour autres versions jMQTT
+            'mqttuser',
+            'mqttlogin',
+            'broker_user',
+            'login',
+            'user',
+            'username',
+        }
+    ),
+    'calendar': frozenset(),  # Agenda (eqType_name réel : 'calendar')
+    'alarm': frozenset(),  # Alarme (eqType_name réel : 'alarm') — pas de credentials dans blob
     'Thermostat': frozenset(),
     'thermostat': frozenset(),
     'JeedomConnect': frozenset(  # eqType_name réel : 'JeedomConnect' (sans espace)
@@ -206,8 +215,8 @@ _PLUGIN_EXTRA_KEYS: dict[str, frozenset[str]] = {
         }
     ),
     'Script': frozenset(),
-    'mqtt2': frozenset(),      # MQTT Manager (eqType_name réel : 'mqtt2') — pas de credentials
-    'virtual': frozenset(),    # Virtuel (eqType_name réel : 'virtual')
+    'mqtt2': frozenset(),  # MQTT Manager (eqType_name réel : 'mqtt2') — pas de credentials
+    'virtual': frozenset(),  # Virtuel (eqType_name réel : 'virtual')
     # Plugins top-10 initiaux (D15.2 J1-1)
     'Aqara': frozenset({'app_id', 'region_key', 'region'}),
     'Zigbee2MQTT': frozenset({'broker_user', 'login', 'user', 'username'}),

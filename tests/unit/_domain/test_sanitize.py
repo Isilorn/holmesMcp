@@ -937,14 +937,14 @@ class TestInternals:
         """Les plugins de l'install PO (eqType_name réels J6-2) sont dans _PLUGIN_EXTRA_KEYS."""
         po_plugins = [
             'jMQTT',
-            'calendar',       # Agenda
-            'alarm',          # Alarme
+            'calendar',  # Agenda
+            'alarm',  # Alarme
             'Thermostat',
             'thermostat',
             'JeedomConnect',  # ex 'Jeedom Connect'
             'Script',
-            'mqtt2',          # MQTT Manager
-            'virtual',        # Virtuel
+            'mqtt2',  # MQTT Manager
+            'virtual',  # Virtuel
         ]
         for plugin in po_plugins:
             assert plugin in _PLUGIN_EXTRA_KEYS, f'{plugin} absent de _PLUGIN_EXTRA_KEYS'
@@ -996,10 +996,12 @@ class TestInternals:
 
     # E07 (J3-5) : id stale retiré des whitelists history / historyArch
     def test_history_whitelist_has_no_id(self) -> None:
-        assert 'id' not in _TABLE_WHITELISTS['history'], \
+        assert 'id' not in _TABLE_WHITELISTS['history'], (
             "'id' stale (supprimé du SELECT en J3-4) ne doit plus figurer dans 'history'"
-        assert 'id' not in _TABLE_WHITELISTS['historyArch'], \
+        )
+        assert 'id' not in _TABLE_WHITELISTS['historyArch'], (
             "'id' stale ne doit plus figurer dans 'historyArch'"
+        )
 
     def test_history_whitelist_has_expected_fields(self) -> None:
         for table in ('history', 'historyArch'):
