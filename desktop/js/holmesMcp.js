@@ -20,11 +20,33 @@ var holmesMcp = (function () {
                         $('#message').showAlert({ message: data.result, level: 'danger' });
                         return;
                     }
-                    $('#token_' + userId).val(data.result);
+                    var full = data.result;
+                    var masked = full.substring(0, 8) + '••••••••••••••••';
+                    $('#token_' + userId)
+                        .val(masked)
+                        .attr('data-full', full)
+                        .attr('data-masked', '1');
+                    $('#reveal_' + userId)
+                        .prop('disabled', false)
+                        .find('i').removeClass('fa-eye-slash').addClass('fa-eye');
                     $('#message').showAlert({ message: '{{Token généré avec succès.}}', level: 'success' });
                 },
             });
         });
+    }
+
+    function toggleToken(userId) {
+        var $input = $('#token_' + userId);
+        var $icon  = $('#reveal_' + userId).find('i');
+        var full   = $input.attr('data-full') || '';
+        if (!full) { return; }
+        if ($input.attr('data-masked') === '1') {
+            $input.val(full).attr('data-masked', '0');
+            $icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            $input.val(full.substring(0, 8) + '••••••••••••••••').attr('data-masked', '1');
+            $icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
     }
 
     function loadLogs() {
@@ -126,6 +148,7 @@ var holmesMcp = (function () {
 
     return {
         generateToken: generateToken,
+        toggleToken:   toggleToken,
         loadLogs:      loadLogs,
         setupRefresh:  setupRefresh,
     };

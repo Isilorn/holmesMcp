@@ -11,6 +11,7 @@ include_file('desktop', 'holmesMcp', 'js', 'holmesMcp');
 $mc_url = holmesMcp::getMcpUrl();
 ?>
 
+<h4><i class="fas fa-cog"></i> {{Configuration daemon}}</h4>
 <form class="form-horizontal">
   <fieldset>
 
@@ -52,7 +53,7 @@ $mc_url = holmesMcp::getMcpUrl();
 
 <!-- Section tokens par utilisateur -->
 <hr />
-<h4>{{Tokens d'accès par utilisateur}}</h4>
+<h4><i class="fas fa-key"></i> {{Tokens d'accès par utilisateur}}</h4>
 <p class="text-muted">
   {{Chaque utilisateur Jeedom peut avoir son propre token MCP. Copiez-le dans la configuration de votre client MCP.}}
 </p>
@@ -60,15 +61,32 @@ $mc_url = holmesMcp::getMcpUrl();
 <div id="holmesMcp_tokens">
   <?php
   foreach (user::all() as $user) {
-      $uid   = $user->getId();
-      $login = htmlspecialchars($user->getLogin(), ENT_QUOTES, 'UTF-8');
-      $token = holmesMcp::getTokenForUser($uid);
+      $uid    = $user->getId();
+      $login  = htmlspecialchars($user->getLogin(), ENT_QUOTES, 'UTF-8');
+      $token  = holmesMcp::getTokenForUser($uid);
+      $masked = $token
+          ? (htmlspecialchars(substr($token, 0, 8), ENT_QUOTES, 'UTF-8') . str_repeat('•', 16))
+          : '—';
+      $full   = $token ? htmlspecialchars($token, ENT_QUOTES, 'UTF-8') : '';
       ?>
       <div class="form-group">
         <label class="col-xs-3 control-label"><?php echo $login; ?></label>
         <div class="col-xs-5">
-          <input type="text" class="form-control" id="token_<?php echo $uid; ?>"
-                 readonly value="<?php echo htmlspecialchars($token ?: '—', ENT_QUOTES, 'UTF-8'); ?>" />
+          <div class="input-group">
+            <input type="text" class="form-control" id="token_<?php echo $uid; ?>"
+                   readonly
+                   value="<?php echo $masked; ?>"
+                   data-full="<?php echo $full; ?>"
+                   data-masked="1" />
+            <span class="input-group-btn">
+              <button class="btn btn-default btn-sm" type="button"
+                      id="reveal_<?php echo $uid; ?>"
+                      onclick="holmesMcp.toggleToken(<?php echo $uid; ?>)"
+                      <?php echo $token ? '' : 'disabled="disabled"'; ?>>
+                <i class="fas fa-eye"></i>
+              </button>
+            </span>
+          </div>
         </div>
         <div class="col-xs-4">
           <button class="btn btn-sm btn-warning" type="button"
@@ -86,7 +104,7 @@ $mc_url = holmesMcp::getMcpUrl();
 
 <!-- Section activité MCP (D14.4) -->
 <hr />
-<h4>{{Activité MCP}}</h4>
+<h4><i class="fas fa-list-alt"></i> {{Activité MCP}}</h4>
 <p class="text-muted">
   {{Appels de tools enregistrés par le daemon Holmes MCP.}}
 </p>
