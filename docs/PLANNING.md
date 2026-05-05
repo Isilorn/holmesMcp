@@ -379,36 +379,64 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 **Objectif principal** : livrer la documentation utilisateur MkDocs, finaliser l'identité produit, conduire la bêta privée sur la box du PO, soumettre au market en statut bêta.
 
-**Durée indicative** : 1-2 sessions Claude Code + 2+ semaines bêta privée PO
+**Durée indicative** : sessions Claude Code + 2+ semaines bêta privée PO + délai compte développeur Jeedom (plusieurs semaines)
 
-**Livrables Claude Code** :
-- `docs/user/` — source MkDocs (12 sections D12.6 : présentation, prérequis, install, config, clients MCP, sécurité, tools, resources, diagnostic, FAQ, lien sphère, contribuer)
-- `mkdocs.yml` — config MkDocs Material (navigation, sélecteur de version, recherche, dark mode)
-- `.github/workflows/docs.yml` — CI GitHub Actions : rebuild doc à chaque push `main`, publie sur `gh-pages`
-- `README.md` (racine) — README market-friendly avec identité produit Holmes MCP, prérequis, install rapide, lien doc
-- `plugin_info/changelog.md` — changelog versionné
-- `plugin_info/holmesMcp_icon.png` — icône market (Holmes-themed — Claude Code propose un design, PO valide)
-- Build packagé du plugin (zip installable)
-- Annonce forum Jeedom rédigée par Claude Code + soumise au PO pour validation avant publication
-- 9 critères de sortie V1.0.0 vérifiés (D8.3)
+---
 
-**Livrables PO** :
-- **3-5 captures d'écran UI Jeedom** (page config plugin, état daemon, optionnel : fiche market preview)
-- **Validation Claude Desktop finale** sur sa machine (D8.3 critère #4) — test complet de connexion + invocation de 3-5 tools
-- **Validation documentation** (lire et confirmer que la doc est compréhensible pour un Jeedomiste non-dev)
-- **Bêta privée 2+ semaines** : 5 sessions Claude Desktop réelles minimum (usage normal du plugin), zéro crash daemon, zéro fuite données observée
-- **Soumission market Jeedom** en statut bêta (compte développeur PO)
-- **Publication annonce forum** Jeedom (texte fourni par Claude Code)
+#### J7-1 ✅ Documentation utilisateur MkDocs (2026-05-05)
 
-**Dépendances** : J6 validé (sanity check sanitisation PO réalisé)
+- `docs/user/` : 12 sections MkDocs complètes
+- `plugin_info/holmesMcp_icon.png` : icône market hibou Holmes (200×200 initiale)
+- `mkdocs build --strict` OK
 
-**Critères d'avancement (DoD)** :
-- [ ] Doc MkDocs complète (12 sections), URL `gh-pages` accessible
-- [ ] `info.json` mis à jour avec champs `documentation` + `documentation_beta` pointant GitHub Pages
-- [ ] README.md market-friendly validé
-- [ ] 9 critères de sortie V1.0.0 tous cochés par le PO
-- [ ] Bêta privée 2+ semaines : aucun crash, aucune fuite, 5 sessions réelles
-- [ ] Plugin soumis sur le market Jeedom en statut bêta ✅
+#### J7-2 ✅ Packaging market (2026-05-05)
+
+- `plugin_info/info.json` : version 1.0.0, catégorie `programming`
+- `plugin_info/changelog.md` : historique complet v0.0.0→v1.0.0 (langage utilisateur)
+- `plugin_info/holmesMcp_icon.png` : format Jeedom conforme (309×348, zone 309×309 coins arrondis, 39px transparent bas)
+- `README.md` : market-ready v1.0.0
+- `docs/market/forum-developers-lounge.md` : post Developers' Lounge prêt à publier
+- Commit `0eb3122`
+
+#### J7-3 — Polish UI page configuration
+
+**Objectif** : améliorer le rendu de la page de configuration du plugin (masquage tokens, hiérarchie visuelle).
+
+**Livrables** :
+
+- `desktop/php/holmesMcp.php` : masquage partiel des tokens (8 premiers chars + `••••`), icônes sections, séparateurs
+- Tests visuels sur box PO
+
+**DoD** :
+
+- [ ] Tokens masqués par défaut avec bouton révéler
+- [ ] Sections avec icônes Font Awesome cohérentes avec le thème Jeedom
+- [ ] Rendu validé sur box PO (capture PO)
+
+#### J7-market — Soumission market bêta
+
+**Déclencheur** : réception confirmation compte développeur Jeedom (demandé 2026-05-05, délai plusieurs semaines) + bêta privée fermée.
+
+**Séquence** :
+
+1. PO publie le post Developers' Lounge (`docs/market/forum-developers-lounge.md`)
+2. PO soumet le plugin sur le portail market en canal **bêta** (branche `develop`)
+3. Claude Code met à jour PROJECT_STATE.md + tag
+4. Annonce forum grand public (texte à rédiger en J7-market)
+
+**Livrables PO (bloquants)** :
+
+- Réception compte développeur Jeedom
+- 3-5 captures d'écran UI Jeedom (page config, état daemon)
+- Validation Claude Desktop finale (D8.3 critère #4)
+- Bêta privée 2+ semaines : zéro crash, zéro fuite, 5 sessions réelles minimum
+
+**DoD** :
+
+- [ ] Post Developers' Lounge publié par le PO
+- [ ] Plugin soumis sur le market Jeedom en statut bêta
+- [ ] Bêta privée 2+ semaines validée par le PO
+- [ ] Annonce forum grand public publiée
 
 ---
 
