@@ -415,6 +415,39 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 ---
 
+### J8 — Bêta privée
+
+**Objectif** : valider le plugin en conditions réelles sur la box du PO avant toute publication market. J8 se déroule entièrement sur la box existante — pas de code livré par Claude Code sauf corrections de bugs bloquants éventuels.
+
+**Démarrage** : à la clôture de J7 (J7-3 ✅).
+
+#### Discussion ouverte en début de J8 — Méthodologie bêta
+
+Avant de démarrer les sessions de test, le PO et Claude Code discutent de la méthode. Point ouvert à trancher en J8-1 :
+
+**Option envisagée par le PO** : créer une branche `develop` sur `jeedom-audit` qui utilise Holmes MCP comme source de données à la place des scripts SSH directs. Ce serait une validation bout-en-bout du plugin (jeedom-audit devient consommatrice MCP, conformément à ADR-0019 et ADR-0020). D'autres approches possibles (sessions Claude Desktop directes, Cursor, script de test dédié).
+
+*Discussion ouverte — aucune décision prise à ce stade.*
+
+#### Critères de sortie bêta (DoD J8)
+
+**Activité PO** :
+
+- [ ] 5 sessions de test réelles minimum (Claude Desktop, Cursor, ou client retenu)
+- [ ] Zéro crash daemon sur la durée de la bêta
+- [ ] Zéro fuite de données observée (sanity check régulier)
+- [ ] Validation Claude Desktop finale sur la machine PO (D8.3 critère #4)
+- [ ] 2+ semaines de bêta effective
+- [ ] PO déclare la bêta fermée
+
+**Packaging market (DoD J8 — règle jalons futurs)** :
+
+- [ ] `plugin_info/changelog.md` — entrée J8 ajoutée
+- [ ] `plugin_info/info.json` — version incrémentée si livraisons code en J8
+- [ ] `docs/market/forum-developers-lounge.md` relu et mis à jour si besoin
+
+---
+
 ## 6. Jalon Jx — Publication market (numéro attribué par le PO quand il le décide)
 
 Jalon flottant, déclenché par le PO quand les deux conditions sont réunies :
