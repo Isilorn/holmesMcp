@@ -1,5 +1,7 @@
 # Holmes MCP
 
+![Holmes MCP](img/holmes-icon.png){ width=160, align=center }
+
 > *Holmes observe, déduit, raconte. Il ne touche jamais à la scène de crime, sans jamais exposer les secrets de votre maison.*
 
 **Holmes MCP** est un plugin Jeedom natif open source qui expose votre box Jeedom comme serveur [MCP (Model Context Protocol)](https://modelcontextprotocol.io) en **lecture seule**.
