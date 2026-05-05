@@ -97,47 +97,99 @@ git merge --ff-only main   # develop doit être à parité avec main en début d
 ### Routine de fin de sous-session
 
 **À la fin de chaque sous-session** — que la session Claude Code continue ou non.
+Exécuter chaque étape dans l'ordre. Ne pas passer à la suivante si une étape bloque.
 
 #### Étape 1 — Qualité code (bloquante)
 
 ```bash
-# Lint + format sur tous les fichiers modifiés
-ruff check <fichiers>
-ruff format --check <fichiers>
-
-# Suite de tests unitaires + couverture
-python -m pytest tests/unit/ --cov --cov-report=term-missing -q
+git branch --show-current   # doit afficher "develop"
+git diff --name-only HEAD   # fichiers modifiés dans le dernier commit
+git status                  # fichiers non commités éventuels
 ```
 
-- Ruff doit être propre (0 erreur). Appliquer `ruff format` si nécessaire.
-- Le module implémenté dans la sous-session doit atteindre son objectif de couverture
-  (100% pour `sanitize.py`, >80% pour les autres).
-- Si un test échoue → corriger avant de passer aux étapes suivantes.
-
-#### Étape 2 — Documentation (dans le même commit que le code)
-
-1. **ADRs impactées** : toute implémentation qui concerne une décision met à jour l'ADR
-   correspondante (statut, contenu). Règle ADR on commit.
-2. **Fichier de session** : créer `docs/sessions/AAAA-MM-JJ-{Jx-y-slug}.md` avec :
-   - Objectif de la sous-session
-   - Livrables produits (fichiers, fonctions, tests)
-   - Décisions prises en session (choix non triviaux)
-   - Résultats des tests (nb tests, couverture)
-   - Prochaine sous-session (objectif + pré-requis)
-3. **PROJECT_STATE.md** : marquer la sous-session ✅, mettre à jour la prochaine,
-   ajouter le commit hash, mettre à jour le risque actif si besoin.
-
-#### Étape 3 — Commit
+Pour chaque fichier Python modifié (ruff est un linter Python — ne pas lancer sur PHP/JS) :
 
 ```bash
-# Vérifier qu'on est bien sur develop (jamais sur main)
-git branch --show-current   # doit afficher "develop"
+ruff check <fichier.py>
+ruff format --check <fichier.py>
+python -m pytest tests/unit/ --cov --cov-report=term-missing -q 2>&1 | tail -20
+```
 
-# Ajouter explicitement les fichiers (pas git add .)
-git add <fichiers code> <ADRs> <session file> PROJECT_STATE.md
+- Ruff = 0 erreur. Appliquer `ruff format` puis `ruff check --fix` si nécessaire.
+- Module de la session : 100 % couverture pour `sanitize.py`, > 80 % pour les autres.
+- Si un test échoue → corriger avant de continuer.
 
-# Message de commit : convention "feat/docs/fix(scope): livrable principal"
-git commit -m "feat(domain): cmd_refs — résolveur #cmdId# + 100% coverage"
+#### Étape 2 — Fichier de session
+
+Créer `docs/sessions/AAAA-MM-JJ-{Jx-y-slug}.md` :
+
+```markdown
+# Session {Jx-y} — {Titre descriptif}
+
+**Date** : AAAA-MM-JJ
+**Branche** : `develop`
+**Commit(s)** : {hash(es)}
+
+---
+
+## Objectif
+
+{1-2 phrases}
+
+---
+
+## Livrables
+
+| Fichier | Ce qui a changé |
+| --- | --- |
+| `path/to/file.py` | {description concise} |
+
+---
+
+## Décisions prises en session
+
+{Choix non triviaux uniquement — contexte → choix → raison.
+Si aucun : "Aucune décision structurante."}
+
+---
+
+## Résultats qualité
+
+| Métrique | Valeur |
+| --- | --- |
+| Tests unitaires | X/X ✅ |
+| Couverture globale | XX % |
+| Ruff | propre |
+
+---
+
+## Incidents / anomalies
+
+{Bug, incident infra, écart par rapport au plan — description courte.
+Si rien : "Aucun."}
+
+---
+
+## Prochaine sous-session : {Jx-(y+1)}
+
+**Objectif** : {description}
+**Pré-requis** : {snapshot Proxmox si SSH nécessaire, autre dépendance}
+```
+
+#### Étape 3 — PROJECT_STATE.md
+
+- `Dernière session` → `AAAA-MM-JJ-{jx-y}`
+- `Prochaine session` → `{Jx-(y+1)} — {objectif court}`
+- `Statut global` → ajouter `, {Jx-y} ✅ ({résumé 1 ligne})` en fin de ligne
+
+#### Étape 4 — Commit doc
+
+```bash
+# Inclure aussi les ADRs impactées si applicable
+git add docs/sessions/AAAA-MM-JJ-{Jx-y-slug}.md docs/state/PROJECT_STATE.md
+git commit -m "docs({Jx-y}): fichier session + PROJECT_STATE
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ```
 
 Le pre-commit hook vérifie :
@@ -147,15 +199,25 @@ Le pre-commit hook vérifie :
 
 Si credential refusé à tort → demander d'ajuster le filtre (ADR-0013), ne pas bypasser.
 
-#### Étape 4 — Mémoire Claude Code (si la session Claude Code se ferme)
+#### Étape 5 — Mémoire Claude Code
 
-Mettre à jour les fichiers mémoire dans
-`~/.claude/projects/-home-gtillit-Github-holmesMcp/memory/` :
-- `project_holmes_mcp.md` : état courant (dernier commit, sous-session ✅, prochaine)
-- Tout autre fichier mémoire pertinent (nouveau risque, nouvelle décision structurante)
+Mettre à jour `~/.claude/projects/-home-gtillit-Github-holmesMcp/memory/project_holmes_mcp.md` :
 
-Si la session Claude Code continue vers la sous-session suivante, la mémoire peut
-attendre la fermeture de fenêtre.
+- Ligne `État au AAAA-MM-JJ` → mettre à jour
+- Ajouter un bloc `**{Jx-y} livré**` en tête avec livrables clés, commit hash, faits notables
+
+Si incident ou décision structurante → créer/mettre à jour `feedback_*.md` ou `reference_*.md`
+et mettre à jour le pointeur dans `MEMORY.md`.
+
+#### Checklist finale
+
+- [ ] Branche = `develop`
+- [ ] Ruff propre sur tous les fichiers Python modifiés
+- [ ] Tests unitaires : tous passés, couverture objectif atteint
+- [ ] Fichier de session créé (`docs/sessions/`)
+- [ ] `PROJECT_STATE.md` mis à jour
+- [ ] Commit doc posé
+- [ ] Mémoire Claude Code à jour (`project_holmes_mcp.md`)
 
 ### Routine de fin de jalon
 
