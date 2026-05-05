@@ -1,5 +1,11 @@
 # Changelog Holmes MCP
 
+## v1.1.1 — 2026-05-05
+
+Correction de bug — compatibilité MariaDB (J7bis-2).
+
+- Correction : `find_command_usages` échouait sur MariaDB (Jeedom Bookworm) lors de la recherche dans les expressions de scénarios — syntaxe `CAST AS JSON` remplacée par `JSON_SEARCH`
+
 ## v1.1.0 — 2026-05-05
 
 Améliorations pré-bêta (J7bis-1) — qualité query_sql et nouvel outil d'analyse de dépendances.
