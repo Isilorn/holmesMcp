@@ -185,24 +185,18 @@ _BLOB_COLUMNS: frozenset[str] = frozenset({'configuration', 'options'})
 # Nommages spécifiques non couverts par _BLOB_KEY_RE.
 # Liste V1 : 10 plugins initiaux (D15.2 J1-1) + 5 plugins install PO (J2-1).
 _PLUGIN_EXTRA_KEYS: dict[str, frozenset[str]] = {
-    # Plugins install PO
-    'jMQTT': frozenset({'mqttuser', 'mqttlogin', 'broker_user', 'login', 'user', 'username'}),
-    'Agenda': frozenset(),
-    'Alarme': frozenset(
-        {
-            'pin',
-            'code',
-            'arm_code',
-            'disarm_code',
-            'user_code',
-            'armCode',
-            'disarmCode',
-            'userCode',
-        }
-    ),
+    # Plugins install PO — eqType_name et champs vérifiés live J6-2
+    'jMQTT': frozenset({
+        # Vrais champs camelCase broker (vérifiés live J6-2 — non couverts par regex mech 2)
+        'mqttUser', 'mqttPass', 'mqttTlsClientKey',
+        # Variantes défensives pour autres versions jMQTT
+        'mqttuser', 'mqttlogin', 'broker_user', 'login', 'user', 'username',
+    }),
+    'calendar': frozenset(),   # Agenda (eqType_name réel : 'calendar')
+    'alarm': frozenset(),      # Alarme (eqType_name réel : 'alarm') — pas de credentials dans blob
     'Thermostat': frozenset(),
     'thermostat': frozenset(),
-    'Jeedom Connect': frozenset(
+    'JeedomConnect': frozenset(  # eqType_name réel : 'JeedomConnect' (sans espace)
         {
             'install_code',
             'pairing_code',
@@ -212,8 +206,8 @@ _PLUGIN_EXTRA_KEYS: dict[str, frozenset[str]] = {
         }
     ),
     'Script': frozenset(),
-    'MQTT Manager': frozenset({'broker_user', 'broker_login', 'login', 'user', 'username'}),
-    'Virtuel': frozenset(),
+    'mqtt2': frozenset(),      # MQTT Manager (eqType_name réel : 'mqtt2') — pas de credentials
+    'virtual': frozenset(),    # Virtuel (eqType_name réel : 'virtual')
     # Plugins top-10 initiaux (D15.2 J1-1)
     'Aqara': frozenset({'app_id', 'region_key', 'region'}),
     'Zigbee2MQTT': frozenset({'broker_user', 'login', 'user', 'username'}),

@@ -11,9 +11,9 @@
 | **Version courante** | `v0.5.0` (J5 ✅ complet — 25 tools + 5 resources + audit J5-5) |
 | **Jalon en cours** | J6 — Vue UI logs + durcissement sanitisation |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-05-j6-1` |
-| **Prochaine session** | `J6-2` — Enrichissement sanitisation (vérification live jMQTT/Alarme/JeedomConnect/MQTT Manager) |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut) |
+| **Dernière session** | `2026-05-05-j6-2` |
+| **Prochaine session** | J7 ou tag v0.6.0 (après sanity check PO) |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted) |
 
 ---
 
@@ -416,6 +416,41 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 
 ---
 
+## Jalon J6 — Vue UI logs + durcissement sanitisation
+
+### J6-1 ✅ Vue activité MCP + fix daemon signal handlers (2026-05-05)
+
+- `desktop/php/holmesMcp.php` : table activité MCP (D14.4), filtre tool/status/date, auto-refresh 30 s ; fix layout tokens (`col-xs-*` + `form-horizontal` + `clearfix`)
+- `resources/holmesMcpd/holmesMcpd.py` : suppression handlers SIGTERM/SIGINT manuels ; `_remove_pid()` dans `finally` ; imports `signal`/`sys` supprimés
+- **664 tests unitaires**, couverture 98,38 %, ruff propre
+- Commits `9776c2b`, `d505704`
+
+### J6-2 ✅ Vérification live sanitisation + ADR-0017 accepted (2026-05-05)
+
+**Security gap corrigé** : `_PLUGIN_EXTRA_KEYS` — 5 noms de plugin incorrects, `mqttUser`/`mqttPass` camelCase absent.
+
+| Plugin | Avant J6-2 | Après J6-2 |
+| --- | --- | --- |
+| jMQTT | `mqttuser` (mauvaise casse), `mqttPass` absent | `mqttUser`, `mqttPass`, `mqttTlsClientKey` ajoutés |
+| `alarm` | clé `'Alarme'` (fausse) + extras inexistants | clé `'alarm'`, extras vides (aucun cred dans blob) |
+| `JeedomConnect` | clé `'Jeedom Connect'` (espace, fausse) | clé `'JeedomConnect'`, champs réels couverts mech 2 |
+| `mqtt2` | clé `'MQTT Manager'` (fausse) + extras inexistants | clé `'mqtt2'`, extras vides |
+| `virtual` / `calendar` | `'Virtuel'` / `'Agenda'` (faux) | `'virtual'` / `'calendar'` |
+
+- ADR-0017 → statut `accepted`, table plugins finalisée avec noms `eqType_name` réels
+- **665 tests unitaires**, `sanitize.py` 100%, ruff propre
+- Rapport sanity check D15.6 produit (voir session `2026-05-05-j6-2-sanitize-live-verification.md`)
+
+**DoD J6 — en attente sanity check PO** :
+
+- [x] Vue dédiée logs opérationnelle (J6-1)
+- [ ] **Sanity check PO** : lire le rapport de session J6-2 + confirmer qu'aucun credential connu ne transparaît
+- [x] Liste plugins hard-codés finalisée (ADR-0017 accepted)
+- [x] Tests live exécutés + résumés
+- [ ] Tag `v0.6.0` (après sanity check PO)
+
+---
+
 ## Décisions tranchées (référence brief)
 
 Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-brief-cadrage.md` §"Tableau récapitulatif des décisions". Résumé des pivots :
@@ -494,7 +529,7 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ID `holmesMcp` pris sur market (D10.8) | 🟡 Moyen | Vérification J0, alternatives préparées |
 | Validateur market Jeedom (critères partiellement publics) | 🟡 Moyen | Pre-submit checklist en J0/J7 |
 | Dérive de scope V1 | 🟡 Moyen | Discipline anti-drift D8.2, ROADMAP.md comme exutoire |
-| Extras sanitiseur non vérifiés (jMQTT, Alarme, Jeedom Connect, MQTT Manager) | 🟡 Moyen | ADR-0021 : vérification live obligatoire en J6 (D15.6), patch v1.0.x si delta |
+| ~~Extras sanitiseur non vérifiés (jMQTT, Alarme, Jeedom Connect, MQTT Manager)~~ | ~~🟡 Moyen~~ | ✅ Clos J6-2 — security gap jMQTT corrigé, noms plugin corrigés, ADR-0017 accepted |
 
 ---
 
@@ -518,7 +553,7 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ADR-0014 | Distribution market et versioning | proposed |
 | ADR-0015 | Modèle opérationnel PO / Claude Code | draft |
 | ADR-0016 | Observabilité | draft |
-| ADR-0017 | Sanitisation et guardrails | proposed |
+| ADR-0017 | Sanitisation et guardrails | accepted |
 | ADR-0018 | Résultat POC D2.3 | accepted |
 | ADR-0019 | Couverture skill jeedom-audit D5.8 | accepted |
 | ADR-0020 | Holmes MCP projet séparé de jeedom-skills | accepted |

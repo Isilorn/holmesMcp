@@ -124,28 +124,33 @@ class TestIsSensitiveKey:
     def test_non_sensitive_keys(self, key: str) -> None:
         assert is_sensitive_key(key) is False
 
-    def test_plugin_extra_match(self) -> None:
-        assert is_sensitive_key('pin', plugin='Alarme') is True
-        assert is_sensitive_key('code', plugin='Alarme') is True
-        assert is_sensitive_key('armCode', plugin='Alarme') is True
-        assert is_sensitive_key('disarmCode', plugin='Alarme') is True
-        assert is_sensitive_key('userCode', plugin='Alarme') is True
+    def test_alarm_plugin_no_credential_extras(self) -> None:
+        # Vérif live J6-2 : le plugin alarm ne stocke pas de codes dans le blob config
+        assert is_sensitive_key('pin', plugin='alarm') is False
+        assert is_sensitive_key('code', plugin='alarm') is False
+        assert is_sensitive_key('armCode', plugin='alarm') is False
 
-    def test_plugin_extra_mqtt_manager(self) -> None:
-        assert is_sensitive_key('login', plugin='MQTT Manager') is True
-        assert is_sensitive_key('user', plugin='MQTT Manager') is True
-        assert is_sensitive_key('username', plugin='MQTT Manager') is True
-        assert is_sensitive_key('broker_user', plugin='MQTT Manager') is True
+    def test_mqtt2_no_credential_extras(self) -> None:
+        # Vérif live J6-2 : le plugin mqtt2 n'a pas de credentials dans le blob config
+        assert is_sensitive_key('login', plugin='mqtt2') is False
+        assert is_sensitive_key('user', plugin='mqtt2') is False
 
     def test_plugin_extra_jmqtt(self) -> None:
+        # Champs lowercase (variantes défensives)
         assert is_sensitive_key('mqttuser', plugin='jMQTT') is True
         assert is_sensitive_key('mqttlogin', plugin='jMQTT') is True
         assert is_sensitive_key('login', plugin='jMQTT') is True
 
+    def test_plugin_extra_jmqtt_camelcase(self) -> None:
+        # Vrais champs camelCase vérifiés live J6-2 — non couverts par regex mech 2
+        assert is_sensitive_key('mqttUser', plugin='jMQTT') is True
+        assert is_sensitive_key('mqttPass', plugin='jMQTT') is True
+        assert is_sensitive_key('mqttTlsClientKey', plugin='jMQTT') is True
+
     def test_plugin_extra_jeedom_connect(self) -> None:
-        assert is_sensitive_key('installCode', plugin='Jeedom Connect') is True
-        assert is_sensitive_key('pairing_code', plugin='Jeedom Connect') is True
-        assert is_sensitive_key('device_code', plugin='Jeedom Connect') is True
+        assert is_sensitive_key('installCode', plugin='JeedomConnect') is True
+        assert is_sensitive_key('pairing_code', plugin='JeedomConnect') is True
+        assert is_sensitive_key('device_code', plugin='JeedomConnect') is True
 
     def test_plugin_extra_philips_hue(self) -> None:
         assert is_sensitive_key('username', plugin='Philips Hue') is True
@@ -167,8 +172,9 @@ class TestIsSensitiveKey:
         assert is_sensitive_key('login', plugin='ecodevices') is True
 
     def test_plugin_extra_case_sensitive(self) -> None:
-        # Extras are exact-match (not lowercased) — "Login" ≠ "login"
-        assert is_sensitive_key('Login', plugin='MQTT Manager') is False
+        # Extras are exact-match (not lowercased) — 'Login' ≠ 'login', 'MqttUser' ≠ 'mqttUser'
+        assert is_sensitive_key('Login', plugin='jMQTT') is False
+        assert is_sensitive_key('MqttUser', plugin='jMQTT') is False
 
     def test_plugin_none_skips_extras(self) -> None:
         # "pin" is only caught via plugin extra, not by regex
@@ -180,10 +186,12 @@ class TestIsSensitiveKey:
         assert is_sensitive_key('pin', plugin='UnknownPlugin') is False
 
     def test_plugin_with_empty_extras(self) -> None:
-        # Agenda, Script, Virtuel, etc. have frozenset() extras
-        assert is_sensitive_key('pin', plugin='Agenda') is False
+        # calendar, alarm, mqtt2, virtual, Script ont des extras vides
+        assert is_sensitive_key('pin', plugin='calendar') is False
+        assert is_sensitive_key('code', plugin='alarm') is False
+        assert is_sensitive_key('user', plugin='mqtt2') is False
+        assert is_sensitive_key('user', plugin='virtual') is False
         assert is_sensitive_key('code', plugin='Script') is False
-        assert is_sensitive_key('user', plugin='Virtuel') is False
 
 
 # ---------------------------------------------------------------------------
@@ -281,24 +289,20 @@ class TestSanitizeJsonBlob:
         assert 'token' in filtered
 
     def test_plugin_extra_key_in_blob(self) -> None:
-        blob = json.dumps({'pin': '1234', 'mode': 'armed'})
-        result, filtered = sanitize_json_blob(blob, plugin='Alarme')
-        assert result['pin'] == FILTERED
-        assert result['mode'] == 'armed'
-        assert 'pin' in filtered
+        # jMQTT camelCase : mqttUser non couvert par regex → mech 3 requis
+        blob = json.dumps({'mqttUser': 'jeedom', 'mqttAddress': '192.0.2.1'})
+        result, filtered = sanitize_json_blob(blob, plugin='jMQTT')
+        assert result['mqttUser'] == FILTERED
+        assert result['mqttAddress'] == '192.0.2.1'
+        assert 'mqttUser' in filtered
 
     def test_nested_dict_sensitive_key(self) -> None:
-        blob = json.dumps(
-            {
-                'zone1': {
-                    'name': 'entrée',
-                    'armCode': '9999',
-                }
-            }
-        )
-        result, filtered = sanitize_json_blob(blob, plugin='Alarme')
-        assert result['zone1']['armCode'] == FILTERED
-        assert 'zone1.armCode' in filtered
+        blob = json.dumps({'broker': {'mqttUser': 'jeedom', 'mqttPass': 'S3cr3t!'}})
+        result, filtered = sanitize_json_blob(blob, plugin='jMQTT')
+        assert result['broker']['mqttUser'] == FILTERED
+        assert result['broker']['mqttPass'] == FILTERED
+        assert 'broker.mqttUser' in filtered
+        assert 'broker.mqttPass' in filtered
 
     def test_nested_dict_clean(self) -> None:
         blob = json.dumps({'zone1': {'name': 'entrée', 'type': 'motion'}})
@@ -431,12 +435,17 @@ class TestSanitizeRow:
         assert 'configuration.mqttpassword' in filtered
 
     def test_known_table_blob_with_plugin_extras(self) -> None:
-        config = json.dumps({'pin': '1234', 'mode': 'armed'})
-        row = {'id': 5, 'name': 'Alarme', 'eqType_name': 'Alarme', 'configuration': config}
-        result, filtered = sanitize_row(row, table='eqLogic', plugin='Alarme')
-        assert result['configuration']['pin'] == FILTERED
-        assert result['configuration']['mode'] == 'armed'
-        assert 'configuration.pin' in filtered
+        # jMQTT broker : mqttUser/mqttPass filtrés par mech 3 (non couverts par regex)
+        config = json.dumps(
+            {'mqttUser': 'jeedom', 'mqttPass': 'S3cr3t!', 'mqttAddress': '192.0.2.1'}
+        )
+        row = {'id': 5, 'name': 'Broker jMQTT', 'eqType_name': 'jMQTT', 'configuration': config}
+        result, filtered = sanitize_row(row, table='eqLogic', plugin='jMQTT')
+        assert result['configuration']['mqttUser'] == FILTERED
+        assert result['configuration']['mqttPass'] == FILTERED
+        assert result['configuration']['mqttAddress'] == '192.0.2.1'
+        assert 'configuration.mqttUser' in filtered
+        assert 'configuration.mqttPass' in filtered
 
     def test_known_table_options_column_parsed(self) -> None:
         options = json.dumps({'enable': True, 'token': 'opttok'})
@@ -643,19 +652,19 @@ class TestSanitizeRows:
         assert filtered == sorted(filtered)
 
     def test_with_table_and_plugin(self) -> None:
-        config = json.dumps({'pin': '1111', 'mode': 'armed'})
+        config = json.dumps({'mqttUser': 'jeedom', 'mqttAddress': '192.0.2.1'})
         rows_input = [
             {
                 'id': 1,
-                'name': 'A1',
-                'eqType_name': 'Alarme',
+                'name': 'Broker',
+                'eqType_name': 'jMQTT',
                 'configuration': config,
                 'isEnable': 1,
             },
         ]
-        rows, filtered = sanitize_rows(rows_input, table='eqLogic', plugin='Alarme')
-        assert rows[0]['configuration']['pin'] == FILTERED
-        assert 'configuration.pin' in filtered
+        rows, filtered = sanitize_rows(rows_input, table='eqLogic', plugin='jMQTT')
+        assert rows[0]['configuration']['mqttUser'] == FILTERED
+        assert 'configuration.mqttUser' in filtered
 
 
 # ---------------------------------------------------------------------------
@@ -696,7 +705,7 @@ class TestWrapResult:
 # ---------------------------------------------------------------------------
 
 CREDENTIAL_FIXTURES = [
-    # 1. eqLogic jMQTT — password dans blob configuration
+    # 1. eqLogic jMQTT — mqttpassword (mech 2) + mqttuser lowercase (mech 3)
     {
         'id': 'jmqtt_eqlogic',
         'table': 'eqLogic',
@@ -710,8 +719,7 @@ CREDENTIAL_FIXTURES = [
             'isVisible': 1,
             'configuration': json.dumps(
                 {
-                    'mqtt_host': '192.0.2.100',
-                    'mqtt_port': '1883',
+                    'mqttAddress': '192.0.2.100',
                     'mqttpassword': 'SuperSecret123!',
                     'mqttuser': 'jeedom_user',
                 }
@@ -727,71 +735,71 @@ CREDENTIAL_FIXTURES = [
         'row': {'plugin': 'core', 'key': 'apikey', 'value': 'AbCdEf123456XyZ'},
         'credentials': ['AbCdEf123456XyZ'],
     },
-    # 3. eqLogic Alarme — PIN et code dans configuration
+    # 3. eqLogic jMQTT broker — champs camelCase mqttUser/mqttPass (vérif live J6-2)
+    #    Non couverts par regex mech 2 → mech 3 obligatoire
     {
-        'id': 'alarme_pin',
+        'id': 'jmqtt_camelcase',
         'table': 'eqLogic',
-        'plugin': 'Alarme',
+        'plugin': 'jMQTT',
         'row': {
             'id': 5,
-            'name': 'Alarme Maison',
-            'eqType_name': 'Alarme',
+            'name': 'Broker Zwave',
+            'eqType_name': 'jMQTT',
             'object_id': 2,
             'isEnable': 1,
             'isVisible': 1,
             'configuration': json.dumps(
                 {
-                    'armCode': '1234',
-                    'disarmCode': '5678',
-                    'mode': 'armed_away',
+                    'mqttAddress': 'mqtt.home.lan',
+                    'mqttUser': 'jeedom_zwave',
+                    'mqttPass': 'Zw4v3S3cr3t!',
                 }
             ),
         },
-        'credentials': ['1234', '5678'],
+        'credentials': ['jeedom_zwave', 'Zw4v3S3cr3t!'],
     },
-    # 4. eqLogic Jeedom Connect — install code
+    # 4. eqLogic JeedomConnect — apiKey + token (mech 2 : apikey, token dans regex)
     {
-        'id': 'jeedomconnect_code',
+        'id': 'jeedomconnect_apikey',
         'table': 'eqLogic',
-        'plugin': 'Jeedom Connect',
+        'plugin': 'JeedomConnect',
         'row': {
             'id': 20,
-            'name': 'Mon App',
-            'eqType_name': 'Jeedom Connect',
+            'name': 'iPhone Geraud',
+            'eqType_name': 'JeedomConnect',
             'object_id': 1,
             'isEnable': 1,
             'isVisible': 1,
             'configuration': json.dumps(
                 {
-                    'installCode': 'INSTALL-PAIRING-99ZZ',
-                    'device_name': 'iPhone de Pierre',
+                    'apiKey': 'abc123def456ghi789',
+                    'token': 'fcm-token-xyz-APA91bF',
+                    'deviceName': 'iPhone',
                 }
             ),
         },
-        'credentials': ['INSTALL-PAIRING-99ZZ'],
+        'credentials': ['abc123def456ghi789', 'fcm-token-xyz-APA91bF'],
     },
-    # 5. eqLogic MQTT Manager — broker credentials
+    # 5. eqLogic mqtt2 — password dans blob filtré par mech 2 (pas d'extras mech 3)
     {
-        'id': 'mqttmanager_creds',
+        'id': 'mqtt2_password',
         'table': 'eqLogic',
-        'plugin': 'MQTT Manager',
+        'plugin': 'mqtt2',
         'row': {
             'id': 30,
-            'name': 'MQTT Broker',
-            'eqType_name': 'MQTT Manager',
+            'name': 'MQTT',
+            'eqType_name': 'mqtt2',
             'object_id': 1,
             'isEnable': 1,
             'isVisible': 1,
             'configuration': json.dumps(
                 {
                     'host': '192.0.2.50',
-                    'port': '1883',
-                    'username': 'mqtt_admin',
                     'password': 'BrokerPass!2026',
                 }
             ),
         },
-        'credentials': ['mqtt_admin', 'BrokerPass!2026'],
+        'credentials': ['BrokerPass!2026'],
     },
     # 6. Champ token hors whitelist (table connue)
     {
@@ -926,17 +934,17 @@ class TestInternals:
             assert isinstance(wl, frozenset), f'{table} whitelist doit être frozenset'
 
     def test_po_plugins_in_extra_keys(self) -> None:
-        """Les plugins de l'install PO sont dans _PLUGIN_EXTRA_KEYS (même si extras vides)."""
+        """Les plugins de l'install PO (eqType_name réels J6-2) sont dans _PLUGIN_EXTRA_KEYS."""
         po_plugins = [
             'jMQTT',
-            'Agenda',
-            'Alarme',
+            'calendar',       # Agenda
+            'alarm',          # Alarme
             'Thermostat',
             'thermostat',
-            'Jeedom Connect',
+            'JeedomConnect',  # ex 'Jeedom Connect'
             'Script',
-            'MQTT Manager',
-            'Virtuel',
+            'mqtt2',          # MQTT Manager
+            'virtual',        # Virtuel
         ]
         for plugin in po_plugins:
             assert plugin in _PLUGIN_EXTRA_KEYS, f'{plugin} absent de _PLUGIN_EXTRA_KEYS'
