@@ -2,7 +2,7 @@
 
 **Date** : 2026-05-05
 **Branche** : `develop`
-**Commit(s)** : `0eb3122`
+**Commit(s)** : `0eb3122` (packaging), `248d4f9` (doc session), `20bd160` (Jx), `fdbc8d1` (Jx fix), `011d03a` (J8)
 
 ---
 
