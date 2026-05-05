@@ -413,34 +413,63 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 - [ ] Sections avec icônes Font Awesome cohérentes avec le thème Jeedom
 - [ ] Rendu validé sur box PO (capture PO)
 
-#### J7-market — Soumission market bêta
+---
 
-**Déclencheur** : réception confirmation compte développeur Jeedom (demandé 2026-05-05, délai plusieurs semaines) + bêta privée fermée.
+## 6. Jalon Jx — Publication market (numéro à fixer en fin de J7)
+
+Jalon flottant, déclenché par le PO quand les deux conditions sont réunies :
+
+1. **Compte développeur Jeedom reçu** (demandé 2026-05-05, délai annoncé plusieurs semaines)
+2. **Bêta privée fermée** (2+ semaines, 5 sessions réelles, zéro crash, zéro fuite)
+
+Le numéro définitif (J8, J9…) sera attribué en fin de J7 selon les jalons intercalés.
+
+### Contenu de Jx
+
+**Pré-requis Claude Code (vérifier avant de déclencher)** :
+
+- `plugin_info/info.json` version à jour avec le dernier jalon
+- `plugin_info/changelog.md` entrée ajoutée pour chaque jalon depuis J7-2
+- `docs/market/forum-developers-lounge.md` relu et mis à jour si périmètre a évolué
+- Annonce forum grand public rédigée (texte à produire en début de Jx)
 
 **Séquence** :
 
-1. PO publie le post Developers' Lounge (`docs/market/forum-developers-lounge.md`)
-2. PO soumet le plugin sur le portail market en canal **bêta** (branche `develop`)
-3. Claude Code met à jour PROJECT_STATE.md + tag
-4. Annonce forum grand public (texte à rédiger en J7-market)
+1. Claude Code vérifie et met à jour le packaging (changelog, info.json, post forum)
+2. PO publie le post Developers' Lounge sur community.jeedom.com
+3. PO soumet le plugin sur le portail market Jeedom en canal **bêta** (branche `main` du dernier tag stable)
+4. Claude Code tag + PROJECT_STATE.md mis à jour
+5. Claude Code rédige l'annonce forum grand public → PO publie
 
 **Livrables PO (bloquants)** :
 
-- Réception compte développeur Jeedom
-- 3-5 captures d'écran UI Jeedom (page config, état daemon)
-- Validation Claude Desktop finale (D8.3 critère #4)
-- Bêta privée 2+ semaines : zéro crash, zéro fuite, 5 sessions réelles minimum
+- Confirmation compte développeur reçu
+- 3-5 captures d'écran UI Jeedom à jour (page config, état daemon, vue activité MCP)
+- Validation Claude Desktop finale sur sa machine (D8.3 critère #4)
+- Attestation bêta privée : 2+ semaines, 5 sessions réelles, zéro incident bloquant
 
-**DoD** :
+**DoD Jx** :
 
+- [ ] Packaging market à jour (changelog, info.json, icône)
 - [ ] Post Developers' Lounge publié par le PO
 - [ ] Plugin soumis sur le market Jeedom en statut bêta
-- [ ] Bêta privée 2+ semaines validée par le PO
-- [ ] Annonce forum grand public publiée
+- [ ] Annonce forum grand public publiée par le PO
 
 ---
 
-## 6. Pré-requis externes (checklist J0)
+### Règle DoD pour les jalons J8, J9… (et tout jalon futur)
+
+**Chaque jalon futur doit inclure dans son DoD la mise à jour du packaging market** :
+
+- [ ] `plugin_info/changelog.md` — entrée ajoutée pour ce jalon (langage utilisateur)
+- [ ] `plugin_info/info.json` — version incrémentée (`1.x.0`)
+- [ ] `docs/market/forum-developers-lounge.md` — relu, mis à jour si fonctionnalités nouvelles
+
+Cela garantit que le packaging est toujours prêt à déclencher Jx sans retard, quel que soit le moment choisi par le PO.
+
+---
+
+## 7. Pré-requis externes (checklist J0)
 
 Ces éléments doivent être traités en J0, indépendamment du code Holmes MCP.
 
@@ -454,13 +483,13 @@ Si la vérification du copyright révèle une contribution externe → escalade 
 
 ---
 
-## 7. Roadmap V1.x / V2+
+## 8. Roadmap V1.x / V2+
 
 Voir `docs/ROADMAP.md`. Les candidates identifiées depuis le brief sont listées et statutées `draft` dans ce fichier. Tout nouveau besoin émergent pendant V1 → ROADMAP.md (anti-drift D8.2), pas en V1.
 
 ---
 
-## 8. ADRs initiales
+## 9. ADRs initiales
 
 17 ADRs esquissées en `docs/decisions/ADR-0001.md` à `ADR-0017.md` (statut `draft` à l'issue de cette session de planning, à étoffer en J0 vers `proposed` par lots de 3-5 pour validation PO).
 
@@ -472,7 +501,7 @@ Autres ADRs à créer en J0/J1 pour les décisions 🔵 (port défaut, driver My
 
 ---
 
-## 9. Annexe — Glossaire
+## 10. Annexe — Glossaire
 
 | Terme | Définition |
 |---|---|
