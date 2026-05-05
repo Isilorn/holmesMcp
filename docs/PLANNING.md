@@ -415,14 +415,14 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 ---
 
-## 6. Jalon Jx — Publication market (numéro à fixer en fin de J7)
+## 6. Jalon Jx — Publication market (numéro attribué par le PO quand il le décide)
 
 Jalon flottant, déclenché par le PO quand les deux conditions sont réunies :
 
 1. **Compte développeur Jeedom reçu** (demandé 2026-05-05, délai annoncé plusieurs semaines)
 2. **Bêta privée fermée** (2+ semaines, 5 sessions réelles, zéro crash, zéro fuite)
 
-Le numéro définitif (J8, J9…) sera attribué en fin de J7 selon les jalons intercalés.
+Le numéro (J8, J9…) sera attribué par le PO au moment où il décide de déclencher le jalon, selon les jalons effectivement réalisés entre-temps.
 
 ### Contenu de Jx
 
