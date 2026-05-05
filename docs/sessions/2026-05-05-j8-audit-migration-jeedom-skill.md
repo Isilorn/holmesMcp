@@ -105,19 +105,22 @@ SELECT id, name FROM scenario
 WHERE JSON_CONTAINS(`trigger`, '"#<cmd_id>#"')
 
 -- Expressions (conditions/actions) référençant ce cmd
+-- ⚠️ MariaDB : CAST(... AS JSON) non supporté — utiliser JSON_SEARCH (corrigé J7bis-2)
 SELECT se.expression, sse.subtype, s.id AS scenario_id, s.name AS scenario_name
 FROM scenarioExpression se
 JOIN scenarioSubElement sse ON se.scenarioSubElement_id = sse.id
 JOIN scenarioElement sel ON sse.scenarioElement_id = sel.id
-JOIN scenario s ON JSON_CONTAINS(s.scenarioElement, CAST(sel.id AS JSON))
+JOIN scenario s ON JSON_SEARCH(s.scenarioElement, 'one', CAST(sel.id AS CHAR)) IS NOT NULL
 WHERE se.expression LIKE '%#<cmd_id>#%'
 
 -- Variables dataStore référençant ce cmd
-SELECT key, value, link_id FROM dataStore
+SELECT `key`, value, link_id FROM dataStore
 WHERE value LIKE '%#<cmd_id>#%'
 ```
 
 Ces requêtes ont les mêmes contraintes que `query_sql()` : backticks sur `trigger` obligatoires, LIMIT à spécifier explicitement pour les listings.
+
+> **Note J7bis-2 :** La requête expressions ci-dessus remplace la syntaxe originale `CAST(sel.id AS JSON)` qui échoue sur MariaDB (Jeedom Bookworm). `find_command_usages()` utilise la syntaxe corrigée depuis J7bis-2. Les deux autres requêtes (trigger et dataStore) sont inchangées.
 
 #### SKILL.md — restructuration profonde
 

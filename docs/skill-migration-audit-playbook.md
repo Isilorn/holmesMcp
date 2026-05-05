@@ -342,6 +342,26 @@ Si l'audit a révélé un pattern d'investigation non couvert par ce playbook, l
 
 ---
 
+## Patterns découverts en J7bis-2
+
+### Compatibilité JSON MariaDB vs MySQL
+
+`CAST(col AS JSON)` est syntaxe MySQL pure — échoue sur MariaDB (Jeedom Bookworm) avec `ProgrammingError: 1064`. Substitution :
+
+```sql
+-- MySQL (ne pas utiliser sur Jeedom)
+JSON_CONTAINS(arr_col, CAST(id_col AS JSON))
+
+-- MariaDB (correct)
+JSON_SEARCH(arr_col, 'one', CAST(id_col AS CHAR)) IS NOT NULL
+```
+
+Point connexe : `scenario.scenarioElement` stocke les IDs comme chaînes JSON (`["502"]`), pas comme entiers (`[502]`). `JSON_SEARCH` avec `CAST AS CHAR` est cohérent avec ce format.
+
+**À vérifier systématiquement** lors des tests live : toute requête SQL de substitution impliquant `JSON_CONTAINS` avec un entier doit être testée sur MariaDB avant d'être documentée.
+
+---
+
 ## Notes d'utilisation
 
 **Pour rejouer cet audit sur une autre skill :**

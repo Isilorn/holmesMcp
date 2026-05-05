@@ -463,7 +463,8 @@ def find_command_usages(
         ' FROM scenarioExpression expr'
         ' JOIN scenarioSubElement ss ON expr.scenarioSubElement_id = ss.id'
         ' JOIN scenarioElement sel   ON ss.scenarioElement_id = sel.id'
-        ' JOIN scenario s            ON JSON_CONTAINS(s.scenarioElement, CAST(sel.id AS JSON))'
+        ' JOIN scenario s'
+        "   ON JSON_SEARCH(s.scenarioElement, 'one', CAST(sel.id AS CHAR)) IS NOT NULL"
         ' WHERE expr.expression LIKE %s'
         ' LIMIT %s',
         (pattern, limit),

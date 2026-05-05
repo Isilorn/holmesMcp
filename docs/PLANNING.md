@@ -440,7 +440,7 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 #### J7bis-2 — Audit live Holmes MCP + jeedom-audit
 
-**Objectif** : valider Holmes MCP v1.1.0 en conditions réelles sur la box et auditer la couverture des 13 workflows jeedom-audit avec Holmes MCP comme source de données exclusive. Même nature que J8-audit, mais avec le nouvel outil `find_command_usages` disponible et les corrections J7bis-1 intégrées.
+**Objectif** : valider Holmes MCP v1.1.0 en conditions réelles sur la box et auditer la couverture des 13 workflows jeedom-audit avec Holmes MCP comme source de données exclusive. Même nature que J8-audit, mais avec le nouvel outil `find_command_usages` disponible et les corrections J7bis-1 intégrées. Suit les 6 phases du playbook `docs/skill-migration-audit-playbook.md`.
 
 **Pré-requis** :
 
@@ -450,19 +450,25 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 **Livrables :**
 
-- **Audit A — Tests d'intégration live complets** : lancer la suite `pytest tests/integration/` sur la box via SSH. Valider les 4 tests `TestFindCommandUsagesLive` (nouveau). Documenter tous les échecs/écarts.
-- **Audit B — WF jeedom-audit × Holmes MCP** : pour chacun des 13 workflows de `docs/skill-coverage-matrix.md`, vérifier que Holmes MCP (v1.1.0) couvre le besoin end-to-end depuis Claude Code. Identifier les gaps résiduels.
-- **Audit C — Qualité des réponses MCP** : sanity check sur 5-10 requêtes réelles depuis Claude Code sur la box du PO. Vérifier : sanitisation, pertinence, absence de crash.
-- **Audit D — Rapport d'audit** : document `docs/state/audit-J7bis-2.md` listant : items ✅ / ⚠️ / 🔴, bugs identifiés, gaps résiduels, recommandations pour J8.
+- **Audit A — Tests d'intégration live complets** (hors playbook) : lancer la suite `pytest tests/integration/` sur la box via SSH. Valider les 4 tests `TestFindCommandUsagesLive` (nouveau). Documenter tous les échecs/écarts.
+- **Audit B — Gap analysis 13 WF × Holmes MCP** (Phase 3 playbook) : pour chacun des 13 workflows de `docs/skill-coverage-matrix.md`, verdict ✅ / ⚠️ / ❌ + distinction explicite gap fonctionnel vs gap de connaissance.
+- **Audit C — Macro étude de migration** (Phase 4 playbook) : classification de chaque composant jeedom-audit en Éliminer / Transformer / Conserver, quantification (lignes Python/Markdown), contraintes de migration (LIMIT, backticks, erreurs, version), requêtes SQL de substitution rédigées et testables pour les ⚠️.
+- **Audit D — Impacts Holmes MCP** (Phase 5 playbook) : pour chaque gap ❌ et ⚠️ significatif, évaluation selon grille généricité / effort / sécurité / priorité ; clarifications de comportement ; compatibilité version.
+- **Audit E — Sanity check qualité réponses MCP** (hors playbook) : 5-10 requêtes réelles depuis Claude Code sur la box. Vérifier : sanitisation, pertinence, absence de crash.
+- **Audit F — Document de session** (Phase 6 playbook) : `docs/sessions/YYYY-MM-DD-j7bis-2-audit-jeedom-audit.md` avec structure en 6 sections (Contexte / Gap analysis / Macro migration / Impacts Holmes / Synthèse / Annexe) + mise à jour playbook si patterns nouveaux + checklist de clôture.
 
 **DoD J7bis-2** :
 
-- [ ] Suite intégration live exécutée — résultats documentés
-- [ ] `find_command_usages` validé live sur la box
-- [ ] 13 WF jeedom-audit revus — matrice mise à jour si besoin
-- [ ] Rapport `docs/state/audit-J7bis-2.md` rédigé
-- [ ] Zéro crash daemon pendant la session
-- [ ] Items bloquants pour J8 identifiés (ou confirmation : aucun)
+- [x] Suite intégration live exécutée — 168/168 ✅ (bug JSON_SEARCH MariaDB corrigé)
+- [x] `find_command_usages` validé live sur la box
+- [x] Gap analysis 13 WF complète — 13/13 ✅, aucun gap fonctionnel résiduel
+- [x] Macro étude de migration complète — classification Éliminer/Transformer/Conserver confirmée
+- [x] Requêtes SQL de substitution corrigées pour MariaDB (WF6 expressions)
+- [x] Impacts Holmes MCP évalués — 4/4 impacts J8-audit résolus, 1 nouvel impact documentaire traité
+- [x] Document de session rédigé dans `docs/sessions/2026-05-05-j7bis-2-audit-jeedom-audit.md`
+- [x] Playbook mis à jour — pattern JSON MariaDB vs MySQL ajouté
+- [x] Zéro crash daemon pendant la session
+- [x] Aucun item bloquant pour J8
 
 ---
 

@@ -105,10 +105,11 @@ La bascule de jeedom-audit en consommatrice Holmes MCP (D5.8) est validée sans 
 | Étape | Canal jeedom-audit | Tool Holmes MCP V1 |
 |---|---|---|
 | Identification cible (cmd/eqLogic/scenario) | SQL + fuzzy | `find_equipment_by_name` / `find_commands_advanced` / `find_scenarios_advanced` |
-| Graphe d'usage agrégé | `usage_graph.py` | `find_scenario_dependencies` |
+| Graphe d'usage cmd → scénarios (triggers/conditions/actions/dataStore) | `usage_graph.py` | `find_command_usages` (livré J7bis-1) |
+| Graphe d'usage scenario → scenarios | `usage_graph.py` | `find_scenario_dependencies` |
 | Résolution #ID# dans résultats | `resolve_cmd_refs.py` | `describe_scenario` (si contexte scénario) |
 
-**Couverture : ✅ Totale** — `find_scenario_dependencies` mappe directement usage_graph.py
+**Couverture : ✅ Totale** — `find_command_usages` + `find_scenario_dependencies` couvrent les deux axes de usage_graph.py. Mis à jour J7bis-2 (l'audit J8-audit avait identifié un gap cmd→scénarios, résolu par `find_command_usages`).
 
 ---
 
