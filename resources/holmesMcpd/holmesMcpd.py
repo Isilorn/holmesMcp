@@ -8,8 +8,6 @@ Ref : doc.jeedom.com/fr_FR/dev/daemon_plugin
 import argparse
 import logging
 import os
-import signal
-import sys
 from pathlib import Path
 
 # ── CLI (pattern Jeedom — arguments passés par deamon_start() en PHP) ─────────
@@ -61,17 +59,6 @@ def _remove_pid() -> None:
     _PID_PATH.unlink(missing_ok=True)
 
 
-# ── Signal handlers ───────────────────────────────────────────────────────────
-def _handle_shutdown(signum, frame) -> None:
-    log.info('daemon_shutdown', signal=signum)
-    _remove_pid()
-    sys.exit(0)
-
-
-signal.signal(signal.SIGTERM, _handle_shutdown)
-signal.signal(signal.SIGINT, _handle_shutdown)
-
-
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main() -> None:
     log.info('daemon_start', port=ARGS.port, pid_path=str(_PID_PATH))
@@ -102,12 +89,16 @@ def main() -> None:
         authed_app = BearerAuthMiddleware(activity_logged, token_store=token_store)
 
         log.info('daemon_listening', host='0.0.0.0', port=ARGS.port, path='/mcp')
+        # uvicorn installe ses propres handlers SIGTERM/SIGINT sur la boucle asyncio.
+        # On laisse uvicorn gérer l'arrêt gracieux ; on nettoie le PID file à son retour.
         uvicorn.run(authed_app, host='0.0.0.0', port=ARGS.port, log_config=None)
 
     except Exception:
         log.exception('daemon_fatal_error')
+        raise
+    finally:
+        log.info('daemon_shutdown')
         _remove_pid()
-        sys.exit(1)
 
 
 if __name__ == '__main__':

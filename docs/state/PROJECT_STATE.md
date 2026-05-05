@@ -11,9 +11,9 @@
 | **Version courante** | `v0.5.0` (J5 ✅ complet — 25 tools + 5 resources + audit J5-5) |
 | **Jalon en cours** | J6 — Vue UI logs + durcissement sanitisation |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-04-j5-5` |
-| **Prochaine session** | `J6` — Page config PHP/JS + vue logs + sanity check sanitisation PO |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0) |
+| **Dernière session** | `2026-05-05-j6-1` |
+| **Prochaine session** | `J6-2` — Enrichissement sanitisation (vérification live jMQTT/Alarme/JeedomConnect/MQTT Manager) |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut) |
 
 ---
 
