@@ -8,7 +8,7 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v1.1.0` (J7bis-1 ✅ — find_command_usages, auto-backtick query_sql, doc) |
+| **Version courante** | `v1.1.1` (J7bis-2 ✅ — fix JSON_SEARCH MariaDB — `main` = `develop` = `v1.1.1`) |
 | **Jalon en cours** | J7bis ✅ clôturé — prochaine session : J8 (bêta privée + migration jeedom-audit) |
 | **Branche de travail** | `develop` |
 | **Dernière session** | `2026-05-05-j7bis-2-audit-jeedom-audit` |
