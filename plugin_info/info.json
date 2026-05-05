@@ -5,11 +5,11 @@
   "licence": "AGPL-3.0",
   "author": "Isilorn",
   "require": "4.5",
-  "category": "supervision",
+  "category": "programming",
   "changelog": "plugin_info/changelog.md",
   "documentation": "https://isilorn.github.io/holmesMcp/",
   "hasDependency": true,
   "hasOwnDeamon": true,
   "maxDependancyInstallTime": 10,
-  "version": "0.0.0"
+  "version": "1.0.0"
 }

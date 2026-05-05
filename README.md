@@ -10,10 +10,11 @@ Orienté audit, diagnostic et assistance à la conception. Pour **Claude Desktop
 
 ## Fonctionnalités V1
 
-- **25 tools** de lecture : équipements, commandes, scénarios, plugins, logs, configuration
-- **5 resources** MCP minimales pour les workflows courants
+- **25 tools** de lecture : équipements, commandes, scénarios, plugins, logs, configuration, datastore, SQL restreint
+- **5 resources** MCP pour les workflows courants (overview, health, scenario, equipment, logs du jour)
 - **Authentification Bearer** par utilisateur Jeedom (token individuel)
 - **Sanitisation forte** : 3 mécanismes cumulatifs, aucun credential exposé
+- **Vue activité MCP** dans l'interface Jeedom : derniers appels tools, statut, durée
 - Installation via le **market Jeedom** — zéro setup côté client
 
 ## Prérequis
@@ -38,7 +39,7 @@ Documentation complète : **[isilorn.github.io/holmesMcp](https://isilorn.github
 
 ## Statut
 
-`v0.0.0` — Bootstrap J0 (en développement, pas encore fonctionnel)
+`v1.0.0` — Version stable V1. 25 tools, 5 resources, authentification Bearer, sanitisation, validé sur Jeedom 4.5.3.
 
 ## Licence
 
