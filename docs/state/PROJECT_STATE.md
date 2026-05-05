@@ -9,11 +9,11 @@
 | Champ | Valeur |
 |---|---|
 | **Version courante** | `v1.0.0` (J7-2 ✅ — packaging market, icône conforme, changelog, README) |
-| **Jalon en cours** | J7 — Doc utilisateur + bêta privée + release market |
+| **Jalon en cours** | J7bis — Améliorations Holmes MCP pré-migration jeedom-audit |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-05-j7-3` |
-| **Prochaine session** | J8 — Bêta privée (discussion méthode en J8-1) |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO) |
+| **Dernière session** | `2026-05-05-j8-1-discussion-methode-beta` |
+| **Prochaine session** | J7bis-1 — Nouvel outil `find_command_usages` + qualité `query_sql` + doc |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé) |
 
 ---
 
@@ -481,7 +481,33 @@ DoD intégralement coché (voir `docs/PLANNING.md` §J2). 4/4 modules `_domain/`
 - [x] Sections avec icônes Font Awesome cohérentes avec le thème Jeedom
 - [x] Rendu validé sur box PO (capture PO — session 2026-05-05)
 
-**J7 ✅ Clôturé.** Les 9 critères de sortie V1.0.0 (D8.3) sont tous cochés. Prochaine étape : J8 — Bêta privée.
+**J7 ✅ Clôturé.** Les 9 critères de sortie V1.0.0 (D8.3) sont tous cochés.
+
+---
+
+## Jalon J7bis — Améliorations Holmes MCP pré-migration jeedom-audit
+
+**Déclencheur** : audit de migration jeedom-audit → Holmes MCP (session J8-audit, 2026-05-05) — 4 items identifiés, traités avant la bêta.
+
+### J7bis-1 — Nouvel outil + qualité query_sql + doc
+
+**Livraisons prévues :**
+
+- Item A : `find_command_usages(cmd_id)` — triggers, conditions/actions, refs dataStore d'une commande
+- Item B : `query_sql()` — documenter comportement LIMIT auto-injecté (docstring + doc MkDocs)
+- Item C : `query_sql()` — auto-backtick mots réservés MySQL (`trigger`, `repeat`, `update`)
+- Item D : FAQ — entrée "Jeedom 4.4.x supporté ?" → Non, cible 4.5+ Bookworm
+
+**DoD J7bis-1** :
+
+- [ ] `find_command_usages(cmd_id)` implémenté, testé (unit + intégration live), documenté
+- [ ] `query_sql()` docstring mise à jour (comportement LIMIT)
+- [ ] Parser `query_sql.py` : auto-backtick `trigger` / `repeat` / `update`
+- [ ] `docs/user/faq.md` : entrée Jeedom 4.4.x ajoutée
+- [ ] Tests unitaires 100% verts, ruff propre
+- [ ] `plugin_info/changelog.md` — entrée J7bis ajoutée
+- [ ] `plugin_info/info.json` — version `1.1.0`
+- [ ] `docs/market/forum-developers-lounge.md` — relu, mis à jour si besoin
 
 ---
 

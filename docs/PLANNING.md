@@ -412,30 +412,58 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 ---
 
+### J7bis — Améliorations Holmes MCP pré-migration jeedom-audit
+
+**Objectif** : traiter les 4 items identifiés dans l'audit de migration jeedom-audit → Holmes MCP (session J8-audit, 2026-05-05) avant de démarrer la migration effective sur jeedom-skills. Aucun item n'est bloquant pour la migration, mais les traiter en amont garantit une meilleure qualité de vie pour tous les clients MCP.
+
+**Démarrage** : à la clôture de J7 (J7-3 ✅) et après l'audit J8-audit ✅.
+
+#### J7bis-1 — Nouvel outil + qualité query_sql + doc
+
+**Livraisons :**
+
+- **Item A** — Nouvel outil `find_command_usages(cmd_id)` (Family 2 — équipements/commandes) : retourne triggers, conditions/actions, refs dataStore pour une commande donnée. SQL déjà documenté dans `sql-cookbook.md`. À ajouter dans `tools/equipments.py` + `mcp_server.py` + tests + doc.
+- **Item B** — `query_sql()` : documenter le comportement LIMIT auto-injecté (50 si absent, max 200) dans la docstring de l'outil + section diagnostic de la doc MkDocs.
+- **Item C** — `query_sql()` : auto-backtick des mots réservés MySQL connus dans le contexte Jeedom (`trigger`, `repeat`, `update`) dans le parser `tools/query_sql.py`.
+- **Item D** — FAQ MkDocs : ajouter entrée "Jeedom 4.4.x est-il supporté ?" → Non, Holmes MCP cible Jeedom 4.5+ (Bookworm x86_64).
+
+**DoD J7bis-1** :
+
+- [ ] `find_command_usages(cmd_id)` implémenté, testé (unit + intégration live), documenté
+- [ ] `query_sql()` docstring mise à jour (comportement LIMIT)
+- [ ] Parser `query_sql.py` : auto-backtick `trigger` / `repeat` / `update`
+- [ ] `docs/user/faq.md` : entrée Jeedom 4.4.x ajoutée
+- [ ] Tests unitaires 100% verts, ruff propre
+- [ ] `plugin_info/changelog.md` — entrée J7bis ajoutée
+- [ ] `plugin_info/info.json` — version incrémentée (`1.1.0`)
+- [ ] `docs/market/forum-developers-lounge.md` — relu, mis à jour si besoin
+
+---
+
 ### J8 — Bêta privée
 
-**Objectif** : valider le plugin en conditions réelles sur la box du PO avant toute publication market. J8 se déroule entièrement sur la box existante — pas de code livré par Claude Code sauf corrections de bugs bloquants éventuels.
+**Objectif** : valider le plugin en conditions réelles sur la box du PO avant toute publication market. La bêta combine deux axes : (1) sessions Claude Code directes sur Holmes MCP, (2) migration de jeedom-audit (branche `develop` sur `jeedom-skills`) pour utiliser Holmes MCP comme source de données exclusive — validation bout-en-bout conforme à ADR-0019/0020.
 
-**Démarrage** : à la clôture de J7 (J7-3 ✅).
+**Démarrage** : à la clôture de J7bis.
 
-#### Discussion ouverte en début de J8 — Méthodologie bêta
-
-Avant de démarrer les sessions de test, le PO et Claude Code discutent de la méthode. Point ouvert à trancher en J8-1 :
-
-**Option envisagée par le PO** : créer une branche `develop` sur `jeedom-audit` qui utilise Holmes MCP comme source de données à la place des scripts SSH directs. Ce serait une validation bout-en-bout du plugin (jeedom-audit devient consommatrice MCP, conformément à ADR-0019 et ADR-0020). D'autres approches possibles (sessions Claude Desktop directes, Cursor, script de test dédié).
-
-*Discussion ouverte — aucune décision prise à ce stade.*
+**Client retenu** : Claude Code (HTTP LAN natif, déjà validé J0-3) + MCP Inspector pour le debug. *(Tranché J8-1 — 2026-05-05.)*
 
 #### Critères de sortie bêta (DoD J8)
 
 **Activité PO** :
 
-- [ ] 5 sessions de test réelles minimum (Claude Desktop, Cursor, ou client retenu)
+- [ ] 5 sessions de test réelles minimum avec Claude Code + Holmes MCP
 - [ ] Zéro crash daemon sur la durée de la bêta
 - [ ] Zéro fuite de données observée (sanity check régulier)
-- [ ] Validation Claude Desktop finale sur la machine PO (D8.3 critère #4)
 - [ ] 2+ semaines de bêta effective
 - [ ] PO déclare la bêta fermée
+
+**Migration jeedom-audit (branche develop jeedom-skills)** :
+
+- [ ] Branche `develop` créée sur `jeedom-skills`
+- [ ] jeedom-audit migré : SSH/MySQL directs remplacés par appels Holmes MCP
+- [ ] 12/13 workflows opérationnels sur la branche develop
+- [ ] WF6 fonctionnel via `find_command_usages()` (livré en J7bis) + `query_sql()`
 
 **Packaging market (DoD J8 — règle jalons futurs)** :
 
