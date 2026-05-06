@@ -740,3 +740,167 @@ class TestFindCommandUsages:
         result = self._call(trigger_rows=trigger_rows)
 
         assert 'secret_col' in result['_filtered_fields']
+
+
+# ---------------------------------------------------------------------------
+# find_equipments_advanced — has_warning
+# ---------------------------------------------------------------------------
+
+
+class TestFindEquipmentsAdvancedHasWarning:
+    def test_no_has_warning_no_json_condition(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipments_advanced(_MOCK_CONN)
+
+        sql = mock_q.call_args[0][1]
+        assert 'JSON_EXTRACT' not in sql
+
+    def test_has_warning_adds_json_condition(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipments_advanced(_MOCK_CONN, has_warning=True)
+
+        sql = mock_q.call_args[0][1]
+        assert 'JSON_EXTRACT' in sql
+        assert 'status' in sql
+
+    def test_has_warning_adds_status_to_select(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipments_advanced(_MOCK_CONN, has_warning=True)
+
+        sql = mock_q.call_args[0][1]
+        assert sql.startswith('SELECT') and 'status' in sql.split('FROM')[0]
+
+    def test_has_warning_combined_with_plugin(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipments_advanced(_MOCK_CONN, plugin='jMQTT', has_warning=True)
+
+        sql = mock_q.call_args[0][1]
+        params = mock_q.call_args[0][2]
+        assert 'eqType_name' in sql
+        assert 'JSON_EXTRACT' in sql
+        assert 'jMQTT' in params
+
+    def test_has_warning_false_no_status_in_select(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipments_advanced(_MOCK_CONN, has_warning=False)
+
+        sql = mock_q.call_args[0][1]
+        assert 'JSON_EXTRACT' not in sql
+
+
+# ---------------------------------------------------------------------------
+# find_commands_advanced — generic_type_missing
+# ---------------------------------------------------------------------------
+
+
+class TestFindCommandsAdvancedGenericTypeMissing:
+    def test_no_flag_no_generic_type_condition(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_commands_advanced(_MOCK_CONN)
+
+        sql = mock_q.call_args[0][1]
+        assert 'generic_type IS NULL' not in sql
+
+    def test_flag_adds_null_or_empty_condition(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_commands_advanced(_MOCK_CONN, generic_type_missing=True)
+
+        sql = mock_q.call_args[0][1]
+        assert 'generic_type IS NULL' in sql
+        assert "generic_type = ''" in sql
+
+    def test_flag_forces_type_info_when_no_cmd_type(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_commands_advanced(_MOCK_CONN, generic_type_missing=True)
+
+        sql = mock_q.call_args[0][1]
+        assert "type = 'info'" in sql
+
+    def test_flag_does_not_add_type_info_when_cmd_type_set(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_commands_advanced(
+                _MOCK_CONN, cmd_type='action', generic_type_missing=True
+            )
+
+        sql = mock_q.call_args[0][1]
+        assert 'action' in mock_q.call_args[0][2]
+        assert "type = 'info'" not in sql
+
+    def test_flag_combined_with_equipment_id(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_commands_advanced(
+                _MOCK_CONN, equipment_id=5, generic_type_missing=True
+            )
+
+        sql = mock_q.call_args[0][1]
+        params = mock_q.call_args[0][2]
+        assert 'eqLogic_id' in sql
+        assert 'generic_type IS NULL' in sql
+        assert 5 in params
+
+
+# ---------------------------------------------------------------------------
+# find_equipment_usages
+# ---------------------------------------------------------------------------
+
+
+class TestFindEquipmentUsages:
+    def test_empty_db_returns_empty_scenarios(self):
+        with patch('tools.equipments._db.query', return_value=[]):
+            result = equipments.find_equipment_usages(_MOCK_CONN, equipment_id=1)
+
+        assert result['equipment_id'] == 1
+        assert result['scenarios'] == []
+        assert result['total'] == 0
+        assert result['_filtered_fields'] == []
+
+    def test_returns_scenarios(self):
+        rows = [
+            {'id': 10, 'name': 'Scén A', 'isActive': 1},
+            {'id': 20, 'name': 'Scén B', 'isActive': 0},
+        ]
+        with patch('tools.equipments._db.query', return_value=rows):
+            result = equipments.find_equipment_usages(_MOCK_CONN, equipment_id=5)
+
+        assert result['total'] == 2
+        assert result['scenarios'][0]['name'] == 'Scén A'
+        assert result['scenarios'][1]['isActive'] == 0
+
+    def test_equipment_id_in_params(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipment_usages(_MOCK_CONN, equipment_id=42)
+
+        params = mock_q.call_args[0][2]
+        assert 42 in params
+
+    def test_sql_uses_json_search(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipment_usages(_MOCK_CONN, equipment_id=1)
+
+        sql = mock_q.call_args[0][1]
+        assert 'JSON_SEARCH' in sql
+        assert 'CONCAT' in sql
+
+    def test_sql_joins_required_tables(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipment_usages(_MOCK_CONN, equipment_id=1)
+
+        sql = mock_q.call_args[0][1]
+        assert 'scenarioElement' in sql
+        assert 'scenarioSubElement' in sql
+        assert 'scenarioExpression' in sql
+        assert 'cmd' in sql
+
+    def test_limit_capped_at_max(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipment_usages(_MOCK_CONN, equipment_id=1, limit=9999)
+
+        params = mock_q.call_args[0][2]
+        assert equipments._EQ_USAGES_LIMIT in params
+
+    def test_sql_has_distinct(self):
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            equipments.find_equipment_usages(_MOCK_CONN, equipment_id=1)
+
+        sql = mock_q.call_args[0][1]
+        assert 'DISTINCT' in sql

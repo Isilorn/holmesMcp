@@ -222,3 +222,27 @@ class TestGetScenarioLogLive:
     def test_scenario_inexistant_retourne_erreur(self, db_conn):
         result = scenarios.get_scenario_log(db_conn, 999999)
         assert 'error' in result
+
+
+# ---------------------------------------------------------------------------
+# find_scenarios_advanced — called_while_inactive
+# ---------------------------------------------------------------------------
+
+
+class TestFindScenariosAdvancedCalledWhileInactiveLive:
+    def test_structure(self, db_conn):
+        result = scenarios.find_scenarios_advanced(db_conn, called_while_inactive=True)
+        assert 'scenarios' in result
+        assert 'total' in result
+        assert isinstance(result['scenarios'], list)
+
+    def test_retourne_uniquement_inactifs(self, db_conn):
+        result = scenarios.find_scenarios_advanced(db_conn, called_while_inactive=True)
+        for scen in result['scenarios']:
+            assert scen.get('isActive') == 0, (
+                f"Scénario {scen.get('id')} est actif dans called_while_inactive"
+            )
+
+    def test_totaux_coherents(self, db_conn):
+        result = scenarios.find_scenarios_advanced(db_conn, called_while_inactive=True)
+        assert result['total'] == len(result['scenarios'])

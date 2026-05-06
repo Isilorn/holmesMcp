@@ -140,19 +140,22 @@ def find_scenarios_advanced(
     is_active: bool | None = None,
     mode: str | None = None,
     trigger_type: str | None = None,
+    called_while_inactive: bool = False,
     limit: int = _SCEN_LIMIT_ADV,
     apikey: str = '',
 ) -> dict[str, Any]:
     """Recherche avancée de scénarios avec filtres combinables.
 
     Paramètres :
-    - name_contains : fragment de nom (insensible à la casse, LIKE %fragment%)
-    - group         : filtre exact sur le groupe
-    - is_active     : True = actifs uniquement
-    - mode          : filtre exact sur le mode ('schedule', 'provoke', 'all')
-    - trigger_type  : fragment dans le champ trigger (ex. 'schedule', 'event')
-    - limit         : max 50 résultats
-    - apikey        : clé API JSON-RPC Jeedom (enrichit state + lastLaunch si fournie)
+    - name_contains        : fragment de nom (insensible à la casse, LIKE %fragment%)
+    - group                : filtre exact sur le groupe
+    - is_active            : True = actifs uniquement
+    - mode                 : filtre exact sur le mode ('schedule', 'provoke', 'all')
+    - trigger_type         : fragment dans le champ trigger (ex. 'schedule', 'event')
+    - called_while_inactive : True = scénarios désactivés (isActive=0) mais appelés
+                              dans une action d'un autre scénario — utile pour audit WF7
+    - limit                : max 50 résultats
+    - apikey               : clé API JSON-RPC Jeedom (enrichit state + lastLaunch si fournie)
     """
     conditions: list[str] = []
     params: list[Any] = []
@@ -172,6 +175,17 @@ def find_scenarios_advanced(
     if trigger_type is not None:
         conditions.append('`trigger` LIKE %s')
         params.append(f'%{trigger_type}%')
+    if called_while_inactive:
+        conditions.append('isActive = 0')
+        conditions.append(
+            'EXISTS ('
+            ' SELECT 1 FROM scenarioExpression'
+            " WHERE type = 'action'"
+            " AND expression = 'scenario'"
+            ' AND JSON_UNQUOTE(JSON_EXTRACT(options, \'$.scenario_id\'))'
+            ' = CAST(scenario.id AS CHAR)'
+            ')'
+        )
 
     where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
     limit = min(limit, _SCEN_LIMIT_ADV)

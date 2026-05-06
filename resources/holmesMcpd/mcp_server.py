@@ -8,6 +8,7 @@ J5-1 : Familles 4-6 — 7 tools dataStore/logs/recherche.
 J5-2 : Famille 7 — query_sql.
 J5-4 : 5 resources + énumération hybride D6.3.
 J7bis-1 : Famille 2 — find_command_usages (8e tool équipements).
+J8-2 : Famille 2 — find_equipment_usages (9e tool équipements) + 5 paramètres bool.
 """
 
 from __future__ import annotations
@@ -60,7 +61,7 @@ def build_mcp(args: argparse.Namespace) -> FastMCP:
     _register_family7(mcp)
     _register_resources(mcp, apikey)
 
-    log.info('mcp_initialized', families=[1, 2, 3, 4, 5, 6, 7], tools=26, resources=5)
+    log.info('mcp_initialized', families=[1, 2, 3, 4, 5, 6, 7], tools=27, resources=5)
     return mcp
 
 
@@ -131,7 +132,7 @@ def _register_family1(mcp: FastMCP) -> None:
 
 
 def _register_family2(mcp: FastMCP, apikey: str) -> None:
-    """Famille 2 — Équipements et commandes (8 tools)."""
+    """Famille 2 — Équipements et commandes (9 tools)."""
 
     @mcp.tool()
     def list_equipments(
@@ -166,6 +167,7 @@ def _register_family2(mcp: FastMCP, apikey: str) -> None:
         is_enable: bool | None = None,
         generic_type: str | None = None,
         tags: str | None = None,
+        has_warning: bool = False,
         limit: int = 50,
     ) -> dict:
         """Recherche avancée d'équipements avec filtres combinables.
@@ -177,12 +179,15 @@ def _register_family2(mcp: FastMCP, apikey: str) -> None:
         - is_enable     : True = actifs uniquement
         - generic_type  : type générique exact (ex. 'LIGHT', 'THERMOSTAT')
         - tags          : fragment de tag (LIKE %tag%)
+        - has_warning   : True = uniquement les équipements en warning ou danger
+                          (status JSON $.warning ou $.danger non vide)
         - limit         : max 50 résultats
         """
         conn = _db.connect()
         try:
             return equipments.find_equipments_advanced(
-                conn, name_contains, object_id, plugin, is_enable, generic_type, tags, limit
+                conn, name_contains, object_id, plugin, is_enable,
+                generic_type, tags, has_warning, limit,
             )
         finally:
             conn.close()
@@ -255,24 +260,27 @@ def _register_family2(mcp: FastMCP, apikey: str) -> None:
         subtype: str | None = None,
         generic_type: str | None = None,
         is_historized: bool | None = None,
+        generic_type_missing: bool = False,
         limit: int = 50,
     ) -> dict:
         """Recherche avancée de commandes avec filtres combinables.
 
         Paramètres :
-        - name_contains : fragment de nom (LIKE %fragment%)
-        - equipment_id  : restreindre à un équipement
-        - cmd_type      : 'info' ou 'action'
-        - subtype       : sous-type (ex. 'numeric', 'binary', 'string', 'slider', 'message')
-        - generic_type  : type générique (ex. 'TEMPERATURE', 'HUMIDITY', 'LIGHT_STATE')
-        - is_historized : True = uniquement les commandes historisées
-        - limit         : max 50 résultats
+        - name_contains        : fragment de nom (LIKE %fragment%)
+        - equipment_id         : restreindre à un équipement
+        - cmd_type             : 'info' ou 'action'
+        - subtype              : sous-type (ex. 'numeric', 'binary', 'string', 'slider', 'message')
+        - generic_type         : type générique (ex. 'TEMPERATURE', 'HUMIDITY', 'LIGHT_STATE')
+        - is_historized        : True = uniquement les commandes historisées
+        - generic_type_missing : True = commandes info sans Type Générique
+                                 (generic_type NULL ou vide) — audit WF7
+        - limit                : max 50 résultats
         """
         conn = _db.connect()
         try:
             return equipments.find_commands_advanced(
                 conn, name_contains, equipment_id, cmd_type,
-                subtype, generic_type, is_historized, limit,
+                subtype, generic_type, is_historized, generic_type_missing, limit,
             )
         finally:
             conn.close()
@@ -318,6 +326,27 @@ def _register_family2(mcp: FastMCP, apikey: str) -> None:
         finally:
             conn.close()
 
+    @mcp.tool()
+    def find_equipment_usages(equipment_id: int, limit: int = 50) -> dict:
+        """Scénarios qui utilisent un équipement via ses commandes.
+
+        Paramètres :
+        - equipment_id : identifiant de l'équipement (eqLogic.id)
+        - limit        : max de scénarios retournés (défaut 50, max 50)
+
+        Retourne la liste des scénarios dont au moins une expression référence
+        une commande de cet équipement (pattern #cmdId# dans scenarioExpression).
+
+        Couvre les triggers, conditions et actions des scénarios.
+        Pour le détail des références commande par commande, utilisez
+        find_command_usages(cmd_id) sur chaque commande de l'équipement.
+        """
+        conn = _db.connect()
+        try:
+            return equipments.find_equipment_usages(conn, equipment_id, limit)
+        finally:
+            conn.close()
+
 
 def _register_family3(mcp: FastMCP, apikey: str) -> None:
     """Famille 3 — Scénarios (7 tools)."""
@@ -356,24 +385,28 @@ def _register_family3(mcp: FastMCP, apikey: str) -> None:
         is_active: bool | None = None,
         mode: str | None = None,
         trigger_type: str | None = None,
+        called_while_inactive: bool = False,
         limit: int = 50,
     ) -> dict:
         """Recherche avancée de scénarios avec filtres combinables et état runtime.
 
         Paramètres :
-        - name_contains : fragment de nom (insensible à la casse, LIKE %fragment%)
-        - group         : filtre exact sur le groupe
-        - is_active     : True = actifs uniquement
-        - mode          : filtre exact sur le mode ('schedule', 'provoke', 'all')
-        - trigger_type  : fragment dans le champ trigger (ex. 'schedule', 'event')
-        - limit         : max 50 résultats
+        - name_contains        : fragment de nom (insensible à la casse, LIKE %fragment%)
+        - group                : filtre exact sur le groupe
+        - is_active            : True = actifs uniquement
+        - mode                 : filtre exact sur le mode ('schedule', 'provoke', 'all')
+        - trigger_type         : fragment dans le champ trigger (ex. 'schedule', 'event')
+        - called_while_inactive : True = scénarios désactivés mais appelés dans une
+                                  action d'un autre scénario — audit WF7
+        - limit                : max 50 résultats
 
         Champs runtime enrichis via API JSON-RPC : state, lastLaunch.
         """
         conn = _db.connect()
         try:
             return scenarios.find_scenarios_advanced(
-                conn, name_contains, group, is_active, mode, trigger_type, limit, apikey
+                conn, name_contains, group, is_active, mode,
+                trigger_type, called_while_inactive, limit, apikey,
             )
         finally:
             conn.close()
@@ -486,6 +519,7 @@ def _register_family4(mcp: FastMCP) -> None:
         var_type: str | None = None,
         link_id: int | None = None,
         key_pattern: str | None = None,
+        orphaned: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> dict:
@@ -495,6 +529,8 @@ def _register_family4(mcp: FastMCP) -> None:
         - var_type    : filtre exact sur le type ('global' ou 'scenario')
         - link_id     : filtre sur l'identifiant lié (0 pour global, scenario_id pour scenario)
         - key_pattern : filtre LIKE sur le nom de variable (ex. 'meteo%', '%temp%')
+        - orphaned    : True = uniquement les variables non référencées dans aucune
+                        scenarioExpression — audit WF7 refactor
         - limit       : nombre max de résultats (max 200)
         - offset      : décalage pour la pagination
 
@@ -504,7 +540,7 @@ def _register_family4(mcp: FastMCP) -> None:
         conn = _db.connect()
         try:
             return datastore.list_datastore_variables(
-                conn, var_type, link_id, key_pattern, limit, offset
+                conn, var_type, link_id, key_pattern, orphaned, limit, offset
             )
         finally:
             conn.close()
@@ -567,16 +603,17 @@ def _register_family5(mcp: FastMCP) -> None:
 
     @mcp.tool()
     def get_health_summary() -> dict:
-        """Résumé de santé Jeedom : daemons KO, messages système non lus, crons bloqués.
+        """Résumé de santé Jeedom : daemons KO, messages système, crons, commandes mortes.
 
-        Interroge trois sources MySQL :
+        Interroge cinq sources MySQL :
         - plugins_nok       : plugins avec daemon en panne (status='nok')
         - messages_unread   : messages système non lus (20 plus récents)
         - crons_running     : daemons actifs (cron.deamon=1 AND enable=1)
-                              — processus devant tourner en continu
+        - dead_commands     : commandes dont l'équipement est désactivé ou supprimé (max 200)
+        - summary           : comptages globaux incluant historized_cmds_without_data
+                              (commandes info historisées sans aucune donnée en history)
 
-        Si toutes les listes sont vides, l'installation est en bonne santé.
-        Le champ summary fournit les comptages globaux.
+        Si toutes les listes sont vides et les comptages à zéro, l'installation est saine.
         """
         conn = _db.connect()
         try:

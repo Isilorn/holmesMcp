@@ -206,3 +206,56 @@ class TestGetDatastoreVariable:
 
         sql = mock_q.call_args[0][1]
         assert 'LIMIT' in sql
+
+
+# ---------------------------------------------------------------------------
+# list_datastore_variables — orphaned
+# ---------------------------------------------------------------------------
+
+
+class TestListDatastoreVariablesOrphaned:
+    def test_no_orphaned_no_not_exists(self):
+        with patch('tools.datastore._db.query', return_value=[]) as mock_q:
+            datastore.list_datastore_variables(_MOCK_CONN)
+
+        sql = mock_q.call_args[0][1]
+        assert 'NOT EXISTS' not in sql
+
+    def test_orphaned_adds_not_exists_subquery(self):
+        with patch('tools.datastore._db.query', return_value=[]) as mock_q:
+            datastore.list_datastore_variables(_MOCK_CONN, orphaned=True)
+
+        sql = mock_q.call_args[0][1]
+        assert 'NOT EXISTS' in sql
+        assert 'scenarioExpression' in sql
+
+    def test_orphaned_checks_variable_function(self):
+        with patch('tools.datastore._db.query', return_value=[]) as mock_q:
+            datastore.list_datastore_variables(_MOCK_CONN, orphaned=True)
+
+        sql = mock_q.call_args[0][1]
+        assert 'variable(' in sql
+
+    def test_orphaned_checks_options_json(self):
+        with patch('tools.datastore._db.query', return_value=[]) as mock_q:
+            datastore.list_datastore_variables(_MOCK_CONN, orphaned=True)
+
+        sql = mock_q.call_args[0][1]
+        assert 'options' in sql
+
+    def test_orphaned_combined_with_var_type(self):
+        with patch('tools.datastore._db.query', return_value=[]) as mock_q:
+            datastore.list_datastore_variables(_MOCK_CONN, var_type='global', orphaned=True)
+
+        sql = mock_q.call_args[0][1]
+        params = mock_q.call_args[0][2]
+        assert 'NOT EXISTS' in sql
+        assert 'type=%s' in sql
+        assert 'global' in params
+
+    def test_orphaned_returns_empty_when_all_referenced(self):
+        with patch('tools.datastore._db.query', return_value=[]):
+            result = datastore.list_datastore_variables(_MOCK_CONN, orphaned=True)
+
+        assert result['variables'] == []
+        assert result['total'] == 0

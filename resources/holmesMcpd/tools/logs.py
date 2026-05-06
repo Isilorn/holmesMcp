@@ -54,15 +54,18 @@ def tail_log(
 
 
 def get_health_summary(conn: pymysql.connections.Connection) -> dict[str, Any]:
-    """Résumé de santé Jeedom : daemons KO, messages système récents, crons daemon actifs.
+    """Résumé de santé Jeedom : daemons KO, messages système récents, crons daemon actifs,
+    commandes mortes et qualité d'historique.
 
-    Interroge trois sources MySQL :
+    Interroge cinq sources MySQL :
     - Plugins avec daemon en panne (table update, status='nok')
     - 20 messages système les plus récents (table message)
     - Crons de type daemon actifs et activés (table cron, deamon=1 AND enable=1)
+    - Commandes mortes : commandes dont l'équipement est désactivé ou supprimé (LIMIT 200)
+    - Qualité historique : nombre de commandes info historisées sans aucune donnée
 
     Aucune donnée sensible — résumé diagnostique sans credentials.
-    Si toutes les listes sont vides, l'installation est en bonne santé.
+    Si toutes les listes sont vides et les comptages à zéro, l'installation est saine.
     """
     plugins_nok_rows = _db.query(
         conn,
@@ -78,6 +81,24 @@ def get_health_summary(conn: pymysql.connections.Connection) -> dict[str, Any]:
     crons_rows = _db.query(
         conn,
         'SELECT class, `function`, schedule FROM cron WHERE deamon=1 AND enable=1 ORDER BY class',
+    )
+
+    dead_cmd_rows = _db.query(
+        conn,
+        'SELECT c.id, c.name, c.eqLogic_id'
+        ' FROM cmd c'
+        ' LEFT JOIN eqLogic e ON c.eqLogic_id = e.id'
+        ' WHERE e.id IS NULL OR e.isEnable = 0'
+        ' ORDER BY c.eqLogic_id LIMIT 200',
+    )
+
+    history_quality_rows = _db.query(
+        conn,
+        'SELECT COUNT(*) AS cmd_info_sans_historique'
+        ' FROM cmd c'
+        " WHERE c.type = 'info'"
+        ' AND c.isHistorized = 1'
+        ' AND NOT EXISTS (SELECT 1 FROM history h WHERE h.cmd_id = c.id)',
     )
 
     plugins_nok = [dict(r) for r in plugins_nok_rows]
@@ -98,15 +119,27 @@ def get_health_summary(conn: pymysql.connections.Connection) -> dict[str, Any]:
         }
         for r in crons_rows
     ]
+    dead_commands = [
+        {'id': r['id'], 'name': r['name'], 'eqLogic_id': r['eqLogic_id']}
+        for r in dead_cmd_rows
+    ]
+    historized_without_data = int(
+        history_quality_rows[0]['cmd_info_sans_historique']
+        if history_quality_rows
+        else 0
+    )
 
     return {
         'plugins_nok': plugins_nok,
         'messages_unread': messages,
         'crons_running': crons_running,
+        'dead_commands': dead_commands,
         'summary': {
             'plugins_nok_count': len(plugins_nok),
             'messages_unread_count': len(messages),
             'crons_running_count': len(crons_running),
+            'dead_commands_count': len(dead_commands),
+            'historized_cmds_without_data': historized_without_data,
         },
         '_filtered_fields': [],
     }
