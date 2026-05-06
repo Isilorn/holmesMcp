@@ -9,11 +9,11 @@
 | Champ | Valeur |
 |---|---|
 | **Version courante** | `v1.1.1` (J7bis-2 ✅ — fix JSON_SEARCH MariaDB — `main` = `develop` = `v1.1.1`) |
-| **Jalon en cours** | J7bis ✅ clôturé — prochaine session : J8 (bêta privée + migration jeedom-audit) |
+| **Jalon en cours** | J8 EN COURS — bêta privée + matériel migration jeedom-audit |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-05-j7bis-2-audit-jeedom-audit` |
-| **Prochaine session** | J8 — Bêta privée (5 sessions Claude Code réelles + migration jeedom-audit branche develop) |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé), J7bis-1 ✅ (find_command_usages, auto-backtick query_sql, doc LIMIT, FAQ, v1.1.0, 686 ut), J7bis-2 ✅ (audit live 168/168 intég, bug JSON_SEARCH MariaDB corrigé, 13/13 WF couverts, rapport audit) |
+| **Dernière session** | `2026-05-06-j8-1-migration-brief` |
+| **Prochaine session** | J8 — Bêta privée (5 sessions Claude Code réelles) + migration jeedom-audit branche develop (projet jeedom-skills) |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé), J7bis-1 ✅ (find_command_usages, auto-backtick query_sql, doc LIMIT, FAQ, v1.1.0, 686 ut), J7bis-2 ✅ (audit live 168/168 intég, bug JSON_SEARCH MariaDB corrigé, 13/13 WF couverts, rapport audit), **J8-1 ✅ (brief migration jeedom-audit → Holmes MCP — docs/sources/migration-jeedom-audit-brief.md)** |
 
 ---
 
