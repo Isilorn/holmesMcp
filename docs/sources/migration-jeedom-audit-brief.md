@@ -431,3 +431,49 @@ La migration sur branche `develop` est complète quand :
 - [ ] Aucune référence à SSH, `db_query`, `api_call`, `setup.py` dans SKILL.md
 
 **Ce que "testable" signifie :** lancer le WF depuis Claude Code avec Holmes MCP dans le `.mcp.json`, et obtenir une réponse cohérente sans erreur d'outil.
+
+---
+
+## 10. Protocole de validation avant/après migration
+
+Objectif : démontrer que la migration ne dégrade aucun WF — en testant les 13 workflows **deux fois sur la même box**, avec les mêmes prompts, avant et après migration.
+
+### Principe
+
+| Phase | Branche | Connexion données | Quand |
+|---|---|---|---|
+| Phase 0 — Baseline | `main` (jeedom-skills) | SSH + MySQL direct | Avant toute modification |
+| Phase 1 — Validation | `develop` (jeedom-skills) | Holmes MCP (Bearer token) | Après migration complète |
+
+**Règles :**
+- Même box Jeedom, même session Claude Code, même jour ou à proximité
+- Même prompt de test pour chaque WF (copier-coller depuis le tableau ci-dessous)
+- Documenter : prompt utilisé, réponse obtenue (résumé), verdict, anomalie éventuelle
+- Un WF est ✅ si la réponse est cohérente et sans erreur d'outil — la formulation peut différer
+
+### Tableau de suivi — 13 WF × Phase 0 / Phase 1
+
+| WF | Prompt de test | Phase 0 (avant) | Phase 1 (après) |
+|---|---|---|---|
+| WF1 | "Fais un audit général de mon installation Jeedom" | | |
+| WF2 | "Diagnostique le scénario [nom d'un scénario réel]" | | |
+| WF3 | "Diagnostique l'équipement [nom d'un équipement réel]" | | |
+| WF4 | "Diagnostique le plugin [nom d'un plugin installé]" | | |
+| WF5 | "Explique-moi ce que fait le scénario [nom]" | | |
+| WF6 | "Où est utilisée la commande [nom d'une commande réelle] ?" | | |
+| WF7 | "Quelles améliorations peux-tu suggérer pour mon installation ?" | | |
+| WF8 | "Quelle est la valeur actuelle de [nom d'une commande info] ?" | | |
+| WF9 | "Montre-moi l'historique de [nom d'une commande historisée]" | | |
+| WF10 | "Liste les variables dataStore de mon installation" | | |
+| WF11 | "Cherche tout ce qui concerne [mot-clé présent dans l'installation]" | | |
+| WF12 | "Cartographie les scénarios orchestrés depuis [nom d'un scénario maître]" | | |
+| WF13 | "Pourquoi [équipement ou scénario] s'est-il déclenché hier soir ?" | | |
+
+**Verdicts :** ✅ réponse cohérente sans erreur · ⚠️ réponse partielle ou dégradée · ❌ erreur ou absence de réponse
+
+### Document de résultats
+
+Créer `docs/sessions/YYYY-MM-DD-migration-validation.md` avec :
+- Le tableau rempli (Phase 0 + Phase 1)
+- Pour chaque ⚠️ ou ❌ : description de l'anomalie + décision (bloquer / déférer / acceptable)
+- Conclusion : migration validée ou points bloquants identifiés
