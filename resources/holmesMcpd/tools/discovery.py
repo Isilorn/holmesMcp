@@ -73,15 +73,21 @@ def list_objects(conn: pymysql.connections.Connection) -> dict[str, Any]:
 
 
 def list_plugins(conn: pymysql.connections.Connection) -> dict[str, Any]:
-    """Plugins installés avec version et état.
+    """Plugins installés avec version, version distante et état.
 
     Retourne la liste des plugins installés sur cette box Jeedom.
-    Le champ state indique si le daemon du plugin est opérationnel (ok/nok).
-    logical_id est l'identifiant technique du plugin (ex. 'jMQTT', 'holmesMcp').
+    - state       : état du daemon (ok/nok)
+    - version     : version installée (localVersion)
+    - remote_version : version disponible sur le market (remoteVersion)
+                    Comparer version et remote_version pour détecter les mises à jour.
+                    state='update' indique qu'une mise à jour est disponible,
+                    state='nok' indique une erreur d'installation.
+    - logical_id  : identifiant technique du plugin (ex. 'jMQTT', 'holmesMcp')
     """
     rows = _db.query(
         conn,
-        'SELECT id, name, localVersion AS version, status AS state, logicalId AS logical_id'
+        'SELECT id, name, localVersion AS version, remoteVersion AS remote_version,'
+        ' status AS state, logicalId AS logical_id'
         " FROM `update` WHERE type='plugin' ORDER BY name LIMIT %s",
         (_PLUGINS_LIMIT,),
     )

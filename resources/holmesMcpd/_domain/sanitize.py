@@ -122,6 +122,7 @@ _TABLE_WHITELISTS: dict[str, frozenset[str]] = {
             'id',
             'name',
             'version',
+            'remote_version',
             'state',
             'logical_id',
         }
