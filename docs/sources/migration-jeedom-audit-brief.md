@@ -2,7 +2,7 @@
 
 > **Destinataire :** projet Claude Code `jeedom-skills`, branche `develop`
 > **Produit par :** Holmes MCP, session J8-1 (2026-05-06)
-> **Version Holmes MCP cible :** v1.1.1 (26 tools, 5 resources)
+> **Version Holmes MCP cible :** v1.2.0 (27 tools, 5 resources)
 > **Version jeedom-audit source :** main (état au 2026-05-06)
 
 ---
@@ -143,9 +143,10 @@ Pour chaque workflow, les scripts à remplacer et les outils Holmes MCP à utili
 | `db_query.run("SELECT COUNT(*) FROM eqLogic")` | `holmes__get_install_overview()` (inclut comptages) |
 | `db_query.run("SELECT COUNT(*) FROM scenario")` | `holmes__get_install_overview()` |
 | `db_query.run("SELECT ... FROM message WHERE type='error'")` | `holmes__get_health_summary()` |
-| `db_query.run("SELECT ... FROM update WHERE status != 'ok'")` | `holmes__list_plugins()` (champ `update_available`) |
-| `db_query.run(requête commandes mortes)` | `holmes__query_sql(sql)` |
-| `db_query.run(requête qualité historique)` | `holmes__query_sql(sql)` |
+| `db_query.run("SELECT ... FROM update WHERE status != 'ok'")` | `holmes__list_plugins()` → filtrer `state != 'ok'`, champ `remote_version` disponible |
+| `db_query.run(requête équipements warning/danger)` | `holmes__find_equipments_advanced(has_warning=True)` |
+| `db_query.run(requête commandes mortes)` | `holmes__get_health_summary()` (champ `dead_commands` — LIMIT 200) |
+| `db_query.run(requête qualité historique)` | `holmes__get_health_summary()` (champ `summary.historized_cmds_without_data`) |
 | `logs_query.py tail http.error` | `holmes__tail_log(log_name="http", lines=200)` |
 
 ### WF2 — Diagnostic scénario
@@ -189,12 +190,20 @@ Pour chaque workflow, les scripts à remplacer et les outils Holmes MCP à utili
 |------------------|------------------------|
 | `usage_graph.py {"target_type": "cmd", "target_id": N}` | `holmes__find_command_usages(cmd_id=N)` |
 | `usage_graph.py {"target_type": "scenario", "target_id": N}` | `holmes__find_scenario_dependencies(scenario_id=N)` |
-| `usage_graph.py {"target_type": "eqLogic", "target_id": N}` | `holmes__query_sql(sql)` — voir SQL cookbook §A ci-dessous |
+| `usage_graph.py {"target_type": "eqLogic", "target_id": N}` | `holmes__find_equipment_usages(equipment_id=N)` |
 | `resolve_cmd_refs.py` sur résultats | Non nécessaire — `describe_scenario()` résout si contexte scénario |
 
 ### WF7 — Suggestions de refactor
 
-Composition de WF1 + WF5. Aucun script spécifique à remplacer. Les requêtes ad-hoc passent par `holmes__query_sql()`.
+Composition de WF1 + WF5. La plupart des requêtes de refactor ont désormais des outils dédiés v1.2.0 :
+
+| Ancienne approche | Nouvel appel Holmes MCP |
+|------------------|------------------------|
+| `db_query.run(requête variables orphelines)` | `holmes__list_datastore_variables(orphaned=True)` |
+| `db_query.run(requête commandes sans generic_type)` | `holmes__find_commands_advanced(generic_type_missing=True)` |
+| `db_query.run(requête scénarios désactivés mais appelés)` | `holmes__find_scenarios_advanced(called_while_inactive=True)` |
+
+Les requêtes ad-hoc restantes passent par `holmes__query_sql()`.
 
 ### WF8 — Valeur courante
 
@@ -283,7 +292,9 @@ Si `_filtered_fields` n'est pas vide : mentionner explicitement que des champs o
 
 ## 6. SQL cookbook de substitution
 
-Requêtes à conserver dans `references/sql-cookbook.md` après migration — celles qui n'ont pas d'outil Holmes MCP dédié. Toutes testées sur MariaDB 10.x (Jeedom Bookworm).
+Requêtes à conserver dans `references/sql-cookbook.md` après migration — uniquement celles qui n'ont pas d'outil Holmes MCP dédié.
+
+> **Mise à jour v1.2.0 (J8-3/J8-4pre)** : les 8 requêtes initiales du cookbook sont désormais couvertes par des outils Holmes MCP dédiés. Le cookbook est vide — utiliser `query_sql()` uniquement pour des requêtes ad-hoc non couvertes par les 27 tools.
 
 ### Important — MariaDB vs MySQL
 
@@ -299,106 +310,20 @@ JSON_SEARCH(arr_col, 'one', CAST(id_col AS CHAR)) IS NOT NULL
 
 Point connexe : `scenario.scenarioElement` stocke les IDs comme chaînes JSON (`["502"]`, pas `[502]`). `JSON_SEARCH` avec `CAST AS CHAR` est cohérent.
 
-### A. Graphe d'usage eqLogic (WF6 — pas d'outil Holmes MCP dédié)
+### Requêtes obsolètes — remplacées par des outils dédiés v1.2.0
 
-Scénarios dont un équipement est utilisé (via ses commandes) :
+| Ancienne recette | Outil Holmes MCP v1.2.0 |
+|---|---|
+| A — Graphe d'usage eqLogic | `holmes__find_equipment_usages(equipment_id)` |
+| B — Commandes mortes | `holmes__get_health_summary()` → `dead_commands` |
+| C — Variables dataStore orphelines | `holmes__list_datastore_variables(orphaned=True)` |
+| D — Commandes sans Type Générique | `holmes__find_commands_advanced(generic_type_missing=True)` |
+| E — Qualité historique (cmds sans donnée) | `holmes__get_health_summary()` → `summary.historized_cmds_without_data` |
+| F — Équipements en warning ou danger | `holmes__find_equipments_advanced(has_warning=True)` |
+| G — Scénarios désactivés mais appelés | `holmes__find_scenarios_advanced(called_while_inactive=True)` |
+| H — Plugins avec mises à jour | `holmes__list_plugins()` → filtrer `state != 'ok'`, comparer `version` / `remote_version` |
 
-```sql
-SELECT DISTINCT s.id, s.name
-FROM scenario s
-JOIN scenarioElement sel
-  ON JSON_SEARCH(s.scenarioElement, 'one', CAST(sel.id AS CHAR)) IS NOT NULL
-JOIN scenarioSubElement ss ON ss.scenarioElement_id = sel.id
-JOIN scenarioExpression expr ON expr.scenarioSubElement_id = ss.id
-JOIN cmd c ON expr.expression LIKE CONCAT('%#', c.id, '#%')
-WHERE c.eqLogic_id = <EQUIPEMENT_ID>
-LIMIT 50
-```
-
-### B. Commandes mortes (WF1 — audit général)
-
-```sql
-SELECT c.id, c.name, c.eqLogic_id
-FROM cmd c
-LEFT JOIN eqLogic e ON c.eqLogic_id = e.id
-WHERE e.id IS NULL OR e.isEnable = 0
-ORDER BY c.eqLogic_id
-LIMIT 200
-```
-
-### C. Variables dataStore orphelines (WF7 — refactor)
-
-```sql
-SELECT d.`key`, d.value
-FROM dataStore d
-WHERE d.type = 'scenario' AND d.link_id = -1
-  AND NOT EXISTS (
-    SELECT 1 FROM scenarioExpression expr
-    WHERE expr.expression LIKE CONCAT('%variable(', d.`key`, ')%')
-       OR (expr.options IS NOT NULL AND expr.options LIKE CONCAT('%"', d.`key`, '"%'))
-  )
-LIMIT 200
-```
-
-### D. Commandes sans Type Générique (WF7 — refactor)
-
-```sql
-SELECT c.id, c.name, c.type, c.subType,
-       e.name AS equipement, e.eqType_name
-FROM cmd c
-JOIN eqLogic e ON c.eqLogic_id = e.id
-WHERE c.type = 'info'
-  AND (c.generic_type IS NULL OR c.generic_type = '')
-ORDER BY e.name, c.name
-LIMIT 200
-```
-
-### E. Qualité d'historique — commandes info sans aucune valeur (WF1)
-
-```sql
-SELECT COUNT(*) AS cmd_info_sans_historique
-FROM cmd c
-WHERE c.type = 'info'
-  AND c.isHistorized = 1
-  AND NOT EXISTS (SELECT 1 FROM history h WHERE h.cmd_id = c.id)
-```
-
-### F. Équipements en warning ou danger (WF1 / WF3)
-
-```sql
-SELECT id, name, eqType_name, status
-FROM eqLogic
-WHERE JSON_UNQUOTE(JSON_EXTRACT(status, '$.warning')) != ''
-   OR JSON_UNQUOTE(JSON_EXTRACT(status, '$.danger')) != ''
-LIMIT 100
-```
-
-### G. Scénarios désactivés mais appelés en action (WF7)
-
-```sql
-SELECT DISTINCT s.id, s.name
-FROM scenario s
-WHERE s.isActive = 0
-  AND EXISTS (
-    SELECT 1 FROM scenarioExpression expr
-    WHERE expr.type = 'action'
-      AND expr.expression = 'scenario'
-      AND JSON_UNQUOTE(JSON_EXTRACT(expr.options, '$.scenario_id')) = CAST(s.id AS CHAR)
-  )
-LIMIT 50
-```
-
-### H. Résumé plugins avec mises à jour (WF1)
-
-```sql
-SELECT id, name, localVersion, remoteVersion, status
-FROM `update`
-WHERE type = 'plugin' AND status != 'ok'
-ORDER BY name
-LIMIT 50
-```
-
-> `update` est auto-backtické par `query_sql()` — écrire sans backticks.
+> Le cookbook SQL de substitution est vide. Utiliser `query_sql()` uniquement pour des requêtes ad-hoc non couvertes par les 27 tools.
 
 ---
 
