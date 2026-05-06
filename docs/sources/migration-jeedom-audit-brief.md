@@ -506,16 +506,3 @@ La migration sur branche `develop` est complète quand :
 - [ ] Aucune référence à SSH, `db_query`, `api_call`, `setup.py` dans SKILL.md
 
 **Ce que "testable" signifie :** lancer le WF depuis Claude Code avec Holmes MCP dans le `.mcp.json`, et obtenir une réponse cohérente sans erreur d'outil.
-
----
-
-## 10. Documents de référence Holmes MCP
-
-| Document | Contenu |
-|---------|---------|
-| `docs/skill-coverage-matrix.md` | Mapping détaillé WF ↔ tools Holmes MCP (version J7bis-2) |
-| `docs/sessions/2026-05-05-j8-audit-migration-jeedom-skill.md` | Gap analysis complète jeedom-audit v1.0.0 → Holmes MCP |
-| `docs/sessions/2026-05-05-j7bis-2-audit-jeedom-audit.md` | Gap analysis mise à jour v1.1.0, SQL MariaDB corrigés |
-| `docs/skill-migration-audit-playbook.md` | Méthodologie d'audit (contexte, non requis pour la migration) |
-| `docs/user/tools.md` | Documentation utilisateur des 26 tools Holmes MCP |
-| `docs/user/clients-mcp.md` | Configuration `.mcp.json` et autres clients |
