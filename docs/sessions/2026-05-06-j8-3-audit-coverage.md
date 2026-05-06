@@ -2,7 +2,7 @@
 
 **Date** : 2026-05-06
 **Branche** : `develop`
-**Commit(s)** : à produire en fin de session
+**Commit(s)** : `b170e00` (feat) · `6037e3b` (docs) · `72209ac` (test) · `491bca3` (docs §10)
 
 ---
 
