@@ -472,9 +472,9 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 ---
 
-### J8 — Bêta privée + v1.2.0 + audit couverture + migration jeedom-audit
+### J8 — v1.2.0 + audit couverture + migration jeedom-audit (= bêta privée)
 
-**Objectif** : valider le plugin en conditions réelles, compléter la couverture outils pour éliminer le cookbook SQL de jeedom-audit, puis déclencher la migration effective.
+**Objectif** : compléter la couverture outils, valider live, puis migrer jeedom-audit sur Holmes MCP. La migration des 13 WF constitue la bêta privée — pas de phase séparée.
 
 **Démarrage** : à la clôture de J7bis.
 
@@ -484,68 +484,59 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 
 - `docs/sources/migration-jeedom-audit-brief.md` — brief autonome pour le projet jeedom-skills Claude Code
 
-#### J8-2 — Implémentation v1.2.0
+#### J8-2 ✅ Implémentation v1.2.0 (2026-05-06)
 
-**Objectif** : ajouter les outils manquants pour couvrir les 8 requêtes SQL résiduelles du cookbook jeedom-audit.
+- `find_equipment_usages(equipment_id)` — 27e tool
+- `get_health_summary()` — extension commandes mortes + qualité historique
+- `list_datastore_variables(orphaned=True)`, `find_commands_advanced(generic_type_missing=True)`, `find_equipments_advanced(has_warning=True)`, `find_scenarios_advanced(called_while_inactive=True)`
+- 721/721 tests unitaires ✅, 187/187 intégration live ✅, ruff propre
 
-**Livraisons :**
+#### J8-3 ✅ Audit couverture (2026-05-06)
 
-- `find_equipment_usages(equipment_id)` — nouveau tool (27e) : scénarios utilisant un équipement via ses commandes
-- `get_health_summary()` — extension : commandes mortes + qualité d'historique
-- `list_datastore_variables(orphaned=True)` — paramètre bool : variables non référencées dans les expressions
-- `find_commands_advanced(generic_type_missing=True)` — paramètre bool : commandes sans Type Générique
-- `find_equipments_advanced(has_warning=True)` — paramètre bool : équipements en warning ou danger
-- `find_scenarios_advanced(called_while_inactive=True)` — paramètre bool : scénarios inactifs mais appelés en action
+- 13/13 WF couverts, 8/8 requêtes cookbook obsolétées, `list_plugins` +`remote_version`
+- `docs/skill-coverage-matrix.md` mis à jour v1.2.0, brief §6 SQL cookbook vidé
 
-**DoD J8-2 :**
+#### J8-4 ✅ Audit live post-v1.2.0 (2026-05-06)
 
-- [ ] 6 livraisons implémentées, testées (unit + intégration live)
-- [ ] Zéro crash daemon pendant la session
-- [ ] Ruff propre
-- [ ] `plugin_info/info.json` → `1.2.0`
-- [ ] `plugin_info/changelog.md` — entrée v1.2.0
+- 188/188 tests intégration live ✅, smoke 27 tools ✅ (`build_mcp()`)
+- Bug CLOSE-WAIT FastMCP documenté
 
-#### J8-3 — Audit couverture jeedom-audit × Holmes MCP v1.2.0
+#### J8-4bis ✅ Watchdog CLOSE-WAIT + smoke tests HTTP (2026-05-06)
 
-**Objectif** : confirmer que les 13 WF de jeedom-audit sont couverts à 100% sans recours au cookbook SQL.
+- Watchdog asyncio Level 2 dans `holmesMcpd.py`
+- Fix `McpActivityLogger._buffered_receive` (cause racine CLOSE-WAIT)
+- `tests/smoke/smoke_mcp_clean.py` — 27 tools ✅ via client officiel mcp, CPU 3%
 
-**DoD J8-3 :**
+#### J8-5 — Migration jeedom-audit (= bêta privée)
 
-- [ ] Tableau 13 WF × verdict ✅ / ⚠️ — zéro ⚠️ attendu
-- [ ] Pour chacune des 8 requêtes du cookbook §6 du brief : outil Holmes MCP confirmé (ou gap documenté)
-- [ ] `docs/sources/migration-jeedom-audit-brief.md` — §6 SQL cookbook vidé ou supprimé
-- [ ] `docs/skill-coverage-matrix.md` mis à jour (v1.2.0)
+**Objectif** : migrer jeedom-audit (branche `develop` sur `jeedom-skills`) pour remplacer les accès SSH/MySQL directs par des appels Holmes MCP. Les 13 WF rejoués en conditions réelles constituent la bêta privée.
+
+**Pré-requis** : snapshot Proxmox avant session, daemon Holmes MCP UP sur la box.
+
+**Livraisons (sur `jeedom-skills`) :**
+
+- Branche `develop` créée sur `jeedom-skills`
+- Chaque WF1-13 migré : SSH/MySQL directs → appels Holmes MCP (outils v1.2.0)
+- Zéro cookbook SQL résiduel
+- 13/13 workflows opérationnels et validés sur la box du PO
+
+**DoD J8-5 :**
+
+- [ ] Branche `develop` créée sur `jeedom-skills`
+- [ ] 13/13 WF migrés et rejoués sur la box — résultats identiques à avant migration
+- [ ] Zéro cookbook SQL résiduel dans jeedom-audit
+- [ ] Daemon Holmes MCP stable sur la durée (zéro crash, zéro fuite observée)
 - [ ] Document de session rédigé
-- [ ] Si gap résiduel : décision PO (fixer ou déférer)
-
-#### J8-4 — Audit live post-v1.2.0
-
-**Objectif** : validation end-to-end sur box réelle — suite intégration live complète + smoke test 27 tools.
-
-**Pré-requis** : snapshot Proxmox avant session.
-
-**DoD J8-4 :**
-
-- [ ] Suite intégration live complète (tests existants + nouveaux J8-2)
-- [ ] Smoke test 27 tools MCP ✅
-- [ ] Zéro crash daemon pendant la session
-- [ ] Document de session rédigé
+- [ ] PO déclare la bêta fermée
 
 #### Critères de sortie bêta (DoD J8)
 
-**Activité PO** :
+**Migration + stabilité daemon** :
 
-- [ ] 5 sessions de test réelles minimum avec Claude Code + Holmes MCP
+- [ ] J8-5 ✅ — 13/13 WF opérationnels sur `develop` jeedom-skills
 - [ ] Zéro crash daemon sur la durée de la bêta
-- [ ] Zéro fuite de données observée (sanity check régulier)
-- [ ] 2+ semaines de bêta effective
+- [ ] Zéro fuite de données observée
 - [ ] PO déclare la bêta fermée
-
-**Migration jeedom-audit (branche develop jeedom-skills — après J8-3 ✅)** :
-
-- [ ] Branche `develop` créée sur `jeedom-skills`
-- [ ] jeedom-audit migré : SSH/MySQL directs remplacés par appels Holmes MCP
-- [ ] 13/13 workflows opérationnels sur la branche develop — zéro cookbook SQL résiduel
 
 **Packaging market (DoD J8 — règle jalons futurs)** :
 
