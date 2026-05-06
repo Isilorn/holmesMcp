@@ -283,3 +283,79 @@ class TestFindCommandUsagesLive:
             assert pattern in str(scen.get('trigger', '')), (
                 f"Pattern {pattern} absent du trigger du scénario {scen.get('id')}"
             )
+
+
+# ---------------------------------------------------------------------------
+# find_equipment_usages
+# ---------------------------------------------------------------------------
+
+
+class TestFindEquipmentUsagesLive:
+    def test_structure(self, db_conn, first_equipment):
+        result = equipments.find_equipment_usages(db_conn, first_equipment)
+        assert 'equipment_id' in result
+        assert 'scenarios' in result
+        assert 'total' in result
+        assert isinstance(result['scenarios'], list)
+        assert result['equipment_id'] == first_equipment
+
+    def test_totaux_coherents(self, db_conn, first_equipment):
+        result = equipments.find_equipment_usages(db_conn, first_equipment)
+        assert result['total'] == len(result['scenarios'])
+
+    def test_equipement_inexistant_retourne_zero(self, db_conn):
+        result = equipments.find_equipment_usages(db_conn, 999999)
+        assert result['total'] == 0
+        assert result['scenarios'] == []
+
+    def test_champs_scenario_si_present(self, db_conn, first_equipment):
+        result = equipments.find_equipment_usages(db_conn, first_equipment)
+        for scen in result['scenarios']:
+            for field in ('id', 'name', 'isActive'):
+                assert field in scen, f'Champ manquant dans scénario : {field}'
+
+
+# ---------------------------------------------------------------------------
+# find_equipments_advanced — has_warning
+# ---------------------------------------------------------------------------
+
+
+class TestFindEquipmentsAdvancedHasWarningLive:
+    def test_structure(self, db_conn):
+        result = equipments.find_equipments_advanced(db_conn, has_warning=True)
+        assert 'equipements' in result
+        assert isinstance(result['equipements'], list)
+        assert isinstance(result['_filtered_fields'], list)
+
+    def test_retourne_uniquement_warning_ou_danger(self, db_conn):
+        result = equipments.find_equipments_advanced(db_conn, has_warning=True)
+        for eq in result['equipements']:
+            status = eq.get('status')
+            assert status is not None, f'Status None pour équipement {eq.get("id")}'
+
+
+# ---------------------------------------------------------------------------
+# find_commands_advanced — generic_type_missing
+# ---------------------------------------------------------------------------
+
+
+class TestFindCommandsAdvancedGenericTypeMissingLive:
+    def test_structure(self, db_conn):
+        result = equipments.find_commands_advanced(db_conn, generic_type_missing=True)
+        assert 'commandes' in result
+        assert isinstance(result['commandes'], list)
+
+    def test_retourne_uniquement_commandes_sans_generic_type(self, db_conn):
+        result = equipments.find_commands_advanced(db_conn, generic_type_missing=True)
+        for cmd in result['commandes']:
+            gt = cmd.get('generic_type')
+            assert gt is None or gt == '', (
+                f"Commande {cmd.get('id')} a un generic_type non vide : {gt!r}"
+            )
+
+    def test_retourne_uniquement_type_info(self, db_conn):
+        result = equipments.find_commands_advanced(db_conn, generic_type_missing=True)
+        for cmd in result['commandes']:
+            assert cmd.get('type') == 'info', (
+                f"Commande {cmd.get('id')} n'est pas de type info : {cmd.get('type')!r}"
+            )

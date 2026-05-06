@@ -1,5 +1,16 @@
 # Changelog Holmes MCP
 
+## v1.2.0 — 2026-05-06
+
+Nouveaux outils d'audit et de refactoring (J8-2) — couverture complète des workflows jeedom-audit.
+
+- Nouvel outil `find_equipment_usages(equipment_id)` : retourne les scénarios qui utilisent un équipement via ses commandes (27e tool)
+- `get_health_summary` : deux nouvelles métriques — commandes mortes (équipement désactivé ou supprimé) et commandes info historisées sans aucune donnée
+- `list_datastore_variables(orphaned=True)` : filtre les variables non référencées dans aucune expression de scénario
+- `find_commands_advanced(generic_type_missing=True)` : commandes info sans Type Générique — utile pour l'audit de couverture
+- `find_equipments_advanced(has_warning=True)` : équipements en état warning ou danger
+- `find_scenarios_advanced(called_while_inactive=True)` : scénarios désactivés mais appelés dans les actions d'un autre scénario
+
 ## v1.1.1 — 2026-05-05
 
 Correction de bug — compatibilité MariaDB (J7bis-2).

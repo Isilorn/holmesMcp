@@ -1,8 +1,8 @@
-"""Famille 2 — Équipements et commandes (8 tools).
+"""Famille 2 — Équipements et commandes (9 tools).
 
 Tools : list_equipments, find_equipments_advanced, get_equipment,
         find_equipment_by_name, list_commands, find_commands_advanced,
-        get_command_history, find_command_usages.
+        get_command_history, find_command_usages, find_equipment_usages.
 Canal : MySQL RO exclusivement (tables eqLogic, cmd, history, historyArch,
         scenario, scenarioExpression, scenarioSubElement, scenarioElement, dataStore).
         Enrichissement runtime : API JSON-RPC (currentValue, collectDate) via _core/api.
@@ -26,6 +26,7 @@ _CMD_LIMIT = 200
 _CMD_LIMIT_ADV = 50
 _HISTORY_LIMIT = 100
 _CMD_USAGES_LIMIT = 50
+_EQ_USAGES_LIMIT = 50
 
 
 # ── Helpers runtime API ───────────────────────────────────────────────────────
@@ -130,6 +131,7 @@ def find_equipments_advanced(
     is_enable: bool | None = None,
     generic_type: str | None = None,
     tags: str | None = None,
+    has_warning: bool = False,
     limit: int = _EQ_LIMIT_ADV,
 ) -> dict[str, Any]:
     """Recherche avancée d'équipements avec filtres combinables.
@@ -141,6 +143,8 @@ def find_equipments_advanced(
     - is_enable     : True = actifs uniquement
     - generic_type  : type générique exact (ex. 'LIGHT', 'THERMOSTAT')
     - tags          : fragment de tag (LIKE %tag%)
+    - has_warning   : True = uniquement les équipements en warning ou danger
+                      (champ status JSON : $.warning ou $.danger non vide)
     - limit         : max 50 résultats
 
     Pour la recherche par nom seul, préférez find_equipment_by_name.
@@ -166,16 +170,25 @@ def find_equipments_advanced(
     if tags is not None:
         conditions.append('tags LIKE %s')
         params.append(f'%{tags}%')
+    if has_warning:
+        conditions.append(
+            "(status IS NOT NULL"
+            " AND (JSON_UNQUOTE(JSON_EXTRACT(status, '$.warning')) != ''"
+            " OR JSON_UNQUOTE(JSON_EXTRACT(status, '$.danger')) != ''))"
+        )
 
     where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
     limit = min(limit, _EQ_LIMIT_ADV)
     params.append(limit)
 
+    select_cols = (
+        'id, name, eqType_name, object_id, isEnable, isVisible,'
+        ' logicalId, generic_type, `order`, tags'
+        + (', status' if has_warning else '')
+    )
     rows = _db.query(
         conn,
-        f'SELECT id, name, eqType_name, object_id, isEnable, isVisible,'
-        f' logicalId, generic_type, `order`, tags'
-        f' FROM eqLogic {where} ORDER BY name LIMIT %s',
+        f'SELECT {select_cols} FROM eqLogic {where} ORDER BY name LIMIT %s',
         params,
     )
     sanitized, filtered = sanitize_rows(rows, 'eqLogic')
@@ -330,18 +343,21 @@ def find_commands_advanced(
     subtype: str | None = None,
     generic_type: str | None = None,
     is_historized: bool | None = None,
+    generic_type_missing: bool = False,
     limit: int = _CMD_LIMIT_ADV,
 ) -> dict[str, Any]:
     """Recherche avancée de commandes avec filtres combinables.
 
     Paramètres :
-    - name_contains : fragment de nom (LIKE %fragment%)
-    - equipment_id  : restreindre à un équipement
-    - cmd_type      : 'info' ou 'action'
-    - subtype       : sous-type (ex. 'numeric', 'binary', 'string', 'slider', 'message')
-    - generic_type  : type générique (ex. 'TEMPERATURE', 'HUMIDITY', 'LIGHT_STATE')
-    - is_historized : True = uniquement les commandes historisées
-    - limit         : max 50 résultats
+    - name_contains      : fragment de nom (LIKE %fragment%)
+    - equipment_id       : restreindre à un équipement
+    - cmd_type           : 'info' ou 'action'
+    - subtype            : sous-type (ex. 'numeric', 'binary', 'string', 'slider', 'message')
+    - generic_type       : type générique (ex. 'TEMPERATURE', 'HUMIDITY', 'LIGHT_STATE')
+    - is_historized      : True = uniquement les commandes historisées
+    - generic_type_missing : True = commandes info sans Type Générique
+                             (generic_type IS NULL ou vide) — utile pour audit WF7
+    - limit              : max 50 résultats
     """
     conditions: list[str] = []
     params: list[Any] = []
@@ -364,6 +380,10 @@ def find_commands_advanced(
     if is_historized is not None:
         conditions.append('isHistorized = %s')
         params.append(1 if is_historized else 0)
+    if generic_type_missing:
+        if cmd_type is None:
+            conditions.append("type = 'info'")
+        conditions.append("(generic_type IS NULL OR generic_type = '')")
 
     where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
     limit = min(limit, _CMD_LIMIT_ADV)
@@ -423,6 +443,50 @@ def get_command_history(
             'total_archived': len(arch_sanitized),
         },
         all_filtered,
+    )
+
+
+def find_equipment_usages(
+    conn: pymysql.connections.Connection,
+    equipment_id: int,
+    limit: int = _EQ_USAGES_LIMIT,
+) -> dict[str, Any]:
+    """Scénarios qui utilisent un équipement via ses commandes.
+
+    Paramètres :
+    - equipment_id : identifiant de l'équipement (eqLogic.id)
+    - limit        : max de scénarios retournés (défaut 50, max 50)
+
+    Retourne la liste des scénarios dont au moins une expression référence
+    une commande de cet équipement (pattern #cmdId# dans scenarioExpression).
+
+    Couvre les triggers, conditions et actions des scénarios.
+    Pour le détail des références commande par commande, utilisez
+    find_command_usages(cmd_id) sur chaque commande de l'équipement.
+    """
+    limit = min(limit, _EQ_USAGES_LIMIT)
+
+    rows = _db.query(
+        conn,
+        'SELECT DISTINCT s.id, s.name, s.isActive'
+        ' FROM scenario s'
+        ' JOIN scenarioElement sel'
+        "   ON JSON_SEARCH(s.scenarioElement, 'one', CAST(sel.id AS CHAR)) IS NOT NULL"
+        ' JOIN scenarioSubElement ss ON ss.scenarioElement_id = sel.id'
+        ' JOIN scenarioExpression expr ON expr.scenarioSubElement_id = ss.id'
+        " JOIN cmd c ON expr.expression LIKE CONCAT('%%#', c.id, '#%%')"
+        ' WHERE c.eqLogic_id = %s'
+        ' ORDER BY s.name LIMIT %s',
+        (equipment_id, limit),
+    )
+    sanitized, filtered = sanitize_rows(rows, 'scenario')
+    return wrap_result(
+        {
+            'equipment_id': equipment_id,
+            'scenarios': sanitized,
+            'total': len(sanitized),
+        },
+        filtered,
     )
 
 

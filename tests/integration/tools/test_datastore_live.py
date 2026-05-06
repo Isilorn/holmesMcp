@@ -111,3 +111,29 @@ class TestGetDatastoreVariableLive:
             pytest.skip('Variable introuvable avec filtre type')
         for var in result['variables']:
             assert var['type'] == first_datastore_var_type
+
+
+# ---------------------------------------------------------------------------
+# list_datastore_variables — orphaned
+# ---------------------------------------------------------------------------
+
+
+class TestListDatastoreVariablesOrphanedLive:
+    def test_structure(self, db_conn):
+        result = datastore.list_datastore_variables(db_conn, orphaned=True)
+        assert 'variables' in result
+        assert 'total' in result
+        assert isinstance(result['variables'], list)
+        assert isinstance(result['_filtered_fields'], list)
+
+    def test_totaux_coherents(self, db_conn):
+        result = datastore.list_datastore_variables(db_conn, orphaned=True)
+        assert result['total'] == len(result['variables'])
+
+    def test_orphaned_combined_avec_var_type(self, db_conn):
+        result = datastore.list_datastore_variables(
+            db_conn, var_type='global', orphaned=True
+        )
+        assert 'variables' in result
+        for var in result['variables']:
+            assert var.get('type') == 'global'

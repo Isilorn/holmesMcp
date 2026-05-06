@@ -23,6 +23,7 @@ def list_datastore_variables(
     var_type: str | None = None,
     link_id: int | None = None,
     key_pattern: str | None = None,
+    orphaned: bool = False,
     limit: int = 100,
     offset: int = 0,
 ) -> dict[str, Any]:
@@ -34,6 +35,9 @@ def list_datastore_variables(
     - link_id     : filtre sur l'identifiant lié (ex. scenario_id pour type='scenario',
                     0 pour les variables globales)
     - key_pattern : filtre LIKE sur le nom de variable (ex. 'meteo%', '%temp%')
+    - orphaned    : True = uniquement les variables non référencées dans aucune
+                    scenarioExpression (ni via variable(key) ni via options JSON)
+                    — utile pour audit WF7 refactor
     - limit       : nombre max de résultats (max 200)
     - offset      : décalage pour la pagination
 
@@ -52,6 +56,14 @@ def list_datastore_variables(
     if key_pattern is not None:
         conditions.append('`key` LIKE %s')
         params.append(key_pattern)
+    if orphaned:
+        conditions.append(
+            'NOT EXISTS ('
+            ' SELECT 1 FROM scenarioExpression'
+            " WHERE expression LIKE CONCAT('%%variable(', dataStore.`key`, ')%%')"
+            ' OR (options IS NOT NULL'
+            "  AND options LIKE CONCAT('%%\"', dataStore.`key`, '\"%%')))"
+        )
 
     where = (' WHERE ' + ' AND '.join(conditions)) if conditions else ''
     limit = min(limit, _DATASTORE_LIMIT)

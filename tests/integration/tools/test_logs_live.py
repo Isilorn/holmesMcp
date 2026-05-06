@@ -146,3 +146,26 @@ class TestGetHealthSummaryLive:
     def test_pas_de_filtrage_inattendu(self, db_conn):
         result = logs_tools.get_health_summary(db_conn)
         assert result['_filtered_fields'] == []
+
+    def test_dead_commands_structure(self, db_conn):
+        result = logs_tools.get_health_summary(db_conn)
+        assert 'dead_commands' in result
+        assert isinstance(result['dead_commands'], list)
+
+    def test_dead_commands_count_in_summary(self, db_conn):
+        result = logs_tools.get_health_summary(db_conn)
+        assert 'dead_commands_count' in result['summary']
+        assert isinstance(result['summary']['dead_commands_count'], int)
+        assert result['summary']['dead_commands_count'] == len(result['dead_commands'])
+
+    def test_historized_cmds_without_data_in_summary(self, db_conn):
+        result = logs_tools.get_health_summary(db_conn)
+        assert 'historized_cmds_without_data' in result['summary']
+        assert isinstance(result['summary']['historized_cmds_without_data'], int)
+        assert result['summary']['historized_cmds_without_data'] >= 0
+
+    def test_dead_commands_champs_si_present(self, db_conn):
+        result = logs_tools.get_health_summary(db_conn)
+        for cmd in result['dead_commands']:
+            for field in ('id', 'name', 'eqLogic_id'):
+                assert field in cmd, f'Champ manquant dans dead_command : {field}'

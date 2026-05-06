@@ -114,11 +114,16 @@ class TestGetHealthSummary:
         plugins_nok=None,
         messages=None,
         crons=None,
+        dead_commands=None,
+        history_quality=None,
     ):
+        hq = history_quality if history_quality is not None else [{'cmd_info_sans_historique': 0}]
         return [
             plugins_nok or [],
             messages or [],
             crons or [],
+            dead_commands or [],
+            hq,
         ]
 
     def test_all_healthy_returns_empty_lists(self):
@@ -272,3 +277,71 @@ class TestGetHealthSummary:
 
         assert result['summary']['plugins_nok_count'] == len(result['plugins_nok'])
         assert result['summary']['messages_unread_count'] == len(result['messages_unread'])
+
+    def test_dead_commands_returned(self):
+        dead = [
+            {'id': 10, 'name': 'Cmd orpheline', 'eqLogic_id': 99},
+        ]
+        with patch(
+            'tools.logs._db.query',
+            side_effect=self._make_query_side_effects(dead_commands=dead),
+        ):
+            result = logs_tools.get_health_summary(_MOCK_CONN)
+
+        assert 'dead_commands' in result
+        assert len(result['dead_commands']) == 1
+        assert result['dead_commands'][0]['name'] == 'Cmd orpheline'
+        assert result['dead_commands'][0]['eqLogic_id'] == 99
+        assert result['summary']['dead_commands_count'] == 1
+
+    def test_dead_commands_empty_when_no_dead(self):
+        with patch(
+            'tools.logs._db.query',
+            side_effect=self._make_query_side_effects(),
+        ):
+            result = logs_tools.get_health_summary(_MOCK_CONN)
+
+        assert result['dead_commands'] == []
+        assert result['summary']['dead_commands_count'] == 0
+
+    def test_history_quality_in_summary(self):
+        hq = [{'cmd_info_sans_historique': 7}]
+        with patch(
+            'tools.logs._db.query',
+            side_effect=self._make_query_side_effects(history_quality=hq),
+        ):
+            result = logs_tools.get_health_summary(_MOCK_CONN)
+
+        assert result['summary']['historized_cmds_without_data'] == 7
+
+    def test_history_quality_zero_when_all_ok(self):
+        with patch(
+            'tools.logs._db.query',
+            side_effect=self._make_query_side_effects(),
+        ):
+            result = logs_tools.get_health_summary(_MOCK_CONN)
+
+        assert result['summary']['historized_cmds_without_data'] == 0
+
+    def test_dead_commands_query_targets_cmd_and_eqlogic(self):
+        with patch(
+            'tools.logs._db.query',
+            side_effect=self._make_query_side_effects(),
+        ) as mock_q:
+            logs_tools.get_health_summary(_MOCK_CONN)
+
+        fourth_sql = mock_q.call_args_list[3][0][1]
+        assert 'cmd' in fourth_sql
+        assert 'eqLogic' in fourth_sql
+        assert 'isEnable' in fourth_sql
+
+    def test_history_quality_query_uses_not_exists(self):
+        with patch(
+            'tools.logs._db.query',
+            side_effect=self._make_query_side_effects(),
+        ) as mock_q:
+            logs_tools.get_health_summary(_MOCK_CONN)
+
+        fifth_sql = mock_q.call_args_list[4][0][1]
+        assert 'NOT EXISTS' in fifth_sql
+        assert 'history' in fifth_sql

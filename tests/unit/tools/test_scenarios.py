@@ -781,3 +781,66 @@ class TestFetchRuntimeHelpers:
             result = scenarios._fetch_runtime_single('key', 1)
 
         assert result == {'state': 'run', 'lastLaunch': '2026-05-04 08:00:00'}
+
+
+# ---------------------------------------------------------------------------
+# find_scenarios_advanced — called_while_inactive
+# ---------------------------------------------------------------------------
+
+
+class TestFindScenariosAdvancedCalledWhileInactive:
+    def test_no_flag_no_exists_subquery(self):
+        with patch('tools.scenarios._db.query', return_value=[]):
+            with patch('tools.scenarios._fetch_runtime_map', return_value={}):
+                with patch('tools.scenarios._db.query', return_value=[]) as mock_q:
+                    scenarios.find_scenarios_advanced(_MOCK_CONN)
+
+        sql = mock_q.call_args[0][1]
+        assert 'EXISTS' not in sql
+
+    def test_flag_adds_exists_subquery(self):
+        with patch('tools.scenarios._api.call', return_value={'result': []}):
+            with patch('tools.scenarios._db.query', return_value=[]) as mock_q:
+                scenarios.find_scenarios_advanced(_MOCK_CONN, called_while_inactive=True)
+
+        sql = mock_q.call_args[0][1]
+        assert 'EXISTS' in sql
+        assert 'scenarioExpression' in sql
+
+    def test_flag_adds_isactive_0(self):
+        with patch('tools.scenarios._api.call', return_value={'result': []}):
+            with patch('tools.scenarios._db.query', return_value=[]) as mock_q:
+                scenarios.find_scenarios_advanced(_MOCK_CONN, called_while_inactive=True)
+
+        sql = mock_q.call_args[0][1]
+        assert 'isActive = 0' in sql
+
+    def test_flag_checks_action_expression(self):
+        with patch('tools.scenarios._api.call', return_value={'result': []}):
+            with patch('tools.scenarios._db.query', return_value=[]) as mock_q:
+                scenarios.find_scenarios_advanced(_MOCK_CONN, called_while_inactive=True)
+
+        sql = mock_q.call_args[0][1]
+        assert "expression = 'scenario'" in sql
+        assert 'scenario_id' in sql
+
+    def test_flag_combined_with_group(self):
+        with patch('tools.scenarios._api.call', return_value={'result': []}):
+            with patch('tools.scenarios._db.query', return_value=[]) as mock_q:
+                scenarios.find_scenarios_advanced(
+                    _MOCK_CONN, group='Chauffage', called_while_inactive=True
+                )
+
+        sql = mock_q.call_args[0][1]
+        params = mock_q.call_args[0][2]
+        assert 'EXISTS' in sql
+        assert '`group`' in sql
+        assert 'Chauffage' in params
+
+    def test_flag_false_preserves_existing_behavior(self):
+        with patch('tools.scenarios._api.call', return_value={'result': []}):
+            with patch('tools.scenarios._db.query', return_value=[]) as mock_q:
+                scenarios.find_scenarios_advanced(_MOCK_CONN, called_while_inactive=False)
+
+        sql = mock_q.call_args[0][1]
+        assert 'EXISTS' not in sql
