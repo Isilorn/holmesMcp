@@ -77,7 +77,9 @@ class McpActivityLogger:
             if not body_sent:
                 body_sent = True
                 return {'type': 'http.request', 'body': body, 'more_body': False}
-            return {'type': 'http.request', 'body': b'', 'more_body': False}
+            # Relayer les appels suivants vers le vrai receive (disconnect notifications).
+            # Sans ça, FastMCP boucle sur des http.request vides et bloque le SSE.
+            return await receive()
 
         start = time.perf_counter()
         exc_raised: BaseException | None = None
