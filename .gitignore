@@ -60,3 +60,8 @@ site/
 # ── Archives ─────────────────────────────────────────────────────────────────
 *.zip
 *.tar.gz
+.git-deny-patterns
+
+# Zone d'échange SMB (ADR-055) — Sas est un LIEN : /Sas/* seul ne l'attrape pas.
+/Sas
+/Sas/*
