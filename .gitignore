@@ -65,3 +65,13 @@ site/
 # Zone d'échange SMB (ADR-055) — Sas est un LIEN : /Sas/* seul ne l'attrape pas.
 /Sas
 /Sas/*
+
+# ── uv : ce projet n'utilise PAS de venv projet ────────────────────────────────
+# Les deps runtime du daemon sont posées par Jeedom (system::update → packages.json)
+# dans resources/python_venv ; le pyproject.toml est dev-only (ruff/pytest).
+# Un uv.lock orphelin est né le 17-06-2026 d'un `uv sync` de reconnaissance de parc,
+# annulé le jour même (décision « holmesMcp hors périmètre du venv partagé »).
+# Le versionner suggérerait une reproductibilité qui n'existe pas : il ne contient
+# ni mcp, ni httpx, ni sqlparse.
+uv.lock
+.venv/
