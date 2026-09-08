@@ -507,11 +507,59 @@ Puis soumission market directement en statut **bêta** (pas stable). Conversion 
 - Fix `McpActivityLogger._buffered_receive` (cause racine CLOSE-WAIT)
 - `tests/smoke/smoke_mcp_clean.py` — 27 tools ✅ via client officiel mcp, CPU 3%
 
+#### J8-4ter — Reprise après dormance (2026-09-08)
+
+**Déclencheur** : projet dormant depuis le 2026-05-06 (4 mois). Le contrôle d'ouverture et
+l'inspection de la box ont révélé un écart entre ce que le dépôt déclare et l'état réel.
+Ces deux blocs sont des **pré-requis de J8-5**.
+
+##### Bloc A — Hygiène et reconstitution du dépôt
+
+| # | Action | Pourquoi |
+|---|---|---|
+| A1 | Snapshot mémoire versionné : `.routines.conf` (`ARCHIVES="../Archives"`) + `.origine`, puis `mem-snapshot` | Seul canal inter-projets — **prérequis de J8-5, qui se déroule dans `jeedom-skills`** |
+| A2 | `CLAUDE.md` à la racine : interdits durs + ce qui fait foi | Les règles vitales ne vivaient qu'en mémoire cloisonnée et non versionnée |
+| A3 | CI au vert : `ruff format` (21 fichiers), épingler `ruff`, image `ubuntu` supportée | Le job `unit` dépend de `lint` → **722 tests unitaires débranchés depuis mai** |
+| A4 | `.gitleaksignore` sur les 3 fixtures synthétiques vérifiées | Un contrôle qui crie toujours cesse d'être lu |
+| A5 | Arbre de travail : `.claude/settings.json`, `uv.lock` | 2 décisions PO |
+| A6 | `PROJECT_STATE` + `PLANNING` alignés sur le réel | « Ce qu'un projet déclare doit correspondre à son dernier commit » |
+
+🔴 **A1 n'écrit pas dans ce dépôt.** `holmesMcp` est **public** ; les fiches mémoire décrivent la
+doctrine sudo de la flotte et les chemins de la box. Destination `~/Github/Archives` (privé), via
+l'aiguillage `ARCHIVES="../Archives"`.
+
+##### Bloc B — Session live de reprise
+
+| # | Action | Qui |
+|---|---|---|
+| B1 | **Snapshot Proxmox** | 🔴 PO — bloquant |
+| B2 | Re-valider sur **Jeedom 4.6.1** : 188 tests d'intégration live + smoke 27 tools | Claude Code |
+| B3 | **Ré-auditer la sanitisation sur les 32 plugins non couverts** (protocole J6-2) | Claude Code |
+| B4 | Répercuter 4.6.1 : `info.json` (`require`), doc market « validé sur 4.5.3 », changelog | Claude Code |
+| B5 | Document de session + `PROJECT_STATE` + `mem-snapshot` | Claude Code |
+
+**B2 avant B3** : si le core Jeedom a bougé, les outils sont à réparer avant d'auditer ce qu'ils
+renvoient.
+
+🔴 **B3 est bloquant pour J8-5.** Le parc du PO compte 39 plugins tiers ; le mécanisme 3 du
+sanitiseur en nomme **7**. Les 32 non couverts comprennent des comptes constructeur, des
+identifiants SMTP, des jetons de notification, des clés privées de VPN et des plugins de
+géolocalisation. Les mécanismes 1 (whitelist par table) et 2 (regex sur clés de blob) sont
+génériques et couvrent la majorité des cas — mais le précédent jMQTT (J6-2 : `mqttUser` en
+camelCase passait à travers la regex) interdit de le supposer. *(Liste nominative dans le document
+de session, pas ici : dépôt public.)*
+
+**DoD J8-4ter** : CI verte · snapshot mémoire versionné · `CLAUDE.md` en place · 188/188 intég sur
+4.6.1 · 32 plugins audités, 0 fuite · `PROJECT_STATE` conforme au dernier commit.
+
+---
+
 #### J8-5 — Migration jeedom-audit (= bêta privée)
 
 **Objectif** : migrer jeedom-audit (branche `develop` sur `jeedom-skills`) pour remplacer les accès SSH/MySQL directs par des appels Holmes MCP. Les 13 WF rejoués en conditions réelles constituent la bêta privée.
 
-**Pré-requis** : snapshot Proxmox avant session, daemon Holmes MCP UP sur la box.
+**Pré-requis** : **J8-4ter ✅** (blocs A et B — dont le ré-audit de sanitisation B3, bloquant),
+snapshot Proxmox avant session, daemon Holmes MCP UP sur la box.
 
 **Livraisons (sur `jeedom-skills`) :**
 

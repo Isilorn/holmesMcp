@@ -72,17 +72,18 @@ def _group_by_element(rows: list[dict]) -> dict[int, list[dict]]:
                 'expressions': [],
             }
 
-        elements[el_id][sub_id]['expressions'].append({
-            'expr_id': int(row['expr_id']) if row.get('expr_id') is not None else None,
-            'order': int(row['expr_order']) if row.get('expr_order') is not None else 0,
-            'type': row['expr_type'],
-            'expression': row['expression'],
-            'options': row['options'],
-        })
+        elements[el_id][sub_id]['expressions'].append(
+            {
+                'expr_id': int(row['expr_id']) if row.get('expr_id') is not None else None,
+                'order': int(row['expr_order']) if row.get('expr_order') is not None else 0,
+                'type': row['expr_type'],
+                'expression': row['expression'],
+                'options': row['options'],
+            }
+        )
 
     return {
-        el_id: sorted(subs.values(), key=lambda s: s['sub_id'])
-        for el_id, subs in elements.items()
+        el_id: sorted(subs.values(), key=lambda s: s['sub_id']) for el_id, subs in elements.items()
     }
 
 
@@ -185,8 +186,13 @@ def _walk(
 
         if child_ids:
             children = _walk(
-                child_ids, conn, max_depth, visited, depth + 1,
-                warnings, truncated_flag,
+                child_ids,
+                conn,
+                max_depth,
+                visited,
+                depth + 1,
+                warnings,
+                truncated_flag,
                 follow_scenario_calls=follow_scenario_calls,
                 visited_scenarios=visited_scenarios,
             )

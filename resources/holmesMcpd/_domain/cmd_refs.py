@@ -15,7 +15,7 @@ log = structlog.get_logger('holmesMcp.domain.cmd_refs')
 _ID_PATTERN = re.compile(r'#(\d+)#')
 
 _RESOLVE_SQL = (
-    'SELECT c.id, COALESCE(o.name, \'\') AS objet, e.name AS equipement, c.name AS commande'
+    "SELECT c.id, COALESCE(o.name, '') AS objet, e.name AS equipement, c.name AS commande"
     ' FROM cmd c'
     ' JOIN eqLogic e ON c.eqLogic_id = e.id'
     ' LEFT JOIN object o ON e.object_id = o.id'
@@ -32,9 +32,9 @@ def _fetch_names(ids: list[int], conn) -> dict[int, str]:
     for row in rows:
         cmd_id = int(row['id'])
         label = (
-            f"[{row.get('objet') or ''}]"
-            f"[{row.get('equipement') or ''}]"
-            f"[{row.get('commande') or ''}]"
+            f'[{row.get("objet") or ""}]'
+            f'[{row.get("equipement") or ""}]'
+            f'[{row.get("commande") or ""}]'
         )
         result[cmd_id] = label
     log.debug('cmd_refs_fetched', found=len(result), requested=len(ids))

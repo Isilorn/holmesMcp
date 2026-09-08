@@ -39,9 +39,9 @@ def get_install_overview(conn: pymysql.connections.Connection) -> dict[str, Any]
     scen_active: int = _db.query(conn, 'SELECT COUNT(*) AS n FROM scenario WHERE isActive=1')[0][
         'n'
     ]
-    plugin_count: int = _db.query(
-        conn, "SELECT COUNT(*) AS n FROM `update` WHERE type='plugin'"
-    )[0]['n']
+    plugin_count: int = _db.query(conn, "SELECT COUNT(*) AS n FROM `update` WHERE type='plugin'")[
+        0
+    ]['n']
     object_count: int = _db.query(conn, 'SELECT COUNT(*) AS n FROM object')[0]['n']
     cmd_count: int = _db.query(conn, 'SELECT COUNT(*) AS n FROM cmd')[0]['n']
 

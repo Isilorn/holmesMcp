@@ -828,9 +828,7 @@ class TestFindCommandsAdvancedGenericTypeMissing:
 
     def test_flag_combined_with_equipment_id(self):
         with patch('tools.equipments._db.query', return_value=[]) as mock_q:
-            equipments.find_commands_advanced(
-                _MOCK_CONN, equipment_id=5, generic_type_missing=True
-            )
+            equipments.find_commands_advanced(_MOCK_CONN, equipment_id=5, generic_type_missing=True)
 
         sql = mock_q.call_args[0][1]
         params = mock_q.call_args[0][2]

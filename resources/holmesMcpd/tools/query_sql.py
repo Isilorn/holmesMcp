@@ -98,7 +98,7 @@ def _auto_backtick_reserved(sql: str) -> str:
     parts: list[str] = []
     last = 0
     for m in _QUOTED_STR_RE.finditer(sql):
-        parts.append(_RESERVED_BARE_RE.sub(r'`\1`', sql[last:m.start()]))
+        parts.append(_RESERVED_BARE_RE.sub(r'`\1`', sql[last : m.start()]))
         parts.append(m.group(0))
         last = m.end()
     parts.append(_RESERVED_BARE_RE.sub(r'`\1`', sql[last:]))

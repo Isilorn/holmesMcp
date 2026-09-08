@@ -120,13 +120,10 @@ def get_health_summary(conn: pymysql.connections.Connection) -> dict[str, Any]:
         for r in crons_rows
     ]
     dead_commands = [
-        {'id': r['id'], 'name': r['name'], 'eqLogic_id': r['eqLogic_id']}
-        for r in dead_cmd_rows
+        {'id': r['id'], 'name': r['name'], 'eqLogic_id': r['eqLogic_id']} for r in dead_cmd_rows
     ]
     historized_without_data = int(
-        history_quality_rows[0]['cmd_info_sans_historique']
-        if history_quality_rows
-        else 0
+        history_quality_rows[0]['cmd_info_sans_historique'] if history_quality_rows else 0
     )
 
     return {

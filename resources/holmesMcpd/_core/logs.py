@@ -121,13 +121,15 @@ def list_files(log_dirs: list[Path] | None = None) -> list[dict]:
             seen.add(name)
             try:
                 stat = path.stat()
-                files.append({
-                    'name': name,
-                    'size_bytes': stat.st_size,
-                    'last_modified': datetime.fromtimestamp(stat.st_mtime).isoformat(
-                        timespec='seconds'
-                    ),
-                })
+                files.append(
+                    {
+                        'name': name,
+                        'size_bytes': stat.st_size,
+                        'last_modified': datetime.fromtimestamp(stat.st_mtime).isoformat(
+                            timespec='seconds'
+                        ),
+                    }
+                )
             except OSError:
                 continue
 

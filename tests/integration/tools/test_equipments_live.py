@@ -35,7 +35,7 @@ class TestListEquipmentsLive:
     def test_filtre_is_enable(self, db_conn):
         result = equipments.list_equipments(db_conn, is_enable=True)
         for eq in result['equipements']:
-            assert eq['isEnable'] == 1, f"Équipement désactivé dans résultat filtré : {eq['id']}"
+            assert eq['isEnable'] == 1, f'Équipement désactivé dans résultat filtré : {eq["id"]}'
 
     def test_pagination_offset(self, db_conn):
         page0 = equipments.list_equipments(db_conn, limit=5, offset=0)
@@ -67,9 +67,7 @@ class TestFindEquipmentsAdvancedLive:
     def test_filtre_name_contains(self, db_conn):
         result = equipments.find_equipments_advanced(db_conn, name_contains='e')
         for eq in result['equipements']:
-            assert 'e' in eq['name'].lower(), (
-                f"Nom {eq['name']!r} ne contient pas 'e'"
-            )
+            assert 'e' in eq['name'].lower(), f"Nom {eq['name']!r} ne contient pas 'e'"
 
     def test_filtre_is_enable(self, db_conn):
         result = equipments.find_equipments_advanced(db_conn, is_enable=True)
@@ -110,12 +108,10 @@ class TestGetEquipmentLive:
         if info_cmds:
             cmd = info_cmds[0]
             assert 'currentValue' in cmd, (
-                f"currentValue absent de la commande info {cmd.get('id')} "
-                f"(équipement {first_equipment})"
+                f'currentValue absent de la commande info {cmd.get("id")} '
+                f'(équipement {first_equipment})'
             )
-            assert 'collectDate' in cmd, (
-                f"collectDate absent de la commande info {cmd.get('id')}"
-            )
+            assert 'collectDate' in cmd, f'collectDate absent de la commande info {cmd.get("id")}'
 
 
 # ---------------------------------------------------------------------------
@@ -134,9 +130,7 @@ class TestFindEquipmentByNameLive:
     def test_resultats_contiennent_fragment(self, db_conn):
         result = equipments.find_equipment_by_name(db_conn, 'e')
         for eq in result['equipements']:
-            assert 'e' in eq['name'].lower(), (
-                f"Nom {eq['name']!r} ne contient pas 'e'"
-            )
+            assert 'e' in eq['name'].lower(), f"Nom {eq['name']!r} ne contient pas 'e'"
 
     def test_nom_inexistant_retourne_vide(self, db_conn):
         result = equipments.find_equipment_by_name(db_conn, '__aucun_match_xyz_987__')
@@ -160,7 +154,7 @@ class TestListCommandsLive:
     def test_filtre_type_info(self, db_conn, first_equipment):
         result = equipments.list_commands(db_conn, first_equipment, cmd_type='info')
         for cmd in result['commandes']:
-            assert cmd['type'] == 'info', f"Commande de type {cmd['type']!r} dans résultat info"
+            assert cmd['type'] == 'info', f'Commande de type {cmd["type"]!r} dans résultat info'
 
     def test_filtre_type_action(self, db_conn, first_equipment):
         result = equipments.list_commands(db_conn, first_equipment, cmd_type='action')
@@ -180,12 +174,8 @@ class TestListCommandsLive:
         )
         if result['commandes']:
             cmd = result['commandes'][0]
-            assert 'currentValue' in cmd, (
-                f"currentValue absent de la commande info {cmd.get('id')}"
-            )
-            assert 'collectDate' in cmd, (
-                f"collectDate absent de la commande info {cmd.get('id')}"
-            )
+            assert 'currentValue' in cmd, f'currentValue absent de la commande info {cmd.get("id")}'
+            assert 'collectDate' in cmd, f'collectDate absent de la commande info {cmd.get("id")}'
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +271,7 @@ class TestFindCommandUsagesLive:
         pattern = f'#{first_historized_cmd}#'
         for scen in result['triggers']:
             assert pattern in str(scen.get('trigger', '')), (
-                f"Pattern {pattern} absent du trigger du scénario {scen.get('id')}"
+                f'Pattern {pattern} absent du trigger du scénario {scen.get("id")}'
             )
 
 
@@ -350,7 +340,7 @@ class TestFindCommandsAdvancedGenericTypeMissingLive:
         for cmd in result['commandes']:
             gt = cmd.get('generic_type')
             assert gt is None or gt == '', (
-                f"Commande {cmd.get('id')} a un generic_type non vide : {gt!r}"
+                f'Commande {cmd.get("id")} a un generic_type non vide : {gt!r}'
             )
 
     def test_retourne_uniquement_type_info(self, db_conn):

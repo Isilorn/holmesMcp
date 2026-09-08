@@ -51,6 +51,7 @@ def test_summarize_total_length_capped():
 
 # ── McpActivityLogger — helpers ───────────────────────────────────────────────
 
+
 def _make_scope(path: str = '/mcp', scope_type: str = 'http') -> dict:
     return {'type': scope_type, 'path': path, 'headers': []}
 
@@ -72,12 +73,14 @@ async def _noop_send(msg):
 
 
 def _tool_call_body(tool: str, arguments: dict | None = None) -> bytes:
-    return json.dumps({
-        'jsonrpc': '2.0',
-        'method': 'tools/call',
-        'params': {'name': tool, 'arguments': arguments or {}},
-        'id': 1,
-    }).encode()
+    return json.dumps(
+        {
+            'jsonrpc': '2.0',
+            'method': 'tools/call',
+            'params': {'name': tool, 'arguments': arguments or {}},
+            'id': 1,
+        }
+    ).encode()
 
 
 def _non_tool_body(method: str = 'tools/list') -> bytes:
@@ -203,12 +206,14 @@ async def test_tool_call_no_arguments_empty_params_summary(structlog_caplog):
     async def inner(scope, receive, send):
         await receive()
 
-    body = json.dumps({
-        'jsonrpc': '2.0',
-        'method': 'tools/call',
-        'params': {'name': 'get_install_overview'},  # no 'arguments' key
-        'id': 1,
-    }).encode()
+    body = json.dumps(
+        {
+            'jsonrpc': '2.0',
+            'method': 'tools/call',
+            'params': {'name': 'get_install_overview'},  # no 'arguments' key
+            'id': 1,
+        }
+    ).encode()
 
     middleware = McpActivityLogger(inner)
     receive = await _make_receive(body)

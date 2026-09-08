@@ -102,7 +102,7 @@ class TestListPluginsLive:
         result = discovery.list_plugins(db_conn)
         for p in result['plugins']:
             assert p['remote_version'] is None or isinstance(p['remote_version'], str), (
-                f"remote_version inattendu pour {p.get('logical_id')}: {p['remote_version']!r}"
+                f'remote_version inattendu pour {p.get("logical_id")}: {p["remote_version"]!r}'
             )
 
     def test_total_coherent(self, db_conn):
@@ -144,6 +144,6 @@ class TestGetConfigLive:
         if token_entries:
             for entry in token_entries:
                 assert entry['value'] == '***FILTERED***', (
-                    f"Token {entry['key']!r} non filtré : {entry['value']!r}"
+                    f'Token {entry["key"]!r} non filtré : {entry["value"]!r}'
                 )
             assert any('token_' in f for f in result['_filtered_fields'])

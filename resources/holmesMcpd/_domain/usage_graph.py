@@ -25,7 +25,7 @@ _SCENARIO_INFO = 'SELECT id, name, isActive, mode FROM scenario WHERE id = %s'
 
 _EQLOGIC_CMD_IDS = 'SELECT id FROM cmd WHERE eqLogic_id = %s'
 
-_TRIGGER_REFS = "SELECT DISTINCT id, name FROM scenario WHERE `trigger` LIKE %s"
+_TRIGGER_REFS = 'SELECT DISTINCT id, name FROM scenario WHERE `trigger` LIKE %s'
 
 # LIKE '%N%' sur des IDs >100 est sûr ; les petits IDs (<10) peuvent générer
 # des faux positifs signalés dans false_positive_warnings.
@@ -113,16 +113,13 @@ def _refs_for_cmd_id(
 
     datastore_rows = db.query(conn, _DATASTORE_REFS, (pattern,))
     datastore_refs = [
-        {'id': int(r['id']), 'name': r['name'], 'type': r['type']}
-        for r in datastore_rows
+        {'id': int(r['id']), 'name': r['name'], 'type': r['type']} for r in datastore_rows
     ]
 
     fp_warnings: list[str] = []
     code_rows = db.query(conn, _CODE_REFS, (f'%{cmd_id}%',))
     if code_rows:
-        names = ', '.join(
-            f"{r['scenario_name']} (#{r['scenario_id']})" for r in code_rows
-        )
+        names = ', '.join(f'{r["scenario_name"]} (#{r["scenario_id"]})' for r in code_rows)
         fp_warnings.append(
             f"ID {cmd_id} apparaît dans des blocs 'code' PHP (faux positifs possibles) : {names}"
         )
@@ -275,4 +272,4 @@ def resolve(target_type: str, target_id: int, conn) -> dict:
     if target_type == 'scenario':
         return _resolve_scenario(target_id, conn)
 
-    return {'error': f"target_type inconnu : {target_type!r} — valeurs : cmd, eqLogic, scenario"}
+    return {'error': f'target_type inconnu : {target_type!r} — valeurs : cmd, eqLogic, scenario'}

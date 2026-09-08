@@ -131,9 +131,7 @@ class TestListDatastoreVariablesOrphanedLive:
         assert result['total'] == len(result['variables'])
 
     def test_orphaned_combined_avec_var_type(self, db_conn):
-        result = datastore.list_datastore_variables(
-            db_conn, var_type='global', orphaned=True
-        )
+        result = datastore.list_datastore_variables(db_conn, var_type='global', orphaned=True)
         assert 'variables' in result
         for var in result['variables']:
             assert var.get('type') == 'global'
