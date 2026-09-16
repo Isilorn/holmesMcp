@@ -182,7 +182,7 @@ def find_scenarios_advanced(
             ' SELECT 1 FROM scenarioExpression'
             " WHERE type = 'action'"
             " AND expression = 'scenario'"
-            ' AND JSON_UNQUOTE(JSON_EXTRACT(options, \'$.scenario_id\'))'
+            " AND JSON_UNQUOTE(JSON_EXTRACT(options, '$.scenario_id'))"
             ' = CAST(scenario.id AS CHAR)'
             ')'
         )

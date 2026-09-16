@@ -186,8 +186,15 @@ def _register_family2(mcp: FastMCP, apikey: str) -> None:
         conn = _db.connect()
         try:
             return equipments.find_equipments_advanced(
-                conn, name_contains, object_id, plugin, is_enable,
-                generic_type, tags, has_warning, limit,
+                conn,
+                name_contains,
+                object_id,
+                plugin,
+                is_enable,
+                generic_type,
+                tags,
+                has_warning,
+                limit,
             )
         finally:
             conn.close()
@@ -279,8 +286,15 @@ def _register_family2(mcp: FastMCP, apikey: str) -> None:
         conn = _db.connect()
         try:
             return equipments.find_commands_advanced(
-                conn, name_contains, equipment_id, cmd_type,
-                subtype, generic_type, is_historized, generic_type_missing, limit,
+                conn,
+                name_contains,
+                equipment_id,
+                cmd_type,
+                subtype,
+                generic_type,
+                is_historized,
+                generic_type_missing,
+                limit,
             )
         finally:
             conn.close()
@@ -405,8 +419,15 @@ def _register_family3(mcp: FastMCP, apikey: str) -> None:
         conn = _db.connect()
         try:
             return scenarios.find_scenarios_advanced(
-                conn, name_contains, group, is_active, mode,
-                trigger_type, called_while_inactive, limit, apikey,
+                conn,
+                name_contains,
+                group,
+                is_active,
+                mode,
+                trigger_type,
+                called_while_inactive,
+                limit,
+                apikey,
             )
         finally:
             conn.close()
@@ -681,6 +702,7 @@ def _register_family7(mcp: FastMCP) -> None:
 
 # ── Helpers énumération D6.3 ────────────────────────────────────────────────
 
+
 def _fetch_top_scenarios(conn, limit: int) -> list[dict]:
     """Top-N scénarios actifs pour l'énumération hybride D6.3."""
     sql = 'SELECT id, name FROM scenario WHERE isActive = 1 ORDER BY name LIMIT %s'
@@ -697,6 +719,7 @@ def _fetch_top_equipments(conn, limit: int) -> list[dict]:
 
 def _make_scenario_fn(sid: int, ak: str):
     """Factory — resource concrète scénario sans paramètre (requis par FastMCP)."""
+
     def _fn() -> str:
         conn = _db.connect()
         try:
@@ -704,11 +727,13 @@ def _make_scenario_fn(sid: int, ak: str):
             return json.dumps(data, ensure_ascii=False, indent=2, default=str)
         finally:
             conn.close()
+
     return _fn
 
 
 def _make_equipment_fn(eid: int, ak: str):
     """Factory — resource concrète équipement sans paramètre (requis par FastMCP)."""
+
     def _fn() -> str:
         conn = _db.connect()
         try:
@@ -716,6 +741,7 @@ def _make_equipment_fn(eid: int, ak: str):
             return json.dumps(data, ensure_ascii=False, indent=2, default=str)
         finally:
             conn.close()
+
     return _fn
 
 
@@ -732,7 +758,7 @@ def _register_resources(mcp: FastMCP, apikey: str) -> None:
 
     @mcp.resource(
         'jeedom://install/overview',
-        name='Vue générale de l\'installation',
+        name="Vue générale de l'installation",
         description='Snapshot général : version Jeedom, comptages équipements/scénarios/plugins.',
         mime_type='application/json',
     )
@@ -745,7 +771,7 @@ def _register_resources(mcp: FastMCP, apikey: str) -> None:
 
     @mcp.resource(
         'jeedom://install/health',
-        name='État de santé de l\'installation',
+        name="État de santé de l'installation",
         description='Daemons KO, messages système non lus, crons bloqués.',
         mime_type='application/json',
     )
@@ -772,7 +798,7 @@ def _register_resources(mcp: FastMCP, apikey: str) -> None:
     @mcp.resource(
         'jeedom://scenario/{scenario_id}',
         name='Scénario Jeedom',
-        description='Description LLM-friendly d\'un scénario avec résolution #[O][E][C]# et log.',
+        description="Description LLM-friendly d'un scénario avec résolution #[O][E][C]# et log.",
         mime_type='application/json',
     )
     def _resource_scenario(scenario_id: str) -> str:

@@ -32,7 +32,7 @@ holmesMcp/
 │       ├── _tools/       # 25 tools (7 familles)
 │       └── _resources/   # 5 resources
 ├── tests/
-│   ├── unit/             # Tests unitaires (665 tests, 98% couverture)
+│   ├── unit/             # Tests unitaires (763 tests, 98% couverture)
 │   └── integration/      # Tests d'intégration (fixtures synthétiques + live)
 ├── docs/
 │   ├── user/             # Cette documentation (source MkDocs)
@@ -56,7 +56,7 @@ ruff check resources/ tests/
 ruff format resources/ tests/
 ```
 
-Les 665 tests unitaires doivent tous passer et la couverture globale doit rester ≥ 95%.
+Les 763 tests unitaires doivent tous passer et la couverture globale doit rester ≥ 95%.
 
 ## Consulter les ADRs
 

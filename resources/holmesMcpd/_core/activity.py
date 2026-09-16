@@ -15,7 +15,7 @@ import structlog
 
 log = structlog.get_logger('holmesMcp.activity')
 
-_MAX_PARAM_VAL = 40   # longueur max d'une valeur de paramètre dans le résumé
+_MAX_PARAM_VAL = 40  # longueur max d'une valeur de paramètre dans le résumé
 _MAX_PARAMS_STR = 150  # longueur max du résumé complet
 
 
@@ -27,11 +27,11 @@ def _summarize_params(params: dict) -> str:
     for k, v in list(params.items())[:5]:
         sv = str(v)
         if len(sv) > _MAX_PARAM_VAL:
-            sv = sv[:_MAX_PARAM_VAL - 3] + '...'
+            sv = sv[: _MAX_PARAM_VAL - 3] + '...'
         parts.append(f'{k}={sv}')
     result = ', '.join(parts)
     if len(result) > _MAX_PARAMS_STR:
-        result = result[:_MAX_PARAMS_STR - 3] + '...'
+        result = result[: _MAX_PARAMS_STR - 3] + '...'
     return result
 
 
@@ -77,7 +77,9 @@ class McpActivityLogger:
             if not body_sent:
                 body_sent = True
                 return {'type': 'http.request', 'body': body, 'more_body': False}
-            return {'type': 'http.request', 'body': b'', 'more_body': False}
+            # Relayer les appels suivants vers le vrai receive (disconnect notifications).
+            # Sans ça, FastMCP boucle sur des http.request vides et bloque le SSE.
+            return await receive()
 
         start = time.perf_counter()
         exc_raised: BaseException | None = None

@@ -35,28 +35,32 @@ def _scen_row(**kwargs) -> dict:
 
 
 def _walker_result(scenario_id: int = 1, empty_tree: bool = False) -> dict:
-    tree = [] if empty_tree else [
-        {
-            'element_id': 10,
-            'depth': 0,
-            'sub_elements': [
-                {
-                    'sub_id': 20,
-                    'ss_type': 'if',
-                    'ss_subtype': 'condition',
-                    'expressions': [
-                        {
-                            'expr_id': 30,
-                            'order': 1,
-                            'type': 'condition',
-                            'expression': '#456# > 19',
-                            'options': None,
-                        }
-                    ],
-                }
-            ],
-        }
-    ]
+    tree = (
+        []
+        if empty_tree
+        else [
+            {
+                'element_id': 10,
+                'depth': 0,
+                'sub_elements': [
+                    {
+                        'sub_id': 20,
+                        'ss_type': 'if',
+                        'ss_subtype': 'condition',
+                        'expressions': [
+                            {
+                                'expr_id': 30,
+                                'order': 1,
+                                'type': 'condition',
+                                'expression': '#456# > 19',
+                                'options': None,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    )
     return {
         'scenario': {
             'id': scenario_id,
@@ -464,8 +468,13 @@ class TestDescribeScenario:
                     'ss_type': 'action',
                     'ss_subtype': 'do',
                     'expressions': [
-                        {'expr_id': 60, 'order': 1, 'type': 'action',
-                         'expression': 'cmd::execDuration', 'options': None}
+                        {
+                            'expr_id': 60,
+                            'order': 1,
+                            'type': 'action',
+                            'expression': 'cmd::execDuration',
+                            'options': None,
+                        }
                     ],
                 }
             ],

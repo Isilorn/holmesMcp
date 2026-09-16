@@ -1,8 +1,8 @@
 # Matrice de couverture — skill jeedom-audit ↔ Holmes MCP V1
 
-> **Livrable D5.8** — Produit en J1-2 (2026-05-03).  
+> **Livrable D5.8** — Produit en J1-2 (2026-05-03). Mis à jour en J8-3 (2026-05-06) pour Holmes MCP v1.2.0 (27 tools).  
 > Référence jeedom-audit : commit `a792179` (tag `v1.0.1`, branche `main`).  
-> Référence Holmes MCP : liste des 25 tools D5.3, brief `docs/sources/00-brief-cadrage.md`.
+> Référence Holmes MCP : v1.2.0 — 27 tools, 5 resources.
 
 ---
 
@@ -14,7 +14,7 @@
 | Workflows couverts à 100 % | **13 / 13** |
 | Workflows couverts partiellement | 0 |
 | Workflows non couverts | 0 |
-| Tools Holmes MCP V1 suffisants | **Oui — les 25 tools couvrent tout** |
+| Tools Holmes MCP V1 suffisants | **Oui — les 27 tools v1.2.0 couvrent tout** |
 | Nouveaux tools requis | **Aucun** |
 | Bascule jeedom-audit → Holmes MCP | ✅ Faisable sans perte de capacité |
 
@@ -32,11 +32,12 @@ La bascule de jeedom-audit en consommatrice Holmes MCP (D5.8) est validée sans 
 | Version + config système | SQL `config` WHERE plugin='core' | `get_config` (namespace='core') + `get_install_overview` |
 | Plugins + mises à jour | SQL `` `update` `` + `plugin::listPlugin` | `list_plugins` + `query_sql` (update table) |
 | Équipements actifs / désactivés | SQL `eqLogic` | `list_equipments` + `find_equipments_advanced` |
+| Équipements en warning ou danger | SQL `eqLogic.status` JSON | `find_equipments_advanced(has_warning=True)` |
 | Scénarios actifs / inactifs / modes | SQL `scenario` | `list_scenarios` |
-| Commandes mortes | SQL JOIN `cmd` ↔ `eqLogic` | `query_sql` |
+| Commandes mortes | SQL JOIN `cmd` ↔ `eqLogic` | `get_health_summary()` (champ `dead_commands`) |
 | Variables dataStore | SQL `dataStore` | `list_datastore_variables` |
 | Messages système + daemons + cron | SQL `message` + API | `get_health_summary` |
-| Qualité historique | SQL `history` GROUP BY | `query_sql` |
+| Qualité historique | SQL `history` GROUP BY | `get_health_summary()` (champ `historized_cmds_without_data`) |
 | Logs core/php | SSH `tail` logs | `tail_log` |
 
 **Couverture : ✅ Totale**
@@ -79,7 +80,7 @@ La bascule de jeedom-audit en consommatrice Holmes MCP (D5.8) est validée sans 
 |---|---|---|
 | Identification plugin | SQL `` `update` `` + API | `list_plugins` |
 | État daemon + dépendances | API `plugin::listPlugin` | `get_health_summary` |
-| eqLogics du plugin (actifs / warning) | SQL `eqLogic` WHERE eqType_name | `find_equipments_advanced` (filtre plugin) |
+| eqLogics du plugin (actifs / warning) | SQL `eqLogic` WHERE eqType_name | `find_equipments_advanced(plugin=...)` + `has_warning=True` pour les équipements en alerte |
 | Logs plugin + dep | SSH `tail` | `tail_log` (log plugin + `<plugin>_dep`) |
 
 **Couverture : ✅ Totale**
@@ -106,10 +107,11 @@ La bascule de jeedom-audit en consommatrice Holmes MCP (D5.8) est validée sans 
 |---|---|---|
 | Identification cible (cmd/eqLogic/scenario) | SQL + fuzzy | `find_equipment_by_name` / `find_commands_advanced` / `find_scenarios_advanced` |
 | Graphe d'usage cmd → scénarios (triggers/conditions/actions/dataStore) | `usage_graph.py` | `find_command_usages` (livré J7bis-1) |
+| Graphe d'usage eqLogic → scénarios (via ses commandes) | `usage_graph.py` | `find_equipment_usages(equipment_id)` (livré J8-2) |
 | Graphe d'usage scenario → scenarios | `usage_graph.py` | `find_scenario_dependencies` |
 | Résolution #ID# dans résultats | `resolve_cmd_refs.py` | `describe_scenario` (si contexte scénario) |
 
-**Couverture : ✅ Totale** — `find_command_usages` + `find_scenario_dependencies` couvrent les deux axes de usage_graph.py. Mis à jour J7bis-2 (l'audit J8-audit avait identifié un gap cmd→scénarios, résolu par `find_command_usages`).
+**Couverture : ✅ Totale** — `find_command_usages` + `find_equipment_usages` + `find_scenario_dependencies` couvrent les trois axes de usage_graph.py. Mis à jour J8-3 (v1.2.0) : axe eqLogic→scénarios désormais couvert par `find_equipment_usages` (cookbook §A obsolète).
 
 ---
 
@@ -121,11 +123,11 @@ La bascule de jeedom-audit en consommatrice Holmes MCP (D5.8) est validée sans 
 | Explication scénario cible | WF5 composé | `describe_scenario` + `get_scenario_structure` |
 | Conditions dupliquées | Analyse structure | `get_scenario_structure` |
 | Délais en dur / triggerId() déprécié | Analyse expressions | `get_scenario_structure` |
-| Commandes sans Type Générique | SQL `cmd.generic_type IS NULL` | `find_commands_advanced` (filtre generic_type) |
-| Scénarios désactivés référencés | SQL + usage_graph | `find_scenarios_advanced` + `find_scenario_dependencies` |
-| Variables orphelines | SQL dataStore + expressions | `list_datastore_variables` + `find_scenarios_advanced` |
+| Commandes sans Type Générique | SQL `cmd.generic_type IS NULL` | `find_commands_advanced(generic_type_missing=True)` |
+| Scénarios désactivés mais appelés | SQL + usage_graph | `find_scenarios_advanced(called_while_inactive=True)` |
+| Variables orphelines | SQL dataStore + expressions | `list_datastore_variables(orphaned=True)` |
 
-**Couverture : ✅ Totale** — WF7 est une composition de WF1+WF5, entièrement couverte
+**Couverture : ✅ Totale** — WF7 est une composition de WF1+WF5. Mis à jour J8-3 (v1.2.0) : trois paramètres dédiés couvrent directement les requêtes SQL avancées de refactor (`orphaned`, `generic_type_missing`, `called_while_inactive`).
 
 ---
 
@@ -219,6 +221,7 @@ La bascule de jeedom-audit en consommatrice Holmes MCP (D5.8) est validée sans 
 - **Résolution `#ID#` intégrée** dans `describe_scenario` : pas besoin d'un script séparé — les outils Holmes MCP retournent directement les noms lisibles.
 - **Accès simultané MySQL + API** sans routage : le daemon est sur la box, les deux canaux sont toujours disponibles. La notion de "mode API-only" de jeedom-audit disparaît.
 - **`get_health_summary`** consolide ce que jeedom-audit obtenait en 3 canaux séparés (API `plugin::listPlugin`, SQL `message`, API cron).
+- **8/8 requêtes cookbook éliminées (v1.2.0)** : `list_plugins()` expose désormais `remote_version`, éliminant la dernière requête SQL du cookbook (recette H). Le cookbook de migration est vide — `query_sql()` reste disponible pour les requêtes ad-hoc non couvertes par les 27 tools.
 - **Setup utilisateur simplifié** : l'utilisateur final ne configure ni SSH ni credentials MySQL — juste une URL + token Bearer dans son client MCP.
 
 ---

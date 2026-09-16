@@ -95,4 +95,13 @@ if [ "$BLOCKED" -eq 1 ]; then
     exit 1
 fi
 
+# ── 3. Deny-list confidentialité + gitleaks (ajouté 2026-08-29, passe de conformité) ──────────
+# git-deny-check : motifs de .git-deny-patterns (gitignoré, local) + gitleaks sur le diff stagé.
+# Dégradation gracieuse : si le binaire manque, on prévient et on laisse passer.
+if command -v git-deny-check >/dev/null 2>&1; then
+    git-deny-check || exit 1
+else
+    echo -e "${YELLOW}[DENY]${NC} git-deny-check absent — couche confidentialité non appliquée."
+fi
+
 exit 0

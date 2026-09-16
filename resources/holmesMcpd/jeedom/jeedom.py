@@ -23,10 +23,10 @@ class jeedom_utils:  # noqa: N801 — convention Jeedom
     @staticmethod
     def convert_log_level(level: str) -> int:
         mapping = {
-            'debug':   logging.DEBUG,
-            'info':    logging.INFO,
+            'debug': logging.DEBUG,
+            'info': logging.INFO,
             'warning': logging.WARNING,
-            'error':   logging.ERROR,
+            'error': logging.ERROR,
         }
         return mapping.get(level.lower(), logging.INFO)
 
@@ -43,7 +43,7 @@ class jeedom_com:  # noqa: N801 — convention Jeedom
     """Envoi de messages du daemon vers Jeedom (callback HTTP)."""
 
     def __init__(self, callback_url: str, apikey: str):
-        self._url    = callback_url
+        self._url = callback_url
         self._apikey = apikey
 
     def send_change_immediate(self, type_: str, data: dict[str, Any] = None) -> bool:
@@ -52,10 +52,12 @@ class jeedom_com:  # noqa: N801 — convention Jeedom
             return True
         try:
             import urllib.request
+
             payload = json.dumps({'type': type_, 'data': data or {}}).encode()
             url_with_key = self._url + '?apikey=' + self._apikey
             req = urllib.request.Request(
-                url_with_key, data=payload,
+                url_with_key,
+                data=payload,
                 headers={'Content-Type': 'application/json'},
                 method='POST',
             )
@@ -74,16 +76,16 @@ class jeedom_socket:  # noqa: N801 — convention Jeedom
     """
 
     def __init__(self, port: int, callback: Callable[[dict], None]):
-        self._port     = port
+        self._port = port
         self._callback = callback
-        self._thread   = None
-        self._running  = False
+        self._thread = None
+        self._running = False
 
     def open(self) -> None:
         if self._port <= 0:
             return
         self._running = True
-        self._thread  = threading.Thread(target=self._listen, daemon=True)
+        self._thread = threading.Thread(target=self._listen, daemon=True)
         self._thread.start()
         log.debug('Socket Jeedom ouverte sur port %d', self._port)
 

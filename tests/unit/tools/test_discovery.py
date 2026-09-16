@@ -174,12 +174,20 @@ class TestListPlugins:
 
     def test_returns_plugins_with_correct_fields(self):
         rows = [
-            {'id': 1, 'name': 'jMQTT', 'version': '4.1.0', 'state': 'ok', 'logical_id': 'jMQTT'},
+            {
+                'id': 1,
+                'name': 'jMQTT',
+                'version': '4.1.0',
+                'remote_version': '4.1.0',
+                'state': 'ok',
+                'logical_id': 'jMQTT',
+            },
             {
                 'id': 2,
                 'name': 'Philips Hue',
                 'version': '3.0',
-                'state': 'ok',
+                'remote_version': '3.1',
+                'state': 'update',
                 'logical_id': 'philipsHue',
             },
         ]
@@ -190,12 +198,32 @@ class TestListPlugins:
         assert result['plugins'][0]['name'] == 'jMQTT'
         assert result['plugins'][1]['logical_id'] == 'philipsHue'
 
+    def test_remote_version_exposed(self):
+        rows = [
+            {
+                'id': 1,
+                'name': 'jMQTT',
+                'version': '4.1.0',
+                'remote_version': '4.2.0',
+                'state': 'update',
+                'logical_id': 'jMQTT',
+            },
+        ]
+        with patch('tools.discovery._db.query', return_value=rows):
+            result = discovery.list_plugins(_MOCK_CONN)
+
+        plugin = result['plugins'][0]
+        assert plugin['remote_version'] == '4.2.0'
+        assert plugin['version'] == '4.1.0'
+        assert plugin['state'] == 'update'
+
     def test_plugin_state_nok_returned(self):
         rows = [
             {
                 'id': 1,
                 'name': 'BrokenPlugin',
                 'version': '1.0',
+                'remote_version': '1.0',
                 'state': 'nok',
                 'logical_id': 'broken',
             },

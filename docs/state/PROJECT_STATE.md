@@ -8,12 +8,91 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v1.1.1` (J7bis-2 ✅ — fix JSON_SEARCH MariaDB — `main` = `develop` = `v1.1.1`) |
-| **Jalon en cours** | J8 EN COURS — bêta privée + matériel migration jeedom-audit |
+| **Version courante** | `v1.2.1` (J8-4ter bloc B ✅ — 27 tools, 763 ut, 187 intég live sur 4.6.1 — `main` = `develop` = `v1.2.1`) |
+| **Environnement box** | Debian 12 Bookworm (kernel 6.1, Python 3.11.2) · **Jeedom 4.6.1** (était 4.5.3 en mai) · MariaDB 10.11.18 · 39 plugins tiers · daemon v1.2.1 UP (déployé et vérifié le 16-09) |
+| **Jalon en cours** | J8 EN COURS — bêta privée + audit couverture + migration jeedom-audit |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-05-06-j8-1-migration-brief` |
-| **Prochaine session** | J8-2 — Implémentation v1.2.0 (6 livraisons : 1 nouveau tool + 1 extension + 4 paramètres bool) |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé), J7bis-1 ✅ (find_command_usages, auto-backtick query_sql, doc LIMIT, FAQ, v1.1.0, 686 ut), J7bis-2 ✅ (audit live 168/168 intég, bug JSON_SEARCH MariaDB corrigé, 13/13 WF couverts, rapport audit), **J8-1 ✅ (brief migration jeedom-audit → Holmes MCP — docs/sources/migration-jeedom-audit-brief.md)** |
+| **Dernière session** | `2026-09-08-j8-4ter-bloc-b` (consignée le 16-09 ; B3 remédié, B4 et B5 soldés le 16-09) |
+| **Prochaine session** | **J8-5** — migration jeedom-audit = bêta privée (se déroule dans `jeedom-skills`). Pré-requis levés ; **snapshot Proxmox** avant la session live |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé), J7bis-1 ✅ (find_command_usages, auto-backtick query_sql, doc LIMIT, FAQ, v1.1.0, 686 ut), J7bis-2 ✅ (audit live 168/168 intég, bug JSON_SEARCH MariaDB corrigé, 13/13 WF couverts, rapport audit), J8-1 ✅ (brief migration jeedom-audit → Holmes MCP), J8-2 ✅ (v1.2.0 — 27 tools, 6 livraisons audit, 721 ut + 187 intég live, 0 régression), J8-3 ✅ (audit couverture — 13/13 WF, 8/8 cookbook obsolétés, list_plugins +remote_version, 722 ut), J8-4 ✅ (audit live — 188/188 intég, smoke 27 tools, bug CLOSE-WAIT FastMCP documenté), J8-4bis ✅ (watchdog CLOSE-WAIT Level 2, fix McpActivityLogger._buffered_receive, smoke tests HTTP propres, 722 ut), J8-4ter bloc A ✅ (CI verte, snapshot mémoire, CLAUDE.md, doctrine sudo flotte, uv.lock), **J8-4ter bloc B ✅ (4.6.1 sans régression : 187 intég + 27 tools ; audit sanitisation : 4 fuites + trou structurel méca-3 sur table config, **remédiés le 16-09** — méca-2bis segmentation en mots, 763 ut, 100 % couverture sanitize)** |
+
+---
+
+## 🔄 Reprise 2026-09-08 — écarts constatés après 4 mois de dormance
+
+Session de réouverture. Rien de cassé, mais **quatre écarts entre ce que le dépôt déclarait et le
+réel**. Détail et plan : `docs/PLANNING.md` §J8-4ter.
+
+| Constat | Portée |
+|---|---|
+| **17 commits `develop` + 5 `main` + tag `v1.2.0` jamais poussés** — tout J8 n'existait que sur le poste du PO | ✅ poussé le 08-09 |
+| **CI rouge depuis mai** : `ruff format --check` échoue (21 fichiers) → le job `unit` (`needs: lint`) ne tourne plus. **722 tests unitaires débranchés** | ✅ A3 fait le 08-09 — lint vert, 763 ut |
+| **Jeedom est passé de 4.5.3 à 4.6.1.** Les 188 tests d'intégration et les 27 tools avaient été validés contre le schéma et l'API de la 4.5.3 | ✅ **B2 fait le 08-09 — aucune régression** |
+| **Le parc de plugins a changé** : 39 plugins tiers, dont 7 seulement nommés dans le mécanisme 3 du sanitiseur | ✅ **B3 fait le 08-09, remédié le 16-09** — 4 fuites + trou structurel corrigés, vérifiés sur données réelles |
+
+**L'OS n'a pas bougé** : Debian 12 Bookworm, comme déclaré depuis J0-2. La migration Debian 11→12
+est contemporaine du démarrage du projet (mai 2026), pas postérieure.
+
+### Bloc B ✅ exécuté le 2026-09-08 — résultats
+
+Détail complet : `docs/sessions/2026-09-08-j8-4ter-bloc-b.md`.
+
+**B2 — Jeedom 4.6.1 : aucune régression.** 187 tests d'intégration live passés, 1 sauté (bénin,
+dépendant du contenu du log), smoke **27/27 tools**, 0 socket CLOSE-WAIT, daemon à 0,5 % CPU. Le
+watchdog de J8-4bis est éprouvé pour la première fois sur le nouveau core.
+
+**B3 — la regex (mécanisme 2) masque bien les vraies munitions** : `password`, `atlantic_token`,
+`accessToken`, `refreshToken`, `access_token`, `client_secret`, `auth_code`, `mqtt::password` —
+17 clés sur les 359 lignes de `config`, sans qu'aucune entrée par plugin n'ait été nécessaire.
+
+🔴 **Mais deux défauts réels, bloquants pour J8-5 :**
+
+1. **Trou structurel** — `_sanitize_config_row()` appelle `is_sensitive_key(key)` **sans passer le
+   `plugin`**. Le mécanisme 3 est donc **inerte sur la table `config`**, c'est-à-dire là où vivent
+   les identifiants de compte des plugins. Le correctif jMQTT de J6-2 ne protège que les blobs
+   `eqLogic`/`cmd`. Ce n'est pas une liste à compléter, c'est un argument manquant.
+2. **4 fuites confirmées** — des clés d'API de services tiers en clair, qu'un client MCP recevrait
+   aujourd'hui. Cause commune : la regex porte `apikey`/`api_key`/`access_key`/`private_key` mais
+   **jamais `key` seul**, ni `api` seul. Détail nominatif dans le document de session.
+
+✅ **Remédié le 2026-09-16.** Chantier 1 : le plugin est lu depuis `row['plugin']` — aucun appelant
+ne peut l'oublier. Chantier 2 : **mécanisme 2bis**, segmentation de l'identifiant en mots (camelCase,
+`_`, `::`, `-`, `.`) ; `key` suffit en mot, `api` seulement en correspondance exacte. Le 2bis vise les
+clés de **contenu**, pas les **noms de colonnes SQL** (`dataStore.key` est un nom de variable) — d'où
+`segment_words=False` sur ce seul chemin. Vérifié sur la box : 5 clés en clair masquées, identifiants
+restés visibles, 38 lignes `api` déjà en `crypt:` masquées en plus (sans perte). **763 tests, 100 % de
+couverture sur `sanitize.py`.** B4 (répercussion 4.6.1 : `info.json`, changelog, README, FAQ, doc
+market) et B5 (document de session, `PROJECT_STATE`) **soldés le 16-09** ; `v1.2.1` taguée et
+fusionnée sur `main`. **J8-4ter est clos.**
+
+⚠️ **B5 n'a pas été fait le jour même** : pendant 8 jours ce document a déclaré B2 et B3 comme
+restant à faire, alors qu'ils étaient faits et avaient trouvé 4 fuites. Enchaîner deux blocs
+techniques puis poser une question au PO n'est pas une fin de session.
+
+---
+
+### Procédure sudo — changement de doctrine (flotte)
+
+Les scripts `dev/add-sudo-temp.sh`, `dev/remove-sudo-temp.sh` et `dev/secrets.cfg` étaient des
+**copies dérivées** d'outils appartenant au dépôt `Servers-setup` : ils posaient encore l'ancien nom
+de drop-in `gtillit-temp`, désormais détecté comme résiduel par le contrôle de dérive horaire de la
+flotte (ADR-058). **Les trois sont supprimés, le répertoire `dev/` n'existe plus.**
+
+Doctrine en vigueur — on **appelle** ce qui existe, on n'en fait pas de copie :
+
+- secrets : `source "${FLEET_SECRETS:-$HOME/.config/fleet/secrets.env}"` (chemin canonique unique) ;
+- sudo temporaire : `Servers-setup/scripts/add-sudo-temp.sh Jeedom` — **hôte toujours nommé** (sans
+  argument, la flotte entière), retrait **obligatoire** même en cas d'échec ;
+- mode par défaut, pour les commandes ponctuelles : mot de passe pipé, **rien de posé**.
+
+**Contrôle de sécurité passé le 08-09** — `project-doctor --profond` §7 (arbre, stashs, historique
+toutes branches, transcripts) : aucune valeur vivante, 30 clés croisées depuis 6 magasins. Recoupé
+par nom, par contenu et par valeur. Les 3 détections `gitleaks` de l'historique sont des **fixtures
+synthétiques vérifiées** (`tok_alice`, `tok_bob`, `abc123def456ghi789`). `dev/secrets.cfg` n'a
+**jamais** été committé — `.gitignore` porte `dev/` depuis le premier commit.
+
+🔑 À retenir : ce qui a protégé ce dépôt public pendant 4 mois est une ligne de `.gitignore`, **pas
+le hook** — un garde-fou de pre-commit lit le diff stagé, il ne protège jamais l'historique.
 
 ---
 
@@ -28,6 +107,7 @@
 - D10.3 ✅ : docs/ embarqué dans main → ADR-0014 proposed
 - D12.6 ✅ : MkDocs Material + docs.yml CI → ADR-0014 proposed
 - Scripts dev testés et validés : `dev/add-sudo-temp.sh` + `dev/remove-sudo-temp.sh` + `dev/secrets.cfg`
+  *(⚠️ supprimés le 2026-09-08 — copies dérivées d'outils `Servers-setup` ; voir §Reprise 2026-09-08)*
 
 ### J0-2 ✅ SSH + POC daemon (2026-05-03)
 
@@ -634,8 +714,9 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ADR-0014 | Distribution market et versioning | proposed |
 | ADR-0015 | Modèle opérationnel PO / Claude Code | draft |
 | ADR-0016 | Observabilité | draft |
-| ADR-0017 | Sanitisation et guardrails | accepted |
+| ADR-0017 | Sanitisation et guardrails | accepted (amendée par ADR-0022) |
 | ADR-0018 | Résultat POC D2.3 | accepted |
 | ADR-0019 | Couverture skill jeedom-audit D5.8 | accepted |
 | ADR-0020 | Holmes MCP projet séparé de jeedom-skills | accepted |
 | ADR-0021 | Stratégie adressage et test par plugin (install PO) | accepted |
+| ADR-0022 | Mécanisme 2bis — segmentation des identifiants en mots (amende ADR-0017) | accepted |

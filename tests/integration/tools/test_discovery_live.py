@@ -95,8 +95,15 @@ class TestListPluginsLive:
     def test_champs_plugin(self, db_conn):
         result = discovery.list_plugins(db_conn)
         p = result['plugins'][0]
-        for field in ('id', 'name', 'version', 'state', 'logical_id'):
+        for field in ('id', 'name', 'version', 'remote_version', 'state', 'logical_id'):
             assert field in p, f'Champ manquant : {field}'
+
+    def test_remote_version_type(self, db_conn):
+        result = discovery.list_plugins(db_conn)
+        for p in result['plugins']:
+            assert p['remote_version'] is None or isinstance(p['remote_version'], str), (
+                f'remote_version inattendu pour {p.get("logical_id")}: {p["remote_version"]!r}'
+            )
 
     def test_total_coherent(self, db_conn):
         result = discovery.list_plugins(db_conn)
@@ -137,6 +144,6 @@ class TestGetConfigLive:
         if token_entries:
             for entry in token_entries:
                 assert entry['value'] == '***FILTERED***', (
-                    f"Token {entry['key']!r} non filtré : {entry['value']!r}"
+                    f'Token {entry["key"]!r} non filtré : {entry["value"]!r}'
                 )
             assert any('token_' in f for f in result['_filtered_fields'])

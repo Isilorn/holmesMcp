@@ -35,7 +35,7 @@ class TestListScenariosLive:
     def test_filtre_is_active(self, db_conn):
         result = scenarios.list_scenarios(db_conn, is_active=True)
         for scen in result['scenarios']:
-            assert scen['isActive'] == 1, f"Scénario inactif dans résultat filtré : {scen['id']}"
+            assert scen['isActive'] == 1, f'Scénario inactif dans résultat filtré : {scen["id"]}'
 
     def test_champs_scenario(self, db_conn):
         result = scenarios.list_scenarios(db_conn, limit=1)
@@ -79,9 +79,7 @@ class TestFindScenariosAdvancedLive:
     def test_filtre_name_contains(self, db_conn):
         result = scenarios.find_scenarios_advanced(db_conn, name_contains='a')
         for scen in result['scenarios']:
-            assert 'a' in scen['name'].lower(), (
-                f"Nom {scen['name']!r} ne contient pas 'a'"
-            )
+            assert 'a' in scen['name'].lower(), f"Nom {scen['name']!r} ne contient pas 'a'"
 
     def test_state_and_last_launch_present(self, db_conn, jeedom_apikey):
         result = scenarios.find_scenarios_advanced(db_conn, apikey=jeedom_apikey)
@@ -240,7 +238,7 @@ class TestFindScenariosAdvancedCalledWhileInactiveLive:
         result = scenarios.find_scenarios_advanced(db_conn, called_while_inactive=True)
         for scen in result['scenarios']:
             assert scen.get('isActive') == 0, (
-                f"Scénario {scen.get('id')} est actif dans called_while_inactive"
+                f'Scénario {scen.get("id")} est actif dans called_while_inactive'
             )
 
     def test_totaux_coherents(self, db_conn):

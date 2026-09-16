@@ -9,19 +9,22 @@ on:
 jobs:
   lint:
     name: Lint (ruff)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install ruff
+      # Épinglé : `pip install ruff` non contraint prenait la dernière version à chaque run.
+      # Le formateur peut changer d'avis entre deux versions et repasser la CI au rouge sans
+      # qu'une ligne de code ait bougé. Version alignée sur celle du poste de dev.
+      - run: pip install ruff==0.15.17
       - run: ruff check resources/holmesMcpd/ tests/
       - run: ruff format --check resources/holmesMcpd/ tests/
 
   unit:
     name: Tests unitaires
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: lint
     steps:
       - uses: actions/checkout@v4

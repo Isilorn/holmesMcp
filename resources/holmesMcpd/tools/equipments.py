@@ -33,8 +33,7 @@ _EQ_USAGES_LIMIT = 50
 
 
 def _fetch_cmd_runtime_map(apikey: str, equipment_id: int) -> dict[int, dict]:
-    """One call to eqLogic::fullById → {cmd_id: {currentValue, collectDate}}. Returns {} on error.
-    """
+    """One call to eqLogic::fullById → {cmd_id: {currentValue, collectDate}}. Empty on error."""
     if not apikey:
         return {}
     resp = _api.call(apikey, 'eqLogic::fullById', {'id': equipment_id})
@@ -172,7 +171,7 @@ def find_equipments_advanced(
         params.append(f'%{tags}%')
     if has_warning:
         conditions.append(
-            "(status IS NOT NULL"
+            '(status IS NOT NULL'
             " AND (JSON_UNQUOTE(JSON_EXTRACT(status, '$.warning')) != ''"
             " OR JSON_UNQUOTE(JSON_EXTRACT(status, '$.danger')) != ''))"
         )
@@ -183,8 +182,7 @@ def find_equipments_advanced(
 
     select_cols = (
         'id, name, eqType_name, object_id, isEnable, isVisible,'
-        ' logicalId, generic_type, `order`, tags'
-        + (', status' if has_warning else '')
+        ' logicalId, generic_type, `order`, tags' + (', status' if has_warning else '')
     )
     rows = _db.query(
         conn,
@@ -514,8 +512,7 @@ def find_command_usages(
 
     trigger_rows = _db.query(
         conn,
-        'SELECT id, name, isActive, `trigger`'
-        ' FROM scenario WHERE `trigger` LIKE %s LIMIT %s',
+        'SELECT id, name, isActive, `trigger` FROM scenario WHERE `trigger` LIKE %s LIMIT %s',
         (pattern, limit),
     )
     trigger_sanitized, trigger_filtered = sanitize_rows(trigger_rows, 'scenario')
@@ -537,8 +534,7 @@ def find_command_usages(
 
     datastore_rows = _db.query(
         conn,
-        'SELECT `key`, value, type, link_id'
-        ' FROM dataStore WHERE value LIKE %s LIMIT %s',
+        'SELECT `key`, value, type, link_id FROM dataStore WHERE value LIKE %s LIMIT %s',
         (pattern, limit),
     )
     datastore_sanitized, datastore_filtered = sanitize_rows(datastore_rows, 'dataStore')

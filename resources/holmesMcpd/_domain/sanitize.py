@@ -31,6 +31,27 @@ _BLOB_KEY_RE = re.compile(
     r'cert|private_key|access_key|client_secret|bearer)'
 )
 
+# --- Mécanisme 2bis : segmentation de l'identifiant en MOTS ---
+# `key` et `api` ne peuvent pas entrer dans _BLOB_KEY_RE en sous-chaîne : ils
+# attraperaient `monkey`, `keyboard`, `rapide`. On segmente donc l'identifiant sur
+# les frontières camelCase, `_`, `::`, `-`, `.` et les chiffres, puis on teste chaque MOT.
+# Trouvé à l'audit B3 (2026-09-08) : `keyGMG`, `keyNavitia`, `jawglabKey` sortaient en
+# clair parce que la regex ne porte que `apikey`/`api_key`/`access_key`/`private_key`.
+_WORD_SPLIT_RE = re.compile(r'[^A-Za-z]+|(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])')
+
+# Mots dont la seule présence suffit : une clé nommée « key » EST une clé.
+_SECRET_WORDS = frozenset({'key'})
+
+# Clés dont seule la correspondance EXACTE compte. `api` est la clé d'API de plugin
+# Jeedom ; en mot, il masquerait `apiUrl` et `apiVersion`, qui ne sont pas des secrets.
+_SECRET_EXACT_KEYS = frozenset({'api'})
+
+
+def _key_words(key: str) -> set[str]:
+    """Segmente un identifiant en mots minuscules (camelCase, _, ::, -, ., chiffres)."""
+    return {w.lower() for w in _WORD_SPLIT_RE.split(key) if w}
+
+
 # --- Mécanisme 1 : whitelist de champs exposables par table connue ---
 # Colonnes "blob" incluses dans la whitelist ; leur contenu JSON passe ensuite
 # en mécanisme 2+3. Tout champ absent → masqué.
@@ -122,6 +143,7 @@ _TABLE_WHITELISTS: dict[str, frozenset[str]] = {
             'id',
             'name',
             'version',
+            'remote_version',
             'state',
             'logical_id',
         }
@@ -201,6 +223,15 @@ _PLUGIN_EXTRA_KEYS: dict[str, frozenset[str]] = {
             'username',
         }
     ),
+    # Plugins à identifiant de compte, relevés à l'audit B3 (2026-09-08). Ces clés
+    # ne peuvent pas entrer dans la regex globale : `username`/`login` masqués partout
+    # casseraient l'affichage légitime de noms d'utilisateur. D'où le mécanisme 3.
+    'cozytouch': frozenset({'username', 'login', 'user'}),
+    'CozyTouch': frozenset({'username', 'login', 'user'}),
+    'geotrav': frozenset({'username', 'login'}),
+    'mail': frozenset({'username', 'smtp::username', 'smtp::login'}),
+    'openvpn': frozenset({'username', 'login'}),
+    'SomfyUnified': frozenset({'username', 'login'}),
     'calendar': frozenset(),  # Agenda (eqType_name réel : 'calendar')
     'alarm': frozenset(),  # Alarme (eqType_name réel : 'alarm') — pas de credentials dans blob
     'Thermostat': frozenset(),
@@ -229,10 +260,28 @@ _PLUGIN_EXTRA_KEYS: dict[str, frozenset[str]] = {
 }
 
 
-def is_sensitive_key(key: str, plugin: str | None = None) -> bool:
-    """True si la clé doit être masquée (regex mech 2, ou extras plugin mech 3)."""
+def is_sensitive_key(
+    key: str,
+    plugin: str | None = None,
+    *,
+    segment_words: bool = True,
+) -> bool:
+    """True si la clé doit être masquée (regex mech 2, mots mech 2bis, extras mech 3).
+
+    `segment_words=False` désactive le mécanisme 2bis. Réservé aux **noms de colonnes
+    SQL**, qui viennent du schéma Jeedom — un ensemble fermé et connu. `dataStore.key`
+    y est le NOM d'une variable, pas un secret : le segmenter masquerait la donnée
+    même que l'outil doit rendre. Le 2bis vise les clés de CONTENU (champs JSON,
+    clés de `config` définies par les plugins), où `keyGMG` peut exister.
+    Défaut `True` : tout nouvel appelant reçoit le contrôle le plus fort.
+    """
     if _BLOB_KEY_RE.search(key):
         return True
+    if segment_words:
+        if key.strip().lower() in _SECRET_EXACT_KEYS:
+            return True
+        if _key_words(key) & _SECRET_WORDS:
+            return True
     if plugin:
         extras = _PLUGIN_EXTRA_KEYS.get(plugin, frozenset())
         if key in extras:
@@ -287,13 +336,22 @@ def sanitize_json_blob(
     return result, filtered
 
 
-def _sanitize_config_row(row: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    """Cas spécial table config : mask value si key matche la regex (D15.1).
+def _sanitize_config_row(
+    row: dict[str, Any],
+    plugin: str | None = None,
+) -> tuple[dict[str, Any], list[str]]:
+    """Cas spécial table config : mask value si key est sensible (D15.1).
 
     La colonne key reste visible (transparence LLM-side).
+
+    Le `plugin` vient de la row elle-même (colonne `plugin`, whitelistée mech 1) :
+    aucun appelant ne peut l'oublier. L'argument explicite reste prioritaire.
+    Sans lui, le mécanisme 3 était INERTE sur cette table — or c'est là que vivent
+    les identifiants de compte des plugins (trou trouvé à l'audit B3, 2026-09-08).
     """
     key_name = str(row.get('key', ''))
-    if is_sensitive_key(key_name):
+    row_plugin = plugin or row.get('plugin') or None
+    if is_sensitive_key(key_name, row_plugin):
         return {**row, 'value': FILTERED}, [key_name]
     return dict(row), []
 
@@ -313,7 +371,7 @@ def sanitize_row(
     3. Regex sur nom de champ (mech 2, défense en profondeur)
     """
     if table == 'config':
-        return _sanitize_config_row(row)
+        return _sanitize_config_row(row, plugin)
 
     whitelist = _TABLE_WHITELISTS.get(table) if table else None
     result: dict[str, Any] = {}
@@ -333,8 +391,10 @@ def sanitize_row(
             filtered.extend(f'{key}.{f}' for f in blob_filtered)
             continue
 
-        # Mech 2 : regex sur le nom du champ lui-même (défense en profondeur)
-        if is_sensitive_key(key, plugin):
+        # Mech 2 : regex sur le nom de la COLONNE (défense en profondeur).
+        # 2bis désactivé : les noms de colonnes viennent du schéma Jeedom, fermé et
+        # connu — et `dataStore.key` est le nom d'une variable, pas un secret.
+        if is_sensitive_key(key, plugin, segment_words=False):
             result[key] = FILTERED
             filtered.append(key)
             continue

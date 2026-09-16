@@ -1,0 +1,10 @@
+# Faux positifs VÉRIFIÉS le 2026-09-08 — fixtures synthétiques, aucune valeur vivante.
+# Contrôlé une par une : tok_alice_… / tok_bob_… (tests/fixtures/synthetic/config_tokens.json)
+# et abc123def456ghi789 (test_sanitize.py), tous inventés pour les tests de sanitisation.
+# Recoupé par project-doctor --profond §7 : 30 clés croisées, 6 magasins, 0 valeur vivante.
+# Sans ce fichier, gitleaks signale 3 détections à chaque contrôle — et un contrôle qui crie
+# toujours cesse d'être lu.
+
+31910a1d3cf59d6ee18e4c242d49f676efe443bb:tests/unit/_domain/test_sanitize.py:generic-api-key:775
+38cea0d8d27eb567fa879a4081a7658372e5f2de:tests/fixtures/synthetic/config_tokens.json:generic-api-key:2
+38cea0d8d27eb567fa879a4081a7658372e5f2de:tests/fixtures/synthetic/config_tokens.json:generic-api-key:3

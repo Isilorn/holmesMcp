@@ -1,5 +1,32 @@
 # Changelog Holmes MCP
 
+## v1.2.1 — 2026-09-16
+
+Correctif de confidentialité sur la sanitisation, et validation sur Jeedom 4.6.
+
+**Sécurité — cinq valeurs sensibles pouvaient être transmises en clair à un client MCP.**
+
+- Le filtre reconnaissait `apikey`, `api_key`, `access_key` et `private_key`, mais **pas le mot
+  `key` seul** : une clé de configuration nommée `keyGMG` ou `jawglabKey` passait donc en clair.
+  Les identifiants sont désormais **découpés en mots** (frontières camelCase, `_`, `::`, `-`, `.`)
+  et chaque mot est confronté au filtre. `api` est masqué en correspondance exacte — `apiUrl` et
+  `apiVersion` restent visibles, ce ne sont pas des secrets.
+- Les extras par plugin n'étaient **pas appliqués à la table de configuration**, là où vivent les
+  identifiants de compte : le plugin est maintenant lu depuis la ligne elle-même, aucun appelant ne
+  peut l'omettre. Extras ajoutés pour les logins de `cozytouch`, `geotrav`, `mail`, `openvpn`,
+  `SomfyUnified`.
+- Les **identifiants techniques restent visibles** — `appId`, `client_id`, `installed_app_id`,
+  `installUUID` : ce sont des références, pas des secrets, et les masquer nuirait au diagnostic.
+
+**Compatibilité**
+
+- Validé sur **Jeedom 4.6.1** (Debian 12 Bookworm x86_64) : 187 tests d'intégration sur box réelle,
+  27/27 outils au test de fumée, aucune régression depuis 4.5.3. La version minimale requise reste
+  **4.5**.
+
+**Qualité** : 763 tests unitaires, 100 % de couverture sur le module de sanitisation.
+
+
 ## v1.2.0 — 2026-05-06
 
 Nouveaux outils d'audit et de refactoring (J8-2) — couverture complète des workflows jeedom-audit.

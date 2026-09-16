@@ -67,8 +67,9 @@ def test_classify_single_condition():
 
 
 def test_classify_single_action():
-    rows = [{'scenario_id': '2', 'scenario_name': 'S2', 'ss_type': 'action',
-             'ss_subtype': 'action'}]
+    rows = [
+        {'scenario_id': '2', 'scenario_name': 'S2', 'ss_type': 'action', 'ss_subtype': 'action'}
+    ]
     cond, act = _classify_expr_rows(rows)
     assert cond == []
     assert act == [{'id': 2, 'name': 'S2'}]
@@ -118,34 +119,43 @@ def test_refs_no_refs(conn):
 
 
 def test_refs_with_trigger(conn):
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        [{'id': '5', 'name': 'S5'}],  # _TRIGGER_REFS
-        [],                             # _EXPR_REFS
-        [],                             # _DATASTORE_REFS
-        [],                             # _CODE_REFS
-    ]):
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            [{'id': '5', 'name': 'S5'}],  # _TRIGGER_REFS
+            [],  # _EXPR_REFS
+            [],  # _DATASTORE_REFS
+            [],  # _CODE_REFS
+        ],
+    ):
         triggers, _, _, _, _ = _refs_for_cmd_id(100, conn)
     assert triggers == [{'id': 5, 'name': 'S5'}]
 
 
 def test_refs_with_datastore(conn):
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        [],
-        [],
-        [{'id': '1', 'name': 'DS1', 'type': 'scenario'}],
-        [],
-    ]):
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            [],
+            [],
+            [{'id': '1', 'name': 'DS1', 'type': 'scenario'}],
+            [],
+        ],
+    ):
         _, _, _, ds, _ = _refs_for_cmd_id(100, conn)
     assert ds == [{'id': 1, 'name': 'DS1', 'type': 'scenario'}]
 
 
 def test_refs_code_rows_generates_fp_warning(conn):
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        [],
-        [],
-        [],
-        [{'scenario_id': '8', 'scenario_name': 'ScénD'}],
-    ]):
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            [],
+            [],
+            [],
+            [{'scenario_id': '8', 'scenario_name': 'ScénD'}],
+        ],
+    ):
         _, _, _, _, fp = _refs_for_cmd_id(100, conn)
     assert len(fp) == 1
     assert 'ScénD' in fp[0]
@@ -153,15 +163,18 @@ def test_refs_code_rows_generates_fp_warning(conn):
 
 
 def test_refs_multiple_code_rows_in_fp(conn):
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        [],
-        [],
-        [],
-        [
-            {'scenario_id': '8', 'scenario_name': 'ScénD'},
-            {'scenario_id': '9', 'scenario_name': 'ScénE'},
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            [],
+            [],
+            [],
+            [
+                {'scenario_id': '8', 'scenario_name': 'ScénD'},
+                {'scenario_id': '9', 'scenario_name': 'ScénE'},
+            ],
         ],
-    ]):
+    ):
         _, _, _, _, fp = _refs_for_cmd_id(100, conn)
     assert 'ScénD' in fp[0] and 'ScénE' in fp[0]
 
@@ -177,11 +190,26 @@ def test_resolve_cmd_not_found(conn):
 
 
 def test_resolve_cmd_found_minimal(conn):
-    cmd_row = [{'id': 15663, 'name': 'BLE présent', 'type': 'info', 'subType': 'binary',
-                'eqLogic_id': 186, 'eqLogic_name': 'Présence Géraud'}]
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        cmd_row, [], [], [], [],
-    ]):
+    cmd_row = [
+        {
+            'id': 15663,
+            'name': 'BLE présent',
+            'type': 'info',
+            'subType': 'binary',
+            'eqLogic_id': 186,
+            'eqLogic_name': 'Présence Géraud',
+        }
+    ]
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            cmd_row,
+            [],
+            [],
+            [],
+            [],
+        ],
+    ):
         result = _resolve_cmd(15663, conn)
     assert result['target']['id'] == 15663
     assert result['target']['type'] == 'cmd'
@@ -191,16 +219,33 @@ def test_resolve_cmd_found_minimal(conn):
 
 
 def test_resolve_cmd_found_with_all_refs(conn):
-    cmd_row = [{'id': 100, 'name': 'Cmd', 'type': 'info', 'subType': 'numeric',
-                'eqLogic_id': 10, 'eqLogic_name': 'EQ'}]
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        cmd_row,
-        [{'id': '5', 'name': 'ScénA'}],
-        [{'scenario_id': '6', 'scenario_name': 'ScénB', 'ss_type': 'if',
-          'ss_subtype': 'condition'}],
-        [{'id': '1', 'name': 'DS1', 'type': 'scenario'}],
-        [{'scenario_id': '8', 'scenario_name': 'ScénD'}],
-    ]):
+    cmd_row = [
+        {
+            'id': 100,
+            'name': 'Cmd',
+            'type': 'info',
+            'subType': 'numeric',
+            'eqLogic_id': 10,
+            'eqLogic_name': 'EQ',
+        }
+    ]
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            cmd_row,
+            [{'id': '5', 'name': 'ScénA'}],
+            [
+                {
+                    'scenario_id': '6',
+                    'scenario_name': 'ScénB',
+                    'ss_type': 'if',
+                    'ss_subtype': 'condition',
+                }
+            ],
+            [{'id': '1', 'name': 'DS1', 'type': 'scenario'}],
+            [{'scenario_id': '8', 'scenario_name': 'ScénD'}],
+        ],
+    ):
         result = _resolve_cmd(100, conn)
     assert len(result['references']['triggers']) == 1
     assert len(result['references']['conditions']) == 1
@@ -231,11 +276,21 @@ def test_resolve_eqlogic_dedup_triggers(conn):
     cmd_ids = [{'id': 101}, {'id': 102}]
     trigger_101 = [{'id': '1', 'name': 'S1'}, {'id': '2', 'name': 'S2'}]
     trigger_102 = [{'id': '1', 'name': 'S1'}, {'id': '3', 'name': 'S3'}]
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        eq_row, cmd_ids,
-        trigger_101, [], [], [],
-        trigger_102, [], [], [],
-    ]):
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            eq_row,
+            cmd_ids,
+            trigger_101,
+            [],
+            [],
+            [],
+            trigger_102,
+            [],
+            [],
+            [],
+        ],
+    ):
         result = _resolve_eqlogic(10, conn)
     trigger_ids = {r['id'] for r in result['references']['triggers']}
     assert trigger_ids == {1, 2, 3}
@@ -244,13 +299,24 @@ def test_resolve_eqlogic_dedup_triggers(conn):
 def test_resolve_eqlogic_dedup_conditions(conn):
     eq_row = [{'id': 20, 'name': 'EQ2', 'eqType_name': 'P', 'isEnable': 1}]
     cmd_ids = [{'id': 201}, {'id': 202}]
-    cond_row = [{'scenario_id': '5', 'scenario_name': 'S5', 'ss_type': 'if',
-                 'ss_subtype': 'condition'}]
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        eq_row, cmd_ids,
-        [], cond_row, [], [],
-        [], cond_row, [], [],
-    ]):
+    cond_row = [
+        {'scenario_id': '5', 'scenario_name': 'S5', 'ss_type': 'if', 'ss_subtype': 'condition'}
+    ]
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            eq_row,
+            cmd_ids,
+            [],
+            cond_row,
+            [],
+            [],
+            [],
+            cond_row,
+            [],
+            [],
+        ],
+    ):
         result = _resolve_eqlogic(20, conn)
     assert len(result['references']['conditions']) == 1
 
@@ -258,13 +324,24 @@ def test_resolve_eqlogic_dedup_conditions(conn):
 def test_resolve_eqlogic_dedup_actions(conn):
     eq_row = [{'id': 30, 'name': 'EQ3', 'eqType_name': 'P', 'isEnable': 1}]
     cmd_ids = [{'id': 301}, {'id': 302}]
-    act_row = [{'scenario_id': '6', 'scenario_name': 'S6', 'ss_type': 'action',
-                'ss_subtype': 'action'}]
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        eq_row, cmd_ids,
-        [], act_row, [], [],
-        [], act_row, [], [],
-    ]):
+    act_row = [
+        {'scenario_id': '6', 'scenario_name': 'S6', 'ss_type': 'action', 'ss_subtype': 'action'}
+    ]
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            eq_row,
+            cmd_ids,
+            [],
+            act_row,
+            [],
+            [],
+            [],
+            act_row,
+            [],
+            [],
+        ],
+    ):
         result = _resolve_eqlogic(30, conn)
     assert len(result['references']['actions']) == 1
 
@@ -274,10 +351,17 @@ def test_resolve_eqlogic_aggregates_datastore_and_fp(conn):
     cmd_ids = [{'id': 401}]
     ds_rows = [{'id': '7', 'name': 'DS7', 'type': 'scenario'}]
     code_rows = [{'scenario_id': '9', 'scenario_name': 'ScénX'}]
-    with patch('_domain.usage_graph.db.query', side_effect=[
-        eq_row, cmd_ids,
-        [], [], ds_rows, code_rows,
-    ]):
+    with patch(
+        '_domain.usage_graph.db.query',
+        side_effect=[
+            eq_row,
+            cmd_ids,
+            [],
+            [],
+            ds_rows,
+            code_rows,
+        ],
+    ):
         result = _resolve_eqlogic(40, conn)
     assert len(result['references']['datastore_refs']) == 1
     assert len(result['false_positive_warnings']) == 1
@@ -314,8 +398,16 @@ def test_resolve_scenario_with_callers(conn):
 
 
 def test_resolve_dispatches_cmd(conn):
-    cmd_row = [{'id': 1, 'name': 'C', 'type': 'info', 'subType': 'binary',
-                'eqLogic_id': 1, 'eqLogic_name': 'EQ'}]
+    cmd_row = [
+        {
+            'id': 1,
+            'name': 'C',
+            'type': 'info',
+            'subType': 'binary',
+            'eqLogic_id': 1,
+            'eqLogic_name': 'EQ',
+        }
+    ]
     with patch('_domain.usage_graph.db.query', side_effect=[cmd_row, [], [], [], []]):
         result = resolve('cmd', 1, conn)
     assert result['target']['type'] == 'cmd'

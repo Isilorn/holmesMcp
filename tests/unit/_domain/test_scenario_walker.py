@@ -55,10 +55,14 @@ def _make_sql_row(
     options: str = '{}',
 ) -> dict:
     return {
-        'element_id': el_id, 'sub_id': sub_id,
-        'ss_type': ss_type, 'ss_subtype': ss_subtype,
-        'expr_id': expr_id, 'expr_order': expr_order,
-        'expr_type': expr_type, 'expression': expression,
+        'element_id': el_id,
+        'sub_id': sub_id,
+        'ss_type': ss_type,
+        'ss_subtype': ss_subtype,
+        'expr_id': expr_id,
+        'expr_order': expr_order,
+        'expr_type': expr_type,
+        'expression': expression,
         'options': options,
     }
 
@@ -74,10 +78,14 @@ def _make_scenario_row(
     timeout: int | None = None,
 ) -> dict:
     return {
-        'id': scenario_id, 'name': name, 'isActive': isActive,
-        'mode': mode, 'trigger': trigger,
+        'id': scenario_id,
+        'name': name,
+        'isActive': isActive,
+        'mode': mode,
+        'trigger': trigger,
         'scenarioElement': scenario_element,
-        'description': description, 'timeout': timeout,
+        'description': description,
+        'timeout': timeout,
     }
 
 
@@ -277,8 +285,9 @@ def test_extract_options_none_returns_none():
 def test_walk_internal_depth_exceeded(conn):
     """depth > max_depth → retourne [] sans appeler db."""
     with patch('_domain.scenario_walker.db.query') as mock_q:
-        result = _walk([8], conn, max_depth=0, visited=set(), depth=1,
-                       warnings=[], truncated_flag=[False])
+        result = _walk(
+            [8], conn, max_depth=0, visited=set(), depth=1, warnings=[], truncated_flag=[False]
+        )
     assert result == []
     mock_q.assert_not_called()
 
@@ -286,8 +295,9 @@ def test_walk_internal_depth_exceeded(conn):
 def test_walk_internal_all_visited(conn):
     """Tous les IDs déjà visités → retourne []."""
     with patch('_domain.scenario_walker.db.query') as mock_q:
-        result = _walk([8], conn, max_depth=3, visited={8}, depth=0,
-                       warnings=[], truncated_flag=[False])
+        result = _walk(
+            [8], conn, max_depth=3, visited={8}, depth=0, warnings=[], truncated_flag=[False]
+        )
     assert result == []
     mock_q.assert_not_called()
 
@@ -296,8 +306,9 @@ def test_walk_internal_simple_node(conn):
     """Un élément simple, sans enfants."""
     sql_row = _make_sql_row(el_id=8, sub_id=12)
     with patch('_domain.scenario_walker.db.query', return_value=[sql_row]):
-        nodes = _walk([8], conn, max_depth=3, visited=set(), depth=0,
-                      warnings=[], truncated_flag=[False])
+        nodes = _walk(
+            [8], conn, max_depth=3, visited=set(), depth=0, warnings=[], truncated_flag=[False]
+        )
     assert len(nodes) == 1
     assert nodes[0]['element_id'] == 8
     assert nodes[0]['depth'] == 0
@@ -308,12 +319,16 @@ def test_walk_internal_with_children(conn):
     """Élément avec enfant element_id=9 (via expression type='element')."""
     row_el8 = _make_sql_row(el_id=8, sub_id=12, expr_type='element', expression='9')
     row_el9 = _make_sql_row(el_id=9, sub_id=20, expr_type='condition', expression='#123#')
-    with patch('_domain.scenario_walker.db.query', side_effect=[
-        [row_el8],  # _fetch_elements([8])
-        [row_el9],  # _fetch_elements([9])
-    ]):
-        nodes = _walk([8], conn, max_depth=3, visited=set(), depth=0,
-                      warnings=[], truncated_flag=[False])
+    with patch(
+        '_domain.scenario_walker.db.query',
+        side_effect=[
+            [row_el8],  # _fetch_elements([8])
+            [row_el9],  # _fetch_elements([9])
+        ],
+    ):
+        nodes = _walk(
+            [8], conn, max_depth=3, visited=set(), depth=0, warnings=[], truncated_flag=[False]
+        )
     assert len(nodes) == 1
     assert 'children' in nodes[0]
     assert nodes[0]['children'][0]['element_id'] == 9
@@ -323,8 +338,9 @@ def test_walk_internal_children_empty_when_max_depth(conn):
     """Enfant hors max_depth → children retourne [] → clé 'children' absente."""
     row_el8 = _make_sql_row(el_id=8, sub_id=12, expr_type='element', expression='9')
     with patch('_domain.scenario_walker.db.query', return_value=[row_el8]):
-        nodes = _walk([8], conn, max_depth=0, visited=set(), depth=0,
-                      warnings=[], truncated_flag=[False])
+        nodes = _walk(
+            [8], conn, max_depth=0, visited=set(), depth=0, warnings=[], truncated_flag=[False]
+        )
     assert len(nodes) == 1
     assert 'children' not in nodes[0]
 
@@ -339,8 +355,15 @@ def test_walk_internal_truncation(conn):
     warnings: list[str] = []
     truncated_flag = [False]
     with patch('_domain.scenario_walker.db.query', return_value=rows):
-        nodes = _walk([8], conn, max_depth=3, visited=set(), depth=0,
-                      warnings=warnings, truncated_flag=truncated_flag)
+        nodes = _walk(
+            [8],
+            conn,
+            max_depth=3,
+            visited=set(),
+            depth=0,
+            warnings=warnings,
+            truncated_flag=truncated_flag,
+        )
     assert truncated_flag[0] is True
     assert len(warnings) == 1
     assert 'tronqué' in warnings[0]
@@ -350,12 +373,18 @@ def test_walk_internal_truncation(conn):
 def test_walk_internal_no_follow_scenario_calls(conn):
     """follow_scenario_calls=0 → pas de suivi d'appels de scénarios."""
     opts = json.dumps({'action': 'start', 'scenario_id': '99'})
-    row = _make_sql_row(el_id=8, sub_id=12, expr_type='action',
-                        expression='scenario', options=opts)
+    row = _make_sql_row(el_id=8, sub_id=12, expr_type='action', expression='scenario', options=opts)
     with patch('_domain.scenario_walker.db.query', return_value=[row]):
-        nodes = _walk([8], conn, max_depth=3, visited=set(), depth=0,
-                      warnings=[], truncated_flag=[False],
-                      follow_scenario_calls=0)
+        nodes = _walk(
+            [8],
+            conn,
+            max_depth=3,
+            visited=set(),
+            depth=0,
+            warnings=[],
+            truncated_flag=[False],
+            follow_scenario_calls=0,
+        )
     expr = nodes[0]['sub_elements'][0]['expressions'][0]
     assert 'called_scenario_tree' not in expr
 
@@ -363,14 +392,20 @@ def test_walk_internal_no_follow_scenario_calls(conn):
 def test_walk_internal_follow_scenario_calls_cycle(conn):
     """Cycle inter-scénarios → avertissement dans called_scenario_tree."""
     opts = json.dumps({'action': 'start', 'scenario_id': '70'})
-    row = _make_sql_row(el_id=8, sub_id=12, expr_type='action',
-                        expression='scenario', options=opts)
+    row = _make_sql_row(el_id=8, sub_id=12, expr_type='action', expression='scenario', options=opts)
     visited_scenarios = {70}  # scénario 70 déjà visité
     with patch('_domain.scenario_walker.db.query', return_value=[row]):
-        nodes = _walk([8], conn, max_depth=3, visited=set(), depth=0,
-                      warnings=[], truncated_flag=[False],
-                      follow_scenario_calls=1,
-                      visited_scenarios=visited_scenarios)
+        nodes = _walk(
+            [8],
+            conn,
+            max_depth=3,
+            visited=set(),
+            depth=0,
+            warnings=[],
+            truncated_flag=[False],
+            follow_scenario_calls=1,
+            visited_scenarios=visited_scenarios,
+        )
     expr = nodes[0]['sub_elements'][0]['expressions'][0]
     assert 'called_scenario_tree' in expr
     assert 'cycle ignoré' in expr['called_scenario_tree']['warning']
@@ -379,18 +414,29 @@ def test_walk_internal_follow_scenario_calls_cycle(conn):
 def test_walk_internal_follow_scenario_calls_success(conn):
     """Suivi d'un appel de scénario non cyclique."""
     opts = json.dumps({'action': 'start', 'scenario_id': '99'})
-    row_main = _make_sql_row(el_id=8, sub_id=12, expr_type='action',
-                              expression='scenario', options=opts)
+    row_main = _make_sql_row(
+        el_id=8, sub_id=12, expr_type='action', expression='scenario', options=opts
+    )
     scen99_row = _make_scenario_row(scenario_id=99, name='S99', scenario_element='[]')
-    with patch('_domain.scenario_walker.db.query', side_effect=[
-        [row_main],     # _fetch_elements([8])
-        [scen99_row],   # _fetch_scenario(99) via walk()
-        # _fetch_elements([]) → not called (early return)
-    ]):
-        nodes = _walk([8], conn, max_depth=3, visited=set(), depth=0,
-                      warnings=[], truncated_flag=[False],
-                      follow_scenario_calls=1,
-                      visited_scenarios={70})
+    with patch(
+        '_domain.scenario_walker.db.query',
+        side_effect=[
+            [row_main],  # _fetch_elements([8])
+            [scen99_row],  # _fetch_scenario(99) via walk()
+            # _fetch_elements([]) → not called (early return)
+        ],
+    ):
+        nodes = _walk(
+            [8],
+            conn,
+            max_depth=3,
+            visited=set(),
+            depth=0,
+            warnings=[],
+            truncated_flag=[False],
+            follow_scenario_calls=1,
+            visited_scenarios={70},
+        )
     expr = nodes[0]['sub_elements'][0]['expressions'][0]
     assert 'called_scenario_tree' in expr
     assert expr['called_scenario_tree']['scenario']['id'] == 99
@@ -399,18 +445,27 @@ def test_walk_internal_follow_scenario_calls_success(conn):
 def test_walk_internal_visited_scenarios_none_initialized(conn):
     """visited_scenarios=None → initialisé à set() quand follow_scenario_calls > 0."""
     opts = json.dumps({'action': 'start', 'scenario_id': '99'})
-    row = _make_sql_row(el_id=8, sub_id=12, expr_type='action',
-                        expression='scenario', options=opts)
+    row = _make_sql_row(el_id=8, sub_id=12, expr_type='action', expression='scenario', options=opts)
     scen99_row = _make_scenario_row(scenario_id=99, name='S99', scenario_element='[]')
-    with patch('_domain.scenario_walker.db.query', side_effect=[
-        [row],
-        [scen99_row],
-    ]):
+    with patch(
+        '_domain.scenario_walker.db.query',
+        side_effect=[
+            [row],
+            [scen99_row],
+        ],
+    ):
         # visited_scenarios=None → _walk l'initialise à set() en interne
-        nodes = _walk([8], conn, max_depth=3, visited=set(), depth=0,
-                      warnings=[], truncated_flag=[False],
-                      follow_scenario_calls=1,
-                      visited_scenarios=None)
+        nodes = _walk(
+            [8],
+            conn,
+            max_depth=3,
+            visited=set(),
+            depth=0,
+            warnings=[],
+            truncated_flag=[False],
+            follow_scenario_calls=1,
+            visited_scenarios=None,
+        )
     expr = nodes[0]['sub_elements'][0]['expressions'][0]
     assert 'called_scenario_tree' in expr
     assert expr['called_scenario_tree']['scenario']['id'] == 99
@@ -418,13 +473,21 @@ def test_walk_internal_visited_scenarios_none_initialized(conn):
 
 def test_walk_internal_non_scenario_expr_skipped_in_follow(conn):
     """Expression non-scénario ignorée dans le suivi inter-scénarios."""
-    row = _make_sql_row(el_id=8, sub_id=12, expr_type='condition',
-                        expression='#123# == 1', options='{}')
+    row = _make_sql_row(
+        el_id=8, sub_id=12, expr_type='condition', expression='#123# == 1', options='{}'
+    )
     with patch('_domain.scenario_walker.db.query', return_value=[row]):
-        nodes = _walk([8], conn, max_depth=3, visited=set(), depth=0,
-                      warnings=[], truncated_flag=[False],
-                      follow_scenario_calls=1,
-                      visited_scenarios=set())
+        nodes = _walk(
+            [8],
+            conn,
+            max_depth=3,
+            visited=set(),
+            depth=0,
+            warnings=[],
+            truncated_flag=[False],
+            follow_scenario_calls=1,
+            visited_scenarios=set(),
+        )
     expr = nodes[0]['sub_elements'][0]['expressions'][0]
     assert 'called_scenario_tree' not in expr
 
@@ -502,10 +565,7 @@ def test_walk_visited_scenarios_recursive_call(conn):
 def test_walk_returns_truncated_flag(conn):
     """truncated=True quand _walk tronque un élément."""
     scen = _make_scenario_row(70, scenario_element='[8]')
-    rows = [
-        _make_sql_row(el_id=8, sub_id=i, expr_id=i)
-        for i in range(1, MAX_SUB_ELEMENTS + 2)
-    ]
+    rows = [_make_sql_row(el_id=8, sub_id=i, expr_id=i) for i in range(1, MAX_SUB_ELEMENTS + 2)]
     with patch('_domain.scenario_walker.db.query', side_effect=[[scen], rows]):
         result = walk(70, conn)
     assert result['truncated'] is True
@@ -515,8 +575,13 @@ def test_walk_returns_truncated_flag(conn):
 def test_walk_scenario_fields_exposed(conn):
     """Vérifie que tous les champs attendus du scénario sont présents."""
     scen = _make_scenario_row(
-        scenario_id=70, name='Test', isActive=1, mode='schedule',
-        trigger='#cmd123#', scenario_element='[]', description='Ma desc',
+        scenario_id=70,
+        name='Test',
+        isActive=1,
+        mode='schedule',
+        trigger='#cmd123#',
+        scenario_element='[]',
+        description='Ma desc',
     )
     with patch('_domain.scenario_walker.db.query', return_value=[scen]):
         result = walk(70, conn)

@@ -22,11 +22,11 @@ Cas d'usage typiques :
 
 ### Caractéristiques techniques
 
-- **26 tools MCP** en lecture seule : équipements, commandes, scénarios, plugins, logs, datastore, configuration, SQL restreint
+- **27 tools MCP** en lecture seule : équipements, commandes, scénarios, plugins, logs, datastore, configuration, SQL restreint
 - **5 resources MCP** : overview, health, scenario, equipment, logs du jour
 - **Authentification Bearer** par utilisateur Jeedom (token stocké dans les options utilisateur)
 - **Accès données** : MySQL via user dédié `jeedom_mcp_ro` (SELECT only) + API JSON-RPC localhost + logs fichier
-- **Sanitisation forte** : liste blanche de champs + regex credentials + exclusions par plugin (25+ plugins couverts) — aucun credential exposé dans les réponses MCP
+- **Sanitisation forte** : liste blanche de champs + regex credentials + exclusions par plugin (23 plugins nommés) — aucun credential exposé dans les réponses MCP
 - **Daemon Python** (3.11+) — SDK MCP officiel, Streamable HTTP, spec 2025-03-26
 - **Vue activité** dans l'interface Jeedom : tableau des derniers appels MCP avec filtre et rafraîchissement automatique
 - **Protocole** : Streamable HTTP sur le port 8765 (configurable)
@@ -48,7 +48,8 @@ Cas d'usage typiques :
 
 ### Statut
 
-En bêta — validé sur box réelle Jeedom 4.5.3 (665 tests unitaires, tests d'intégration live).
+En bêta — validé sur box réelle Jeedom **4.5.3** et **4.6.1** (763 tests unitaires, tests
+d'intégration live).
 Soumission market en bêta en cours de préparation.
 
 N'hésitez pas si vous avez des questions sur l'implémentation ou la soumission market.
