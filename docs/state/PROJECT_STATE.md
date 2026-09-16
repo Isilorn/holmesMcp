@@ -712,8 +712,9 @@ Toutes les décisions 🟡/🟢 du brief sont tranchées. Voir `docs/sources/00-
 | ADR-0014 | Distribution market et versioning | proposed |
 | ADR-0015 | Modèle opérationnel PO / Claude Code | draft |
 | ADR-0016 | Observabilité | draft |
-| ADR-0017 | Sanitisation et guardrails | accepted |
+| ADR-0017 | Sanitisation et guardrails | accepted (amendée par ADR-0022) |
 | ADR-0018 | Résultat POC D2.3 | accepted |
 | ADR-0019 | Couverture skill jeedom-audit D5.8 | accepted |
 | ADR-0020 | Holmes MCP projet séparé de jeedom-skills | accepted |
 | ADR-0021 | Stratégie adressage et test par plugin (install PO) | accepted |
+| ADR-0022 | Mécanisme 2bis — segmentation des identifiants en mots (amende ADR-0017) | accepted |
