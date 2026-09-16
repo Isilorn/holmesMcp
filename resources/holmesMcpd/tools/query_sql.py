@@ -189,6 +189,40 @@ def _allowed_computed_columns(sql: str, table: str | None) -> frozenset[str]:
     return frozenset(allowed)
 
 
+def _auto_add_config_key(sql: str, table: str | None) -> tuple[str, bool]:
+    """Ajoute `key` au SELECT d'une requête sur `config` qui demande `value` sans elle.
+
+    La sensibilité d'une valeur de config se juge sur sa clé : sans elle, le
+    sanitiseur ne peut que masquer (fail closed). Plutôt que de punir une requête
+    raisonnable, on la complète — même esprit que l'injection du LIMIT et les
+    backticks automatiques. La requête réellement exécutée est renvoyée dans `query`.
+
+    Prudence : on ne touche qu'à une liste de colonnes simple. `DISTINCT`, agrégat ou
+    expression changeraient de sens si on ajoutait une colonne — ces formes-là restent
+    masquées, et la réponse le dit.
+    """
+    if not table or table.lower() != 'config':
+        return sql, False
+
+    m = _SELECT_CLAUSE_RE.search(sql)
+    if not m:
+        return sql, False
+
+    cols_part = m.group(1).strip()
+    if cols_part == '*' or cols_part.lower().startswith('distinct'):
+        return sql, False
+
+    items = _split_select_items(cols_part)
+    if any('(' in item for item in items):
+        return sql, False
+
+    names = {item.strip().strip('`').lower() for item in items}
+    if 'key' in names or 'value' not in names:
+        return sql, False
+
+    return sql[: m.start(1)] + '`key`, ' + sql[m.start(1) :], True
+
+
 def query_sql(
     conn: pymysql.connections.Connection,
     sql: str,
@@ -208,6 +242,9 @@ def query_sql(
     - Tous les résultats passent par la sanitisation runtime (D15.1) :
       champs sensibles remplacés par ***FILTERED***. Les agrégats (`COUNT(*)`,
       `MAX(colonne exposable)`) sont rendus en clair.
+    - Table `config` : la colonne `key` est ajoutée au SELECT si elle manque, car
+      c'est elle qui qualifie la valeur. Pour explorer la configuration, le tool
+      get_config(plugin, key_pattern) est plus direct.
 
     TABLES UTILES JEEDOM
     --------------------
@@ -257,25 +294,46 @@ def query_sql(
         return {'error': error, '_filtered_fields': []}
 
     sql = _auto_backtick_reserved(sql)
+
+    # Sanitisation avec la table principale si requête mono-table connue
+    primary_table = tables[0] if len(tables) == 1 else None
+
+    sql, key_added = _auto_add_config_key(sql, primary_table)
     sql, limit_applied = _ensure_limit(sql)
 
     rows = _db.query(conn, sql)
 
-    # Sanitisation avec la table principale si requête mono-table connue
-    primary_table = tables[0] if len(tables) == 1 else None
     sanitized, filtered = sanitize_rows(
         rows,
         table=primary_table,
         allow_columns=_allowed_computed_columns(sql, primary_table),
     )
 
-    return wrap_result(
-        {
-            'rows': sanitized,
-            'query': sql,
-            'count': len(sanitized),
-            'limit_applied': limit_applied,
-            'truncated': len(sanitized) >= limit_applied,
-        },
-        filtered,
-    )
+    result: dict[str, Any] = {
+        'rows': sanitized,
+        'query': sql,
+        'count': len(sanitized),
+        'limit_applied': limit_applied,
+        'truncated': len(sanitized) >= limit_applied,
+    }
+
+    note = _config_note(key_added, primary_table, filtered)
+    if note:
+        result['note'] = note
+
+    return wrap_result(result, filtered)
+
+
+def _config_note(key_added: bool, table: str | None, filtered: list[str]) -> str | None:
+    """Explique ce qui est arrivé à une requête sur `config` — jamais de masquage muet."""
+    if key_added:
+        return (
+            "Colonne `key` ajoutée automatiquement : la sensibilité d'une valeur de "
+            'configuration se juge sur sa clé. Voir le champ `query`.'
+        )
+    if table and table.lower() == 'config' and 'value' in filtered:
+        return (
+            'Valeurs masquées : sans la colonne `key`, leur sensibilité ne peut pas être '
+            'jugée. Ajoutez `key` au SELECT — ou utilisez le tool get_config.'
+        )
+    return None

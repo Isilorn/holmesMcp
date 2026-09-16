@@ -619,3 +619,83 @@ class TestQuerySqlTruncation:
         with patch('tools.query_sql._db.query', return_value=[]):
             result = qsql.query_sql(_MOCK_CONN, 'SELECT id FROM cmd LIMIT 3')
         assert result['limit_applied'] == 3
+
+
+# ---------------------------------------------------------------------------
+# _auto_add_config_key — la clé qualifie la valeur (ADR-0023)
+# ---------------------------------------------------------------------------
+
+
+class TestAutoAddConfigKey:
+    def test_value_alone_gets_key(self):
+        sql, added = qsql._auto_add_config_key(
+            "SELECT value FROM config WHERE plugin='x'", 'config'
+        )
+        assert added is True
+        assert sql.startswith('SELECT `key`, value FROM config')
+
+    def test_other_columns_get_key_too(self):
+        sql, added = qsql._auto_add_config_key('SELECT plugin, value FROM config', 'config')
+        assert added is True
+        assert '`key`' in sql
+
+    def test_key_already_present_untouched(self):
+        sql, added = qsql._auto_add_config_key('SELECT `key`, value FROM config', 'config')
+        assert added is False
+        assert sql == 'SELECT `key`, value FROM config'
+
+    def test_star_untouched(self):
+        _, added = qsql._auto_add_config_key('SELECT * FROM config', 'config')
+        assert added is False
+
+    def test_distinct_untouched(self):
+        """Ajouter une colonne à un DISTINCT changerait le sens de la requête."""
+        _, added = qsql._auto_add_config_key('SELECT DISTINCT value FROM config', 'config')
+        assert added is False
+
+    def test_aggregate_untouched(self):
+        _, added = qsql._auto_add_config_key('SELECT COUNT(value) AS n FROM config', 'config')
+        assert added is False
+
+    def test_without_value_untouched(self):
+        _, added = qsql._auto_add_config_key('SELECT plugin FROM config', 'config')
+        assert added is False
+
+    def test_other_table_untouched(self):
+        _, added = qsql._auto_add_config_key('SELECT value FROM cmd', 'cmd')
+        assert added is False
+
+    def test_no_table_untouched(self):
+        _, added = qsql._auto_add_config_key('SELECT value FROM config', None)
+        assert added is False
+
+    def test_no_select_clause_untouched(self):
+        _, added = qsql._auto_add_config_key('SELECT 1', 'config')
+        assert added is False
+
+
+class TestConfigNote:
+    def test_note_when_key_added(self):
+        with patch('tools.query_sql._db.query', return_value=[]):
+            result = qsql.query_sql(_MOCK_CONN, "SELECT value FROM config WHERE plugin='x'")
+        assert '`key`' in result['note']
+        assert '`key`, value' in result['query']
+
+    def test_note_when_masked_without_key(self):
+        rows = [{'value': 'secret'}]
+        with patch('tools.query_sql._db.query', return_value=rows):
+            result = qsql.query_sql(_MOCK_CONN, 'SELECT DISTINCT value FROM config')
+        assert result['rows'][0]['value'] == FILTERED
+        assert 'get_config' in result['note']
+
+    def test_no_note_on_ordinary_query(self):
+        with patch('tools.query_sql._db.query', return_value=[_ROW_EQ]):
+            result = qsql.query_sql(_MOCK_CONN, 'SELECT id, name FROM eqLogic')
+        assert 'note' not in result
+
+    def test_no_note_when_key_present(self):
+        rows = [{'key': 'language', 'value': 'fr_FR'}]
+        with patch('tools.query_sql._db.query', return_value=rows):
+            result = qsql.query_sql(_MOCK_CONN, 'SELECT `key`, value FROM config')
+        assert 'note' not in result
+        assert result['rows'][0]['value'] == 'fr_FR'

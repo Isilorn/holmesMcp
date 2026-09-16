@@ -213,10 +213,27 @@ class TestQuerySqlComputedAndTruncationLive:
         assert result['truncated'] is False
         assert result['count'] == 1
 
-    def test_config_sans_colonne_key_est_masquee(self, db_conn):
-        """Fail closed : sans `key`, la valeur ne peut pas être qualifiée → masquée."""
+    def test_config_sans_colonne_key_la_recupere(self, db_conn):
+        """La clé qualifie la valeur : plutôt que de masquer, le tool complète la requête."""
         result = query_sql.query_sql(db_conn, 'SELECT value FROM config LIMIT 5')
         assert result['rows'], 'table config vide'
+        assert '`key`' in result['query']
+        assert all('key' in r for r in result['rows'])
+        assert 'note' in result
+
+    def test_config_non_reparable_reste_masquee(self, db_conn):
+        """DISTINCT : on ne peut pas ajouter de colonne sans changer le sens → fail closed."""
+        result = query_sql.query_sql(db_conn, 'SELECT DISTINCT value FROM config LIMIT 5')
+        assert result['rows'], 'table config vide'
+        assert all(r['value'] == FILTERED for r in result['rows'])
+        assert 'get_config' in result['note']
+
+    def test_config_les_cles_sensibles_restent_masquees(self, db_conn):
+        """La réparation ne doit RIEN dévoiler : une clé sensible reste masquée."""
+        result = query_sql.query_sql(
+            db_conn, "SELECT value FROM config WHERE `key` = 'api' LIMIT 3"
+        )
+        assert result['rows'], 'aucune ligne api'
         assert all(r['value'] == FILTERED for r in result['rows'])
 
     def test_config_avec_colonne_key_reste_lisible(self, db_conn):

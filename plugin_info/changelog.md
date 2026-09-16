@@ -19,8 +19,11 @@ s'atteignent de parent en parent. Les outils s'arrêtaient au premier niveau.
 **Confidentialité**
 
 - La table de configuration rendait ses valeurs **en clair** lorsque la requête ne demandait pas
-  la colonne `key` : c'est elle qui permet de juger si une valeur est sensible. Sans elle, la
-  valeur est désormais masquée.
+  la colonne `key` : c'est elle qui permet de juger si une valeur est sensible. `query_sql` ajoute
+  désormais cette colonne à votre requête et vous le dit ; quand il ne peut pas le faire sans
+  changer le sens de la requête (`DISTINCT`, agrégat), les valeurs sont masquées et la réponse
+  explique pourquoi. Pour explorer la configuration, `get_config` reste le chemin direct — il n'a
+  jamais été concerné.
 - Le filtrage par table ne s'appliquait pas aux tables dont le nom porte des majuscules
   (`eqLogic`, `dataStore`, `historyArch`) lorsqu'elles étaient interrogées par `query_sql`.
 - Les agrégats sont maintenant lisibles : `SELECT COUNT(*) FROM scenario` rendait `***FILTERED***`
