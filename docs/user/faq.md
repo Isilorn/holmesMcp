@@ -29,7 +29,7 @@ Ce qui est envoyé à Anthropic (ou votre provider LLM) : les données retourné
 
 ### Holmes MCP est-il compatible avec Jeedom 4.4.x ou antérieur ?
 
-**Non.** Holmes MCP cible **Jeedom 4.5+ sur Debian 12 Bookworm (x86_64)**. Jeedom 4.5 minimum est requis pour la gestion du virtualenv Python (`system::update()`). Jeedom 4.4.x et antérieur ne sont pas supportés.
+**Non.** Holmes MCP cible **Jeedom 4.5+ sur Debian 12 Bookworm (x86_64)**. Jeedom 4.5 minimum est requis pour la gestion du virtualenv Python (`system::update()`). Jeedom 4.4.x et antérieur ne sont pas supportés. Les versions **4.5.3** et **4.6.1** sont validées sur box réelle.
 
 ---
 

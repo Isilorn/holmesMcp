@@ -46,7 +46,12 @@ Binôme : le PO décide et fournit les matières physiques, Claude Code code, r�
    CLOSE-WAIT. Utiliser `build_mcp()` ou `tests/smoke/smoke_mcp_clean.py`.
 8. **Clean room.** Conception à partir des seuls scripts `jeedom-audit`, de la doc Jeedom
    officielle et de la spec MCP. On n'audite pas le code des autres plugins MCP Jeedom.
-9. **Couverture 100 % sur `_domain/sanitize.py`** — non négociable. C'est le cœur de la confiance
+9. **Ne jamais afficher la ligne de commande d'un daemon Jeedom.** `ps ... cmd=`, `ps aux`,
+   `/proc/<pid>/cmdline` : Jeedom lance ses daemons de plugin en passant les clés **en arguments**
+   (`--apikey`, `--jeedom-apikey`). Les imprimer les verse dans le transcript. Pour identifier ou
+   surveiller le process, se limiter à `ps -o pcpu=,stat=,etime= -C python3`, **sans `cmd=`**.
+   *(Fuite constatée le 2026-09-16 : deux clés versées dans un transcript par un `ps` de confort.)*
+10. **Couverture 100 % sur `_domain/sanitize.py`** — non négociable. C'est le cœur de la confiance
    produit.
 
 ---
