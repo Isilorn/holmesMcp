@@ -532,11 +532,11 @@ l'aiguillage `ARCHIVES="../Archives"`.
 
 | # | Action | Qui |
 |---|---|---|
-| B1 | **Snapshot Proxmox** | 🔴 PO — bloquant |
-| B2 | Re-valider sur **Jeedom 4.6.1** : 188 tests d'intégration live + smoke 27 tools | Claude Code |
-| B3 | **Ré-auditer la sanitisation sur les 32 plugins non couverts** (protocole J6-2) | Claude Code |
-| B4 | Répercuter 4.6.1 : `info.json` (`require`), doc market « validé sur 4.5.3 », changelog | Claude Code |
-| B5 | Document de session + `PROJECT_STATE` + `mem-snapshot` | Claude Code |
+| B1 ✅ | **Snapshot Proxmox** | PO |
+| B2 ✅ | Re-valider sur **Jeedom 4.6.1** : 187 intég live + smoke 27/27 tools — aucune régression | Claude Code |
+| B3 ✅ | **Ré-auditer la sanitisation sur les 32 plugins non couverts** (protocole J6-2) — 4 fuites + trou structurel, **remédiés le 16-09** (méca-2bis) | Claude Code |
+| B4 ✅ | Répercuter 4.6.1 : `info.json`, changelog, README, FAQ, doc market — `require` **reste `4.5`** (assumé) | Claude Code |
+| B5 ✅ | Document de session + `PROJECT_STATE` + `mem-snapshot` — soldé le 16-09 | Claude Code |
 
 **B2 avant B3** : si le core Jeedom a bougé, les outils sont à réparer avant d'auditer ce qu'ils
 renvoient.
@@ -552,8 +552,9 @@ camelCase passait à travers la regex) interdit de le supposer.
 clés nécessaires pour justifier le correctif du sanitiseur — pas à un inventaire de l'installation
 du PO.
 
-**DoD J8-4ter** : CI verte · snapshot mémoire versionné · `CLAUDE.md` en place · 188/188 intég sur
-4.6.1 · 32 plugins audités, 0 fuite · `PROJECT_STATE` conforme au dernier commit.
+**DoD J8-4ter** ✅ **atteinte le 2026-09-16** : CI verte · snapshot mémoire versionné · `CLAUDE.md`
+en place · 187 intég sur 4.6.1 · 32 plugins audités, 4 fuites trouvées **et bouchées** (`v1.2.1`,
+763 ut, 100 % sur `sanitize.py`) · `PROJECT_STATE` conforme au dernier commit.
 
 ---
 
