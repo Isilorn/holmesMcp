@@ -1,5 +1,41 @@
 # Changelog Holmes MCP
 
+## v1.2.2 — 2026-09-16
+
+Correction de fond sur la recherche d'usages, et trois corrections de confidentialité.
+
+**Les scénarios imbriqués étaient invisibles.** Un scénario Jeedom est un arbre de blocs, mais
+seuls les blocs de premier niveau sont rattachés au scénario dans la base : les blocs imbriqués
+s'atteignent de parent en parent. Les outils s'arrêtaient au premier niveau.
+
+- `find_command_usages` et `find_equipment_usages` ne trouvaient que les usages portés par un bloc
+  de premier niveau — **69 % des blocs sont imbriqués** sur une installation de référence, et
+  87 commandes sur 165 étaient déclarées « inutilisées » alors qu'elles servaient dans un scénario.
+- `find_scenario_dependencies` souffrait en plus de l'inverse : il **inventait** des rattachements
+  (un bloc `1` était reconnu dans un bloc `100`), rendant 21 réponses fausses sur 63 scénarios.
+- La remontée est désormais **récursive** et le rattachement reste une comparaison exacte : sur
+  l'installation de référence, les 289 liens réels sont retrouvés, sans aucune invention.
+
+**Confidentialité**
+
+- La table de configuration rendait ses valeurs **en clair** lorsque la requête ne demandait pas
+  la colonne `key` : c'est elle qui permet de juger si une valeur est sensible. `query_sql` ajoute
+  désormais cette colonne à votre requête et vous le dit ; quand il ne peut pas le faire sans
+  changer le sens de la requête (`DISTINCT`, agrégat), les valeurs sont masquées et la réponse
+  explique pourquoi. Pour explorer la configuration, `get_config` reste le chemin direct — il n'a
+  jamais été concerné.
+- Le filtrage par table ne s'appliquait pas aux tables dont le nom porte des majuscules
+  (`eqLogic`, `dataStore`, `historyArch`) lorsqu'elles étaient interrogées par `query_sql`.
+- Les agrégats sont maintenant lisibles : `SELECT COUNT(*) FROM scenario` rendait `***FILTERED***`
+  au lieu du compte. Un alias simple (`SELECT une_colonne AS n`) ne contourne pas le filtrage.
+
+**Transparence**
+
+- `query_sql` déclare `limit_applied` et `truncated` : une troncature n'est plus à deviner.
+
+**Qualité** : 820 tests unitaires, 100 % de couverture sur le module de sanitisation, 199 tests
+d'intégration sur box réelle (Jeedom 4.6.1). Détail : `docs/decisions/ADR-0023.md`.
+
 ## v1.2.1 — 2026-09-16
 
 Correctif de confidentialité sur la sanitisation, et validation sur Jeedom 4.6.

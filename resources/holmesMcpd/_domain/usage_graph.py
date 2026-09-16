@@ -8,6 +8,8 @@ from __future__ import annotations
 import structlog
 from _core import db
 
+from _domain import scenario_tree as _tree
+
 log = structlog.get_logger('holmesMcp.domain.usage_graph')
 
 # ── SQL ───────────────────────────────────────────────────────────────────────
@@ -27,42 +29,45 @@ _EQLOGIC_CMD_IDS = 'SELECT id FROM cmd WHERE eqLogic_id = %s'
 
 _TRIGGER_REFS = 'SELECT DISTINCT id, name FROM scenario WHERE `trigger` LIKE %s'
 
-# LIKE '%N%' sur des IDs >100 est sûr ; les petits IDs (<10) peuvent générer
-# des faux positifs signalés dans false_positive_warnings.
-_EXPR_REFS = """SELECT DISTINCT
+# Le rattachement expression → scénario est RÉCURSIF (ADR-0023, _domain/scenario_tree).
+# Le JOIN `LIKE CONCAT('%', sel.id, '%')` qui vivait ici inventait des rattachements
+# (élément 1 → 23 scénarios) ET manquait les éléments imbriqués, soit 69 % d'entre eux.
+_EXPR_REFS = (
+    _tree.ancestors_cte(seed_where="x.expression LIKE %s AND ss.type != 'code'")
+    + """SELECT DISTINCT
     s.id        AS scenario_id,
     s.name      AS scenario_name,
     ss.type     AS ss_type,
     ss.subtype  AS ss_subtype
-FROM scenarioExpression expr
-JOIN scenarioSubElement ss  ON ss.id  = expr.scenarioSubElement_id
-JOIN scenarioElement    sel ON sel.id = ss.scenarioElement_id
-JOIN scenario           s   ON s.scenarioElement LIKE CONCAT('%%', sel.id, '%%')
-WHERE expr.expression LIKE %s
-  AND ss.type != 'code'
+FROM anc a
 """
+    + _tree.ROOT_JOIN
+    + '\n'
+    + _tree.SUBELEMENT_JOIN
+    + '\n'
+)
 
-_CODE_REFS = """SELECT DISTINCT
+_CODE_REFS = (
+    _tree.ancestors_cte(seed_where="ss.type = 'code' AND x.expression LIKE %s")
+    + """SELECT DISTINCT
     s.id   AS scenario_id,
     s.name AS scenario_name
-FROM scenarioExpression expr
-JOIN scenarioSubElement ss  ON ss.id  = expr.scenarioSubElement_id
-JOIN scenarioElement    sel ON sel.id = ss.scenarioElement_id
-JOIN scenario           s   ON s.scenarioElement LIKE CONCAT('%%', sel.id, '%%')
-WHERE ss.type = 'code'
-  AND expr.expression LIKE %s
+FROM anc a
 """
+    + _tree.ROOT_JOIN
+    + '\n'
+)
 
-_SCENARIO_CALLERS = """SELECT DISTINCT
+_SCENARIO_CALLERS = (
+    _tree.ancestors_cte(seed_where="x.expression = 'scenario' AND x.options LIKE %s")
+    + """SELECT DISTINCT
     s.id   AS scenario_id,
     s.name AS scenario_name
-FROM scenarioExpression expr
-JOIN scenarioSubElement ss  ON ss.id  = expr.scenarioSubElement_id
-JOIN scenarioElement    sel ON sel.id = ss.scenarioElement_id
-JOIN scenario           s   ON s.scenarioElement LIKE CONCAT('%%', sel.id, '%%')
-WHERE expr.expression = 'scenario'
-  AND expr.options LIKE %s
+FROM anc a
 """
+    + _tree.ROOT_JOIN
+    + '\n'
+)
 
 _DATASTORE_REFS = 'SELECT id, name, type FROM dataStore WHERE value LIKE %s'
 

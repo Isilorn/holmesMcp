@@ -39,7 +39,7 @@ Documentation complète : **[isilorn.github.io/holmesMcp](https://isilorn.github
 
 ## Statut
 
-`v1.2.1` — Version stable V1. 27 tools, 5 resources, authentification Bearer, sanitisation renforcée. Validé sur Jeedom **4.5.3** et **4.6.1** (Debian 12 Bookworm x86_64).
+`v1.2.2` — Version stable V1. 27 tools, 5 resources, authentification Bearer, sanitisation renforcée. Validé sur Jeedom **4.5.3** et **4.6.1** (Debian 12 Bookworm x86_64).
 
 ## Licence
 

@@ -70,8 +70,10 @@ Le tool `query_sql` permet des requêtes SQL libres mais avec des garde-fous str
 - **SELECT uniquement** — toute requête non-SELECT est rejetée
 - **Blacklist de tables** — les tables `user`, `session`, `network` et autres tables sensibles sont interdites
 - **Blacklist de colonnes** — les colonnes `password`, `api`, `token` et similaires sont détectées et bloquées
-- **LIMIT plafonné** — toute requête reçoit un `LIMIT` automatique (max 200 lignes)
+- **LIMIT plafonné** — toute requête reçoit un `LIMIT` automatique (max 200 lignes), et la réponse déclare `limit_applied` / `truncated`
 - **Sanitisation appliquée** — les 3 mécanismes s'appliquent aussi aux résultats SQL
+- **Agrégats lisibles, sans faille** — `COUNT(*)` et les agrégats portant sur une colonne déjà exposable sont rendus en clair ; un simple alias (`SELECT value AS n`) ne contourne pas la whitelist
+- **Table `config` : masquage par défaut** — la sensibilité d'une valeur se juge sur sa clé. Une requête qui ne sélectionne pas la colonne `key` reçoit `***FILTERED***` : sans la clé, pas de verdict possible, donc pas de valeur
 
 !!! warning "Usage de query_sql"
     `query_sql` est un outil avancé destiné aux utilisateurs qui connaissent le schéma Jeedom. En cas de doute, préférez les tools spécialisés (`get_equipment`, `list_scenarios`…) qui sont plus sûrs et plus simples.

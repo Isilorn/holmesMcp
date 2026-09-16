@@ -26,10 +26,12 @@ from _domain.sanitize import (
     FILTERED,
     _key_words,
     _sanitize_config_row,
+    is_column_exposed,
     is_sensitive_key,
     sanitize_json_blob,
     sanitize_row,
     sanitize_rows,
+    whitelist_for,
     wrap_result,
 )
 
@@ -364,10 +366,22 @@ class TestSanitizeConfigRow:
         result, filtered = _sanitize_config_row(row)
         assert result['value'] == FILTERED
 
-    def test_missing_key_field(self) -> None:
+    def test_missing_key_field_masks_value(self) -> None:
+        """Sans la colonne key, le verdict est impossible → on masque (fail closed).
+
+        Fuite vérifiée sur données réelles le 2026-09-16 : `SELECT value FROM config`
+        via query_sql rendait les valeurs en clair, la colonne key n'étant pas là
+        pour les qualifier.
+        """
         row = {'plugin': 'core', 'value': 'some_value'}
         result, filtered = _sanitize_config_row(row)
-        assert result['value'] == 'some_value'
+        assert result['value'] == FILTERED
+        assert filtered == ['value']
+
+    def test_missing_key_and_value_unchanged(self) -> None:
+        row = {'plugin': 'core'}
+        result, filtered = _sanitize_config_row(row)
+        assert result == {'plugin': 'core'}
         assert filtered == []
 
     def test_empty_key_field(self) -> None:
@@ -1158,3 +1172,75 @@ class TestMech3OnConfigTable:
     def test_username_stays_visible_without_plugin_context(self) -> None:
         """`username` masqué partout casserait l'affichage légitime — d'où le mech 3."""
         assert is_sensitive_key('username') is False
+
+
+# ---------------------------------------------------------------------------
+# whitelist_for / is_column_exposed (ADR-0023)
+# ---------------------------------------------------------------------------
+
+
+class TestWhitelistLookup:
+    def test_known_table(self) -> None:
+        assert 'name' in whitelist_for('cmd')
+
+    def test_case_insensitive(self) -> None:
+        """`query_sql` minuscule les noms de tables : eqLogic ne doit pas échapper au mech 1."""
+        assert whitelist_for('eqlogic') == whitelist_for('eqLogic')
+        assert whitelist_for('datastore') == whitelist_for('dataStore')
+        assert whitelist_for('historyarch') == whitelist_for('historyArch')
+
+    def test_unknown_table_returns_none(self) -> None:
+        assert whitelist_for('table_inconnue') is None
+
+    def test_none_table_returns_none(self) -> None:
+        assert whitelist_for(None) is None
+
+
+class TestIsColumnExposed:
+    def test_whitelisted_column(self) -> None:
+        assert is_column_exposed('cmd', 'name') is True
+
+    def test_non_whitelisted_column(self) -> None:
+        assert is_column_exposed('cmd', 'colonne_inconnue') is False
+
+    def test_sensitive_column_on_unknown_table(self) -> None:
+        assert is_column_exposed(None, 'password') is False
+
+    def test_neutral_column_on_unknown_table(self) -> None:
+        assert is_column_exposed(None, 'datetime') is True
+
+
+# ---------------------------------------------------------------------------
+# allow_columns — colonnes calculées (ADR-0023)
+# ---------------------------------------------------------------------------
+
+
+class TestAllowColumns:
+    def test_computed_column_passes_when_allowed(self) -> None:
+        row, filtered = sanitize_row({'n': 63}, table='scenario', allow_columns=frozenset({'n'}))
+        assert row['n'] == 63
+        assert filtered == []
+
+    def test_computed_column_filtered_when_not_allowed(self) -> None:
+        row, filtered = sanitize_row({'n': 63}, table='scenario')
+        assert row['n'] == FILTERED
+        assert filtered == ['n']
+
+    def test_allow_columns_does_not_disable_other_mechanisms(self) -> None:
+        """La permission ne porte que sur le mécanisme 1 : la regex reste active."""
+        row, filtered = sanitize_row(
+            {'password': 'secret'}, table='scenario', allow_columns=frozenset({'password'})
+        )
+        assert row['password'] == FILTERED
+        assert filtered == ['password']
+
+    def test_rows_variant_propagates_allow_columns(self) -> None:
+        rows, filtered = sanitize_rows(
+            [{'n': 1}, {'n': 2}], table='cmd', allow_columns=frozenset({'n'})
+        )
+        assert [r['n'] for r in rows] == [1, 2]
+        assert filtered == []
+
+    def test_config_table_case_insensitive(self) -> None:
+        row, _ = sanitize_row({'plugin': 'core', 'value': 'v'}, table='CONFIG')
+        assert row['value'] == FILTERED

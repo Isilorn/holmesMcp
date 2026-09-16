@@ -431,3 +431,49 @@ def test_resolve_unknown_target_type(conn):
     result = resolve('foobar', 1, conn)
     assert 'error' in result
     assert 'foobar' in result['error']
+
+
+# ── Forme des requêtes : remontée récursive (ADR-0023) ────────────────────────
+
+
+class TestSqlShape:
+    """Le JOIN `LIKE CONCAT('%', sel.id, '%')` inventait 199 rattachements sur
+    l'installation de référence, et manquait 69 % des éléments. Ces tests le
+    verrouillent ; la preuve de résultat est dans les tests d'intégration live."""
+
+    QUERIES = ('_EXPR_REFS', '_CODE_REFS', '_SCENARIO_CALLERS')
+
+    def test_all_climbs_are_recursive(self):
+        import _domain.usage_graph as ug
+
+        for name in self.QUERIES:
+            assert 'WITH RECURSIVE' in getattr(ug, name), name
+
+    def test_no_like_join_on_scenario_element(self):
+        import _domain.usage_graph as ug
+
+        for name in self.QUERIES:
+            sql = getattr(ug, name)
+            assert 's.scenarioElement LIKE' not in sql, name
+            assert 'CONCAT' not in sql, name
+
+    def test_root_test_stays_exact(self):
+        import _domain.usage_graph as ug
+
+        for name in self.QUERIES:
+            assert 'JSON_SEARCH' in getattr(ug, name), name
+
+    def test_expr_refs_still_excludes_code_blocks(self):
+        import _domain.usage_graph as ug
+
+        assert "ss.type != 'code'" in ug._EXPR_REFS
+
+    def test_code_refs_targets_code_blocks(self):
+        import _domain.usage_graph as ug
+
+        assert "ss.type = 'code'" in ug._CODE_REFS
+
+    def test_scenario_callers_matches_start_action(self):
+        import _domain.usage_graph as ug
+
+        assert "x.expression = 'scenario'" in ug._SCENARIO_CALLERS
