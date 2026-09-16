@@ -902,3 +902,39 @@ class TestFindEquipmentUsages:
 
         sql = mock_q.call_args[0][1]
         assert 'DISTINCT' in sql
+
+
+# ---------------------------------------------------------------------------
+# find_command_usages / find_equipment_usages — remontée récursive (ADR-0023)
+# ---------------------------------------------------------------------------
+
+
+class TestUsagesSqlShape:
+    """Le JOIN JSON_SEARCH direct ne voyait que les éléments RACINES : 31 % de
+    rappel mesuré sur la box (91 liens rendus sur 289). La remontée est désormais
+    récursive ; le test de racine, lui, reste exact (zéro faux positif)."""
+
+    def _sql_of(self, fn, **kwargs) -> list[str]:
+        with patch('tools.equipments._db.query', return_value=[]) as mock_q:
+            fn(_MOCK_CONN, **kwargs)
+        return [call[0][1] for call in mock_q.call_args_list]
+
+    def test_command_usages_climbs_recursively(self):
+        sqls = self._sql_of(equipments.find_command_usages, cmd_id=42)
+        expr_sql = [s for s in sqls if 'scenarioExpression' in s]
+        assert expr_sql, 'aucune requête sur les expressions'
+        assert all('WITH RECURSIVE' in s for s in expr_sql)
+
+    def test_command_usages_keeps_exact_root_test(self):
+        sqls = self._sql_of(equipments.find_command_usages, cmd_id=42)
+        expr_sql = [s for s in sqls if 'scenarioExpression' in s]
+        assert all('JSON_SEARCH' in s for s in expr_sql)
+        assert all('s.scenarioElement LIKE' not in s for s in expr_sql)
+
+    def test_equipment_usages_climbs_recursively(self):
+        sqls = self._sql_of(equipments.find_equipment_usages, equipment_id=7)
+        assert any('WITH RECURSIVE' in s for s in sqls)
+
+    def test_equipment_usages_keeps_cmd_seed(self):
+        sqls = self._sql_of(equipments.find_equipment_usages, equipment_id=7)
+        assert any('c.eqLogic_id = %s' in s for s in sqls)

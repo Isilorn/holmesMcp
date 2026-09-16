@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from _core import api as _api
 from _core import db as _db
+from _domain import scenario_tree as _tree
 from _domain.sanitize import sanitize_rows, wrap_result
 
 if TYPE_CHECKING:
@@ -466,15 +467,12 @@ def find_equipment_usages(
 
     rows = _db.query(
         conn,
-        'SELECT DISTINCT s.id, s.name, s.isActive'
-        ' FROM scenario s'
-        ' JOIN scenarioElement sel'
-        "   ON JSON_SEARCH(s.scenarioElement, 'one', CAST(sel.id AS CHAR)) IS NOT NULL"
-        ' JOIN scenarioSubElement ss ON ss.scenarioElement_id = sel.id'
-        ' JOIN scenarioExpression expr ON expr.scenarioSubElement_id = ss.id'
-        " JOIN cmd c ON expr.expression LIKE CONCAT('%%#', c.id, '#%%')"
-        ' WHERE c.eqLogic_id = %s'
-        ' ORDER BY s.name LIMIT %s',
+        _tree.ancestors_cte(
+            seed_where='c.eqLogic_id = %s',
+            seed_joins="JOIN cmd c ON x.expression LIKE CONCAT('%%#', c.id, '#%%')",
+        )
+        + 'SELECT DISTINCT s.id, s.name, s.isActive'
+        ' FROM anc a ' + _tree.ROOT_JOIN + ' ORDER BY s.name LIMIT %s',
         (equipment_id, limit),
     )
     sanitized, filtered = sanitize_rows(rows, 'scenario')
@@ -519,15 +517,10 @@ def find_command_usages(
 
     expr_rows = _db.query(
         conn,
-        'SELECT DISTINCT s.id, s.name, s.isActive,'
+        _tree.ancestors_cte(seed_where='x.expression LIKE %s')
+        + 'SELECT DISTINCT s.id, s.name, s.isActive,'
         ' expr.type AS expr_type, expr.expression'
-        ' FROM scenarioExpression expr'
-        ' JOIN scenarioSubElement ss ON expr.scenarioSubElement_id = ss.id'
-        ' JOIN scenarioElement sel   ON ss.scenarioElement_id = sel.id'
-        ' JOIN scenario s'
-        "   ON JSON_SEARCH(s.scenarioElement, 'one', CAST(sel.id AS CHAR)) IS NOT NULL"
-        ' WHERE expr.expression LIKE %s'
-        ' LIMIT %s',
+        ' FROM anc a ' + _tree.ROOT_JOIN + ' ' + _tree.EXPR_JOIN + ' LIMIT %s',
         (pattern, limit),
     )
     expr_sanitized, expr_filtered = sanitize_rows(expr_rows)

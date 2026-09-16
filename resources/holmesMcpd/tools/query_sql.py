@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 import sqlparse
 from _core import db as _db
-from _domain.sanitize import sanitize_rows, wrap_result
+from _domain.sanitize import is_column_exposed, sanitize_rows, wrap_result
 
 if TYPE_CHECKING:
     import pymysql.connections
@@ -42,6 +42,11 @@ _SELECT_CLAUSE_RE = re.compile(r'SELECT\s+(.+?)\s+FROM\b', re.IGNORECASE | re.DO
 
 # LIMIT dans la requête externe (pas dans une sous-requête — approximation V1)
 _LIMIT_RE = re.compile(r'\bLIMIT\s+(\d+)\b', re.IGNORECASE)
+
+# Agrégats acceptés en colonne calculée (D15.3bis) — voir _allowed_computed_columns
+_AGG_RE = re.compile(r'(?is)^(count|sum|avg|min|max|group_concat)\s*\((.*)\)$')
+_ALIAS_RE = re.compile(r'(?is)^(.*?)(?:\s+as)?\s+`?(\w+)`?$')
+_BARE_COL_RE = re.compile(r'(?i)^(?:distinct\s+)?`?(\w+)`?$')
 
 # Auto-backtick — mots réservés MySQL courants dans le contexte Jeedom
 _QUOTED_STR_RE = re.compile(r"'(?:[^'\\]|\\.)*'")
@@ -105,17 +110,83 @@ def _auto_backtick_reserved(sql: str) -> str:
     return ''.join(parts)
 
 
-def _ensure_limit(sql: str) -> str:
-    """Injecte LIMIT si absent, plafonne si supérieur à _SQL_MAX_LIMIT."""
+def _ensure_limit(sql: str) -> tuple[str, int]:
+    """Injecte LIMIT si absent, plafonne si supérieur à _SQL_MAX_LIMIT.
+
+    Retourne (sql, limite_effectivement_appliquée) — la limite sert à signaler la
+    troncature à l'appelant, qui ne doit jamais avoir à la deviner.
+    """
     m = _LIMIT_RE.search(sql)
     if m:
         current = int(m.group(1))
         if current > _SQL_MAX_LIMIT:
-            return _LIMIT_RE.sub(f'LIMIT {_SQL_MAX_LIMIT}', sql, count=1)
-        return sql
+            return _LIMIT_RE.sub(f'LIMIT {_SQL_MAX_LIMIT}', sql, count=1), _SQL_MAX_LIMIT
+        return sql, current
     # Pas de LIMIT — l'ajouter (après suppression du ; final éventuel)
     sql_clean = sql.rstrip().rstrip(';').rstrip()
-    return f'{sql_clean} LIMIT {_SQL_DEFAULT_LIMIT}'
+    return f'{sql_clean} LIMIT {_SQL_DEFAULT_LIMIT}', _SQL_DEFAULT_LIMIT
+
+
+def _split_select_items(cols: str) -> list[str]:
+    """Découpe la liste du SELECT sur les virgules de PREMIER niveau."""
+    items: list[str] = []
+    depth = 0
+    current: list[str] = []
+    for ch in cols:
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+        if ch == ',' and depth == 0:
+            items.append(''.join(current))
+            current = []
+            continue
+        current.append(ch)
+    items.append(''.join(current))
+    return [i.strip() for i in items if i.strip()]
+
+
+def _allowed_computed_columns(sql: str, table: str | None) -> frozenset[str]:
+    """Noms de colonnes CALCULÉES sûres — celles que la whitelist doit laisser passer.
+
+    Une colonne calculée n'appartient à aucune table, donc le mécanisme 1 la masque :
+    `SELECT COUNT(*) FROM scenario` rendait `***FILTERED***` au lieu du compte.
+
+    N'est autorisé que ce qui ne peut pas rendre une valeur protégée :
+    - `COUNT(...)` — une cardinalité, quel que soit son argument ;
+    - `SUM/AVG/MIN/MAX/GROUP_CONCAT(col)` **seulement** si `col` est déjà exposable
+      pour cette table (sinon `MAX(value) AS n` contournerait la whitelist).
+
+    Toute autre expression (concaténation, CASE, sous-requête, simple alias de
+    colonne) reste filtrée : on n'ouvre pas la whitelist, on la complète.
+    """
+    m = _SELECT_CLAUSE_RE.search(sql)
+    if not m:
+        return frozenset()
+
+    allowed: set[str] = set()
+    for item in _split_select_items(m.group(1)):
+        expr = item
+        alias_m = _ALIAS_RE.match(item)
+        if alias_m and alias_m.group(1).strip():
+            expr, output_name = alias_m.group(1).strip(), alias_m.group(2)
+        else:
+            output_name = item
+
+        agg = _AGG_RE.match(expr)
+        if not agg:
+            continue
+        func, inner = agg.group(1).lower(), agg.group(2).strip()
+
+        if func == 'count':
+            allowed.add(output_name)
+            continue
+
+        col_m = _BARE_COL_RE.match(inner)
+        if col_m and is_column_exposed(table, col_m.group(1)):
+            allowed.add(output_name)
+
+    return frozenset(allowed)
 
 
 def query_sql(
@@ -132,8 +203,11 @@ def query_sql(
     - Colonnes sensibles interdites dans le SELECT : password, token, apikey,
       secret, private_key… (D15.3).
     - LIMIT injecté à 50 si absent ; plafonné à 200 même si spécifié plus grand.
+      La réponse porte `limit_applied` et `truncated` : `truncated: true` signifie
+      que le nombre de lignes a ATTEINT la limite — il peut en exister d'autres.
     - Tous les résultats passent par la sanitisation runtime (D15.1) :
-      champs sensibles remplacés par ***FILTERED***.
+      champs sensibles remplacés par ***FILTERED***. Les agrégats (`COUNT(*)`,
+      `MAX(colonne exposable)`) sont rendus en clair.
 
     TABLES UTILES JEEDOM
     --------------------
@@ -183,15 +257,25 @@ def query_sql(
         return {'error': error, '_filtered_fields': []}
 
     sql = _auto_backtick_reserved(sql)
-    sql = _ensure_limit(sql)
+    sql, limit_applied = _ensure_limit(sql)
 
     rows = _db.query(conn, sql)
 
     # Sanitisation avec la table principale si requête mono-table connue
     primary_table = tables[0] if len(tables) == 1 else None
-    sanitized, filtered = sanitize_rows(rows, table=primary_table)
+    sanitized, filtered = sanitize_rows(
+        rows,
+        table=primary_table,
+        allow_columns=_allowed_computed_columns(sql, primary_table),
+    )
 
     return wrap_result(
-        {'rows': sanitized, 'query': sql, 'count': len(sanitized)},
+        {
+            'rows': sanitized,
+            'query': sql,
+            'count': len(sanitized),
+            'limit_applied': limit_applied,
+            'truncated': len(sanitized) >= limit_applied,
+        },
         filtered,
     )

@@ -133,6 +133,8 @@ tail_log(log_name="holmesMcp", lines=200, grep="error")
 
 **Cause :** `query_sql` injecte automatiquement `LIMIT 50` si votre requête n'en spécifie pas. Le plafond absolu est `LIMIT 200`, même si vous indiquez une valeur plus grande.
 
+**Comment le savoir sans deviner :** depuis la v1.2.2, la réponse porte `limit_applied` (la limite réellement appliquée) et `truncated`. `truncated: true` signifie que le nombre de lignes a **atteint** la limite — il peut en exister d'autres. Le champ `query` montre par ailleurs la requête telle qu'elle a été exécutée.
+
 **Comportement exact :**
 
 | Cas | LIMIT injecté |

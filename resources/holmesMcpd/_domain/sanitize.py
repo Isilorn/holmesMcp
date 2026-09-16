@@ -10,7 +10,8 @@ joint à chaque réponse pour transparence LLM-side (D15.1).
 
 Cas spécial table config : la colonne key reste visible, la colonne value est
 masquée si key matche la regex (le LLM sait que le champ existe et peut
-l'expliquer à l'utilisateur).
+l'expliquer à l'utilisateur). Si la row ne porte PAS la colonne key, le verdict
+est impossible → value est masquée (fail closed, ADR-0023).
 
 Couverture tests : 100% obligatoire (ADR-0017, D15.5).
 Dérivé de jeedom-audit/_common/sensitive_fields.py — étendu (3 mécanismes).
@@ -200,6 +201,14 @@ _TABLE_WHITELISTS: dict[str, frozenset[str]] = {
     ),
 }
 
+# Index insensible à la casse : les appelants qui extraient le nom de table d'un SQL
+# libre le normalisent en minuscules (`query_sql`), et `eqLogic`/`dataStore`/
+# `historyArch` ne matchaient alors AUCUNE whitelist — mécanisme 1 inerte sur ces
+# trois tables. Trouvé le 2026-09-16 en écrivant le test de contournement d'alias.
+_TABLE_WHITELISTS_CI: dict[str, frozenset[str]] = {
+    name.lower(): cols for name, cols in _TABLE_WHITELISTS.items()
+}
+
 # Colonnes dont le contenu est parsé comme JSON pour appliquer mech 2+3
 _BLOB_COLUMNS: frozenset[str] = frozenset({'configuration', 'options'})
 
@@ -289,6 +298,25 @@ def is_sensitive_key(
     return False
 
 
+def whitelist_for(table: str | None) -> frozenset[str] | None:
+    """Whitelist du mécanisme 1 pour *table*, insensible à la casse. None si inconnue."""
+    if not table:
+        return None
+    return _TABLE_WHITELISTS_CI.get(table.lower())
+
+
+def is_column_exposed(table: str | None, column: str) -> bool:
+    """True si *column* passe le mécanisme 1 (whitelist) pour *table*.
+
+    Sert aux appelants qui doivent raisonner sur une colonne AVANT d'avoir la row —
+    `query_sql` s'en sert pour décider si un agrégat porte sur une colonne exposable.
+    """
+    whitelist = whitelist_for(table)
+    if whitelist is not None and column not in whitelist:
+        return False
+    return not is_sensitive_key(column, segment_words=False)
+
+
 def sanitize_json_blob(
     blob: str | dict[str, Any] | None,
     plugin: str | None = None,
@@ -348,9 +376,20 @@ def _sanitize_config_row(
     aucun appelant ne peut l'oublier. L'argument explicite reste prioritaire.
     Sans lui, le mécanisme 3 était INERTE sur cette table — or c'est là que vivent
     les identifiants de compte des plugins (trou trouvé à l'audit B3, 2026-09-08).
+
+    **Fail closed sans la clé** : le verdict se lit sur la colonne `key`. Une requête
+    qui ne la sélectionne pas (`SELECT value FROM config WHERE …`, possible via
+    `query_sql`) ne laissait plus rien à juger, et la valeur sortait en clair —
+    vérifié sur données réelles le 2026-09-16. Sans `key`, on masque.
     """
-    key_name = str(row.get('key', ''))
     row_plugin = plugin or row.get('plugin') or None
+
+    if 'key' not in row:
+        if 'value' in row:
+            return {**row, 'value': FILTERED}, ['value']
+        return dict(row), []
+
+    key_name = str(row.get('key', ''))
     if is_sensitive_key(key_name, row_plugin):
         return {**row, 'value': FILTERED}, [key_name]
     return dict(row), []
@@ -360,6 +399,7 @@ def sanitize_row(
     row: dict[str, Any],
     table: str | None = None,
     plugin: str | None = None,
+    allow_columns: frozenset[str] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Applique les 3 mécanismes de sanitisation sur une row.
 
@@ -369,17 +409,25 @@ def sanitize_row(
     1. Whitelist par table (mech 1) — champ absent → masqué
     2. Blob columns → sanitize_json_blob (mech 2+3)
     3. Regex sur nom de champ (mech 2, défense en profondeur)
+
+    `allow_columns` ajoute des noms de colonnes acceptés par le mécanisme 1 — et RIEN
+    d'autre : les mécanismes 2/2bis/3 continuent de s'appliquer. Réservé aux colonnes
+    CALCULÉES d'une requête libre (`COUNT(*)`), qui n'existent dans aucune whitelist
+    parce qu'elles n'existent dans aucune table. L'appelant est responsable de ne
+    lister que des agrégats sûrs (voir `query_sql._allowed_computed_columns`) : y
+    mettre un alias de colonne (`SELECT value AS n`) contournerait la whitelist.
     """
-    if table == 'config':
+    if table and table.lower() == 'config':
         return _sanitize_config_row(row, plugin)
 
-    whitelist = _TABLE_WHITELISTS.get(table) if table else None
+    allowed = allow_columns or frozenset()
+    whitelist = whitelist_for(table)
     result: dict[str, Any] = {}
     filtered: list[str] = []
 
     for key, value in row.items():
-        # Mech 1 : whitelist
-        if whitelist is not None and key not in whitelist:
+        # Mech 1 : whitelist (+ colonnes calculées explicitement autorisées)
+        if whitelist is not None and key not in whitelist and key not in allowed:
             result[key] = FILTERED
             filtered.append(key)
             continue
@@ -408,6 +456,7 @@ def sanitize_rows(
     rows: list[dict[str, Any]],
     table: str | None = None,
     plugin: str | None = None,
+    allow_columns: frozenset[str] | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Sanitise une liste de rows.
 
@@ -417,7 +466,7 @@ def sanitize_rows(
     all_filtered: set[str] = set()
 
     for row in rows:
-        san_row, row_filtered = sanitize_row(row, table, plugin)
+        san_row, row_filtered = sanitize_row(row, table, plugin, allow_columns)
         sanitized.append(san_row)
         all_filtered.update(row_filtered)
 

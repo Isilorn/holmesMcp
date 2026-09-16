@@ -203,30 +203,38 @@ class TestCheckSensitiveColumns:
 
 class TestEnsureLimit:
     def test_no_limit_injects_default(self):
-        sql = qsql._ensure_limit('SELECT * FROM eqLogic')
+        sql, applied = qsql._ensure_limit('SELECT * FROM eqLogic')
         assert f'LIMIT {qsql._SQL_DEFAULT_LIMIT}' in sql
+        assert applied == qsql._SQL_DEFAULT_LIMIT
 
     def test_existing_limit_kept(self):
-        sql = qsql._ensure_limit('SELECT * FROM eqLogic LIMIT 10')
+        sql, applied = qsql._ensure_limit('SELECT * FROM eqLogic LIMIT 10')
         assert 'LIMIT 10' in sql
+        assert applied == 10
 
     def test_limit_exceeding_max_capped(self):
-        sql = qsql._ensure_limit(f'SELECT * FROM eqLogic LIMIT {qsql._SQL_MAX_LIMIT + 100}')
+        sql, applied = qsql._ensure_limit(
+            f'SELECT * FROM eqLogic LIMIT {qsql._SQL_MAX_LIMIT + 100}'
+        )
         assert f'LIMIT {qsql._SQL_MAX_LIMIT}' in sql
         assert str(qsql._SQL_MAX_LIMIT + 100) not in sql
+        assert applied == qsql._SQL_MAX_LIMIT
 
     def test_limit_at_max_kept(self):
-        sql = qsql._ensure_limit(f'SELECT * FROM eqLogic LIMIT {qsql._SQL_MAX_LIMIT}')
+        sql, applied = qsql._ensure_limit(f'SELECT * FROM eqLogic LIMIT {qsql._SQL_MAX_LIMIT}')
         assert f'LIMIT {qsql._SQL_MAX_LIMIT}' in sql
+        assert applied == qsql._SQL_MAX_LIMIT
 
     def test_semicolon_stripped_before_limit_injection(self):
-        sql = qsql._ensure_limit('SELECT * FROM eqLogic;')
+        sql, applied = qsql._ensure_limit('SELECT * FROM eqLogic;')
         assert ';' not in sql
         assert f'LIMIT {qsql._SQL_DEFAULT_LIMIT}' in sql
+        assert applied == qsql._SQL_DEFAULT_LIMIT
 
     def test_limit_1_kept(self):
-        sql = qsql._ensure_limit('SELECT * FROM eqLogic LIMIT 1')
+        sql, applied = qsql._ensure_limit('SELECT * FROM eqLogic LIMIT 1')
         assert 'LIMIT 1' in sql
+        assert applied == 1
 
 
 # ---------------------------------------------------------------------------
@@ -500,3 +508,114 @@ class TestQuerySqlAutoBacktick:
 
         executed_sql = mock_q.call_args[0][1]
         assert '`update`' in executed_sql
+
+
+# ---------------------------------------------------------------------------
+# _split_select_items / _allowed_computed_columns (ADR-0023, C3)
+# ---------------------------------------------------------------------------
+
+
+class TestSplitSelectItems:
+    def test_simple_list(self):
+        assert qsql._split_select_items('id, name') == ['id', 'name']
+
+    def test_comma_inside_function_not_split(self):
+        assert qsql._split_select_items('id, CONCAT(a, b) AS x') == ['id', 'CONCAT(a, b) AS x']
+
+    def test_nested_parentheses(self):
+        assert qsql._split_select_items('COUNT(DISTINCT IF(a, b, c)) n') == [
+            'COUNT(DISTINCT IF(a, b, c)) n'
+        ]
+
+    def test_empty_items_dropped(self):
+        assert qsql._split_select_items('id, , name') == ['id', 'name']
+
+
+class TestAllowedComputedColumns:
+    def test_count_star_without_alias(self):
+        assert qsql._allowed_computed_columns('SELECT COUNT(*) FROM scenario', 'scenario') == {
+            'COUNT(*)'
+        }
+
+    def test_count_with_alias(self):
+        assert qsql._allowed_computed_columns('SELECT COUNT(*) AS n FROM cmd', 'cmd') == {'n'}
+
+    def test_count_with_implicit_alias(self):
+        assert qsql._allowed_computed_columns('SELECT COUNT(*) n FROM cmd', 'cmd') == {'n'}
+
+    def test_count_of_sensitive_column_is_a_cardinality(self):
+        """COUNT ne rend jamais la valeur — seulement combien il y en a."""
+        assert qsql._allowed_computed_columns('SELECT COUNT(secretcol) n FROM cmd', 'cmd') == {'n'}
+
+    def test_aggregate_on_exposed_column_allowed(self):
+        assert qsql._allowed_computed_columns('SELECT MAX(id) AS m FROM cmd', 'cmd') == {'m'}
+
+    def test_aggregate_on_non_whitelisted_column_refused(self):
+        assert qsql._allowed_computed_columns('SELECT MAX(hidden) AS m FROM cmd', 'cmd') == set()
+
+    def test_plain_alias_is_not_a_bypass(self):
+        """`SELECT value AS n` ne doit PAS ouvrir la whitelist — ce n'est pas un agrégat."""
+        assert (
+            qsql._allowed_computed_columns('SELECT ignored AS n FROM eqLogic', 'eqLogic') == set()
+        )
+
+    def test_expression_alias_is_not_a_bypass(self):
+        assert qsql._allowed_computed_columns('SELECT CONCAT(a, b) AS n FROM cmd', 'cmd') == set()
+
+    def test_group_by_keeps_both_columns(self):
+        allowed = qsql._allowed_computed_columns(
+            'SELECT eqLogic_id, COUNT(*) AS n FROM cmd GROUP BY eqLogic_id', 'cmd'
+        )
+        assert allowed == {'n'}
+
+    def test_no_select_clause_returns_empty(self):
+        assert qsql._allowed_computed_columns('WITH x AS (SELECT 1) SELECT 1', 'cmd') == set()
+
+    def test_unknown_table_has_no_whitelist(self):
+        assert qsql._allowed_computed_columns('SELECT MAX(anything) m FROM history', None) == {'m'}
+
+
+class TestQuerySqlComputedColumns:
+    def test_count_is_returned_in_clear(self):
+        """Le contrôle positif de jeedom-skills : COUNT(*) doit rendre 63, pas FILTERED."""
+        with patch('tools.query_sql._db.query', return_value=[{'COUNT(*)': 63}]):
+            result = qsql.query_sql(_MOCK_CONN, 'SELECT COUNT(*) FROM scenario')
+        assert result['rows'][0]['COUNT(*)'] == 63
+        assert result['_filtered_fields'] == []
+
+    def test_alias_bypass_still_filtered(self):
+        with patch('tools.query_sql._db.query', return_value=[{'n': 'valeur-protégée'}]):
+            result = qsql.query_sql(_MOCK_CONN, 'SELECT hidden AS n FROM eqLogic')
+        assert result['rows'][0]['n'] == FILTERED
+        assert result['_filtered_fields'] == ['n']
+
+
+# ---------------------------------------------------------------------------
+# query_sql — troncature déclarée (ADR-0023, C2)
+# ---------------------------------------------------------------------------
+
+
+class TestQuerySqlTruncation:
+    def test_truncated_true_when_limit_reached(self):
+        rows = [dict(_ROW_EQ, id=i) for i in range(qsql._SQL_DEFAULT_LIMIT)]
+        with patch('tools.query_sql._db.query', return_value=rows):
+            result = qsql.query_sql(_MOCK_CONN, 'SELECT id, name FROM eqLogic')
+        assert result['limit_applied'] == qsql._SQL_DEFAULT_LIMIT
+        assert result['truncated'] is True
+
+    def test_truncated_false_when_under_limit(self):
+        with patch('tools.query_sql._db.query', return_value=[_ROW_EQ]):
+            result = qsql.query_sql(_MOCK_CONN, 'SELECT id, name FROM eqLogic')
+        assert result['truncated'] is False
+        assert result['limit_applied'] == qsql._SQL_DEFAULT_LIMIT
+
+    def test_limit_applied_reflects_cap(self):
+        with patch('tools.query_sql._db.query', return_value=[]):
+            result = qsql.query_sql(_MOCK_CONN, 'SELECT id FROM cmd LIMIT 5000')
+        assert result['limit_applied'] == qsql._SQL_MAX_LIMIT
+        assert f'LIMIT {qsql._SQL_MAX_LIMIT}' in result['query']
+
+    def test_limit_applied_reflects_user_limit(self):
+        with patch('tools.query_sql._db.query', return_value=[]):
+            result = qsql.query_sql(_MOCK_CONN, 'SELECT id FROM cmd LIMIT 3')
+        assert result['limit_applied'] == 3
