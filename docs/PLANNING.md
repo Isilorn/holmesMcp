@@ -546,8 +546,11 @@ sanitiseur en nomme **7**. Les 32 non couverts comprennent des comptes construct
 identifiants SMTP, des jetons de notification, des clés privées de VPN et des plugins de
 géolocalisation. Les mécanismes 1 (whitelist par table) et 2 (regex sur clés de blob) sont
 génériques et couvrent la majorité des cas — mais le précédent jMQTT (J6-2 : `mqttUser` en
-camelCase passait à travers la regex) interdit de le supposer. *(Liste nominative dans le document
-de session, pas ici : dépôt public.)*
+camelCase passait à travers la regex) interdit de le supposer.
+
+⚠️ `docs/sessions/` est **dans ce dépôt public** : le détail nominatif y est limité aux noms de
+clés nécessaires pour justifier le correctif du sanitiseur — pas à un inventaire de l'installation
+du PO.
 
 **DoD J8-4ter** : CI verte · snapshot mémoire versionné · `CLAUDE.md` en place · 188/188 intég sur
 4.6.1 · 32 plugins audités, 0 fuite · `PROJECT_STATE` conforme au dernier commit.

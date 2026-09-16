@@ -12,9 +12,9 @@
 | **Environnement box** | Debian 12 Bookworm (kernel 6.1, Python 3.11.2) · **Jeedom 4.6.1** (était 4.5.3 en mai) · MariaDB 10.11.18 · 39 plugins tiers · daemon v1.2.0 UP |
 | **Jalon en cours** | J8 EN COURS — bêta privée + audit couverture + migration jeedom-audit |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-09-08-j8-4ter-reprise` (dormance de 4 mois close) |
-| **Prochaine session** | **J8-4ter bloc B** — session live : re-validation Jeedom 4.6.1 + ré-audit sanitisation 32 plugins. **Puis** J8-5 (migration jeedom-audit = bêta privée) |
-| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé), J7bis-1 ✅ (find_command_usages, auto-backtick query_sql, doc LIMIT, FAQ, v1.1.0, 686 ut), J7bis-2 ✅ (audit live 168/168 intég, bug JSON_SEARCH MariaDB corrigé, 13/13 WF couverts, rapport audit), J8-1 ✅ (brief migration jeedom-audit → Holmes MCP), J8-2 ✅ (v1.2.0 — 27 tools, 6 livraisons audit, 721 ut + 187 intég live, 0 régression), J8-3 ✅ (audit couverture — 13/13 WF, 8/8 cookbook obsolétés, list_plugins +remote_version, 722 ut), J8-4 ✅ (audit live — 188/188 intég, smoke 27 tools, bug CLOSE-WAIT FastMCP documenté), **J8-4bis ✅ (watchdog CLOSE-WAIT Level 2, fix McpActivityLogger._buffered_receive, smoke tests HTTP propres, 722 ut)** |
+| **Dernière session** | `2026-09-08-j8-4ter-bloc-b` (consignée le 16-09) |
+| **Prochaine session** | **J8-4ter remédiation** — 2 chantiers sanitiseur (arg `plugin` sur `config` + découpage en mots méca-2) puis B4. **Puis** J8-5 (migration jeedom-audit = bêta privée) |
+| **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé), J7bis-1 ✅ (find_command_usages, auto-backtick query_sql, doc LIMIT, FAQ, v1.1.0, 686 ut), J7bis-2 ✅ (audit live 168/168 intég, bug JSON_SEARCH MariaDB corrigé, 13/13 WF couverts, rapport audit), J8-1 ✅ (brief migration jeedom-audit → Holmes MCP), J8-2 ✅ (v1.2.0 — 27 tools, 6 livraisons audit, 721 ut + 187 intég live, 0 régression), J8-3 ✅ (audit couverture — 13/13 WF, 8/8 cookbook obsolétés, list_plugins +remote_version, 722 ut), J8-4 ✅ (audit live — 188/188 intég, smoke 27 tools, bug CLOSE-WAIT FastMCP documenté), J8-4bis ✅ (watchdog CLOSE-WAIT Level 2, fix McpActivityLogger._buffered_receive, smoke tests HTTP propres, 722 ut), J8-4ter bloc A ✅ (CI verte, snapshot mémoire, CLAUDE.md, doctrine sudo flotte, uv.lock), **J8-4ter bloc B ✅ (4.6.1 sans régression : 187 intég + 27 tools ; audit sanitisation : 4 fuites + trou structurel méca-3 sur table config)** |
 
 ---
 
@@ -27,11 +27,43 @@ réel**. Détail et plan : `docs/PLANNING.md` §J8-4ter.
 |---|---|
 | **17 commits `develop` + 5 `main` + tag `v1.2.0` jamais poussés** — tout J8 n'existait que sur le poste du PO | ✅ poussé le 08-09 |
 | **CI rouge depuis mai** : `ruff format --check` échoue (21 fichiers) → le job `unit` (`needs: lint`) ne tourne plus. **722 tests unitaires débranchés** | 🔴 bloc A3 |
-| **Jeedom est passé de 4.5.3 à 4.6.1.** Les 188 tests d'intégration et les 27 tools ont été validés contre le schéma et l'API de la 4.5.3 | 🔴 bloc B2 |
-| **Le parc de plugins a changé** : 39 plugins tiers, dont **7 seulement** nommés dans le mécanisme 3 du sanitiseur. Inversement, la moitié de la liste hard-codée vise des plugins désinstallés | 🔴 bloc B3 — **bloquant pour J8-5** |
+| **Jeedom est passé de 4.5.3 à 4.6.1.** Les 188 tests d'intégration et les 27 tools avaient été validés contre le schéma et l'API de la 4.5.3 | ✅ **B2 fait le 08-09 — aucune régression** |
+| **Le parc de plugins a changé** : 39 plugins tiers, dont **7 seulement** nommés dans le mécanisme 3 du sanitiseur | ⚠️ **B3 fait le 08-09 — 4 fuites + 1 trou structurel**, remédiation en cours |
 
 **L'OS n'a pas bougé** : Debian 12 Bookworm, comme déclaré depuis J0-2. La migration Debian 11→12
 est contemporaine du démarrage du projet (mai 2026), pas postérieure.
+
+### Bloc B ✅ exécuté le 2026-09-08 — résultats
+
+Détail complet : `docs/sessions/2026-09-08-j8-4ter-bloc-b.md`.
+
+**B2 — Jeedom 4.6.1 : aucune régression.** 187 tests d'intégration live passés, 1 sauté (bénin,
+dépendant du contenu du log), smoke **27/27 tools**, 0 socket CLOSE-WAIT, daemon à 0,5 % CPU. Le
+watchdog de J8-4bis est éprouvé pour la première fois sur le nouveau core.
+
+**B3 — la regex (mécanisme 2) masque bien les vraies munitions** : `password`, `atlantic_token`,
+`accessToken`, `refreshToken`, `access_token`, `client_secret`, `auth_code`, `mqtt::password` —
+17 clés sur les 359 lignes de `config`, sans qu'aucune entrée par plugin n'ait été nécessaire.
+
+🔴 **Mais deux défauts réels, bloquants pour J8-5 :**
+
+1. **Trou structurel** — `_sanitize_config_row()` appelle `is_sensitive_key(key)` **sans passer le
+   `plugin`**. Le mécanisme 3 est donc **inerte sur la table `config`**, c'est-à-dire là où vivent
+   les identifiants de compte des plugins. Le correctif jMQTT de J6-2 ne protège que les blobs
+   `eqLogic`/`cmd`. Ce n'est pas une liste à compléter, c'est un argument manquant.
+2. **4 fuites confirmées** — des clés d'API de services tiers en clair, qu'un client MCP recevrait
+   aujourd'hui. Cause commune : la regex porte `apikey`/`api_key`/`access_key`/`private_key` mais
+   **jamais `key` seul**, ni `api` seul. Détail nominatif dans le document de session.
+
+**Remédiation** : chantier 1 (argument `plugin`) + chantier 2 (découpage des identifiants en mots
+sur les frontières camelCase et `_`, avec tests de faux positifs type `monkey`, `autorefresh`).
+Module à 100 % de couverture obligatoire — interdit dur n°9.
+
+⚠️ **B5 n'a pas été fait le jour même** : pendant 8 jours ce document a déclaré B2 et B3 comme
+restant à faire, alors qu'ils étaient faits et avaient trouvé 4 fuites. Enchaîner deux blocs
+techniques puis poser une question au PO n'est pas une fin de session.
+
+---
 
 ### Procédure sudo — changement de doctrine (flotte)
 
