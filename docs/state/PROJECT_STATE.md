@@ -8,13 +8,47 @@
 
 | Champ | Valeur |
 |---|---|
-| **Version courante** | `v1.2.1` (J8-4ter bloc B ✅ — 27 tools, 763 ut, 187 intég live sur 4.6.1 — `main` = `develop` = `v1.2.1`) |
-| **Environnement box** | Debian 12 Bookworm (kernel 6.1, Python 3.11.2) · **Jeedom 4.6.1** (était 4.5.3 en mai) · MariaDB 10.11.18 · 39 plugins tiers · daemon v1.2.1 UP (déployé et vérifié le 16-09) |
+| **Version courante** | `v1.2.2` (J8-4quater ✅ — 27 tools, 834 ut, 201 intég live — `main` = `develop` = `v1.2.2`, déployée et validée sur la box le 16-09) |
+| **Environnement box** | Debian 12 Bookworm (kernel 6.1, Python 3.11.2) · **Jeedom 4.6.1** (était 4.5.3 en mai) · MariaDB 10.11.18 · 39 plugins tiers · daemon v1.2.2 UP (déployé et vérifié le 16-09, 0 socket CLOSE-WAIT) |
 | **Jalon en cours** | J8 EN COURS — bêta privée + audit couverture + migration jeedom-audit |
 | **Branche de travail** | `develop` |
-| **Dernière session** | `2026-09-08-j8-4ter-bloc-b` (consignée le 16-09 ; B3 remédié, B4 et B5 soldés le 16-09) |
+| **Dernière session** | `2026-09-16-j8-4quater-remontee-recursive` (saisine `jeedom-skills`) |
 | **Prochaine session** | **J8-5** — migration jeedom-audit = bêta privée (se déroule dans `jeedom-skills`). Pré-requis levés ; **snapshot Proxmox** avant la session live |
 | **Statut global** | 🟠 EN COURS — J0 ✅, J1 ✅ (v0.2.0), J2 ✅ (v0.3.0), J3-J4 ✅ (v0.4.0, 18 tools), J3-4bis ✅ (runtime API), J3-5 ✅ (audit 18 tools, 490 ut, 93 intég), J5-1 ✅ (24 tools, 557 ut), J5-2 ✅ (25 tools, 626 ut), J5-3 ✅ (71 intég live, 4 bugs, 25 tools smoke ✅), J5-4 ✅ (5 resources, 648 ut, smoke ✅), J5-5 ✅ (audit 6 écarts, 648 ut, v0.5.0), J6-1 ✅ (vue activité MCP, 664 ut), J6-2 ✅ (sanitisation live, 665 ut, ADR-0017 accepted, v0.6.0 tagué), J7-1 ✅ (doc MkDocs 12 sections, icône market, build strict OK), J7-2 ✅ (packaging market v1.0.0, icône conforme Jeedom, changelog, README, post forum prêt), J7-3 ✅ (polish UI config — masquage tokens, icônes sections, validé PO), J8-audit ✅ (gap analysis migration jeedom-audit → Holmes MCP), J8-1 ✅ (discussion méthode bêta — client Claude Code tranché, J7bis créé), J7bis-1 ✅ (find_command_usages, auto-backtick query_sql, doc LIMIT, FAQ, v1.1.0, 686 ut), J7bis-2 ✅ (audit live 168/168 intég, bug JSON_SEARCH MariaDB corrigé, 13/13 WF couverts, rapport audit), J8-1 ✅ (brief migration jeedom-audit → Holmes MCP), J8-2 ✅ (v1.2.0 — 27 tools, 6 livraisons audit, 721 ut + 187 intég live, 0 régression), J8-3 ✅ (audit couverture — 13/13 WF, 8/8 cookbook obsolétés, list_plugins +remote_version, 722 ut), J8-4 ✅ (audit live — 188/188 intég, smoke 27 tools, bug CLOSE-WAIT FastMCP documenté), J8-4bis ✅ (watchdog CLOSE-WAIT Level 2, fix McpActivityLogger._buffered_receive, smoke tests HTTP propres, 722 ut), J8-4ter bloc A ✅ (CI verte, snapshot mémoire, CLAUDE.md, doctrine sudo flotte, uv.lock), **J8-4ter bloc B ✅ (4.6.1 sans régression : 187 intég + 27 tools ; audit sanitisation : 4 fuites + trou structurel méca-3 sur table config, **remédiés le 16-09** — méca-2bis segmentation en mots, 763 ut, 100 % couverture sanitize)** |
+
+---
+
+## 🔎 J8-4quater — Saisine `jeedom-skills` : la remontée récursive (2026-09-16)
+
+`jeedom-skills` (jalon M0 de sa migration V2.0.0) a signalé deux défauts de sa couche V1 et
+demandé si Holmes MCP les reproduisait. **Vérifié par la mesure sur la box, pas par lecture de
+code** — et il en reproduisait un.
+
+| Vérification demandée | Verdict | Mesure |
+|---|---|---|
+| `query_sql` signale-t-il les erreurs SQL ? | **NE REPRODUIT PAS** | codes MariaDB 1054/1146 remontés en `isError=True` ; jamais `{"rows": []}` sur erreur |
+| `find_command_usages` fait-il la remontée récursive ? | 🔴 **REPRODUIT** (faux négatifs) | 91 liens rendus sur 289 réels = **31 % de rappel** ; 87 commandes sur 165 rendaient 0 à tort ; 0 faux positif |
+| `find_scenario_dependencies` (même question) | 🔴 **REPRODUIT les deux moitiés** | 35 rattachements inventés, 33 manqués, **21 scénarios faux sur 63** |
+
+**Cause** : `scenario.scenarioElement` ne liste que les éléments **racines** — 116 sur 374 ici,
+soit **69 % d'éléments imbriqués invisibles**. Toute remontée est récursive. ADR-0023.
+
+**Corrigé en v1.2.2**, avec trois défauts trouvés en chemin : la table `config` rendait ses valeurs
+en clair quand la requête ne sélectionnait pas `key` (fuite atteignable par tout client MCP
+authentifié) ; le mécanisme 1 était inerte sur `eqLogic`/`dataStore`/`historyArch` (nom de table
+minusculé) ; `COUNT(*)` rendait `***FILTERED***`. `query_sql` déclare désormais `truncated` et
+répare une requête `config` en y ajoutant `key`.
+
+**Validation** : 834 ut, 100 % sur `sanitize.py` **et** `query_sql.py`, 201 intég live contre le
+code déployé, 16/16 contrôles bout en bout à travers le daemon, 0 CLOSE-WAIT.
+
+⚠️ **La procédure de déploiement documentée produisait deux dérives** (corrigée en mémoire) :
+`rsync -a` repassait 44 fichiers en `gtillit:gtillit`, et `__pycache__` non exclu déposait 27 `.pyc`
+de Python 3.14 sur une box en 3.11. Nettoyé, `--chown=www-data:www-data` et `--exclude='__pycache__/'`
+ajoutés à la fiche.
+
+**Reste à faire** : répondre à `jeedom-skills` avec les chiffres avant/après — leur baseline Phase 0
+est à rejouer, les tools ne rendent plus les mêmes réponses.
 
 ---
 
