@@ -24,6 +24,7 @@ from _domain.sanitize import (
     _PLUGIN_EXTRA_KEYS,
     _TABLE_WHITELISTS,
     FILTERED,
+    _key_words,
     _sanitize_config_row,
     is_sensitive_key,
     sanitize_json_blob,
@@ -1009,3 +1010,151 @@ class TestInternals:
             assert 'cmd_id' in wl
             assert 'datetime' in wl
             assert 'value' in wl
+
+
+# ---------------------------------------------------------------------------
+# Mécanisme 2bis — segmentation en mots (audit B3, 2026-09-08)
+# ---------------------------------------------------------------------------
+
+
+class TestMech2bisWordSegmentation:
+    """`key` et `api` ne peuvent pas entrer dans la regex en sous-chaîne.
+
+    Ils y attraperaient `monkey`, `keyboard`, `rapide`. D'où la segmentation de
+    l'identifiant en mots. Les 4 fuites trouvées à l'audit B3 sont les cas de
+    référence de cette classe.
+    """
+
+    @pytest.mark.parametrize(
+        'key',
+        [
+            'keyGMG',  # geotrav — clé d'API Google Maps, 39 car., sortait en clair
+            'keyNavitia',  # geotrav — clé d'API Navitia
+            'jawglabKey',  # tesla — clé d'API Jawg Labs, 64 car.
+            'publicKey',
+            'primary_key',
+            'KEY',
+            'signing.key',
+            'aes::key',
+        ],
+    )
+    def test_key_as_word_is_masked(self, key: str) -> None:
+        assert is_sensitive_key(key) is True, f'{key} doit être masqué (mot « key »)'
+
+    def test_api_exact_match_is_masked(self) -> None:
+        """`api` est la clé d'API de plugin Jeedom — masquée en correspondance EXACTE."""
+        assert is_sensitive_key('api') is True
+        assert is_sensitive_key('  API  ') is True
+
+    @pytest.mark.parametrize(
+        'key',
+        [
+            'monkey',  # contient « key » en sous-chaîne, n'est pas le mot
+            'keyboard',
+            'turnkey',
+            'hotkeys',
+            'apiUrl',  # `api` en mot n'est PAS un secret — d'où le match exact
+            'apiVersion',
+            'api_endpoint',
+            'autorefresh',  # expression cron — signalée 5 fois par l'heuristique B3
+            'serialNumber',
+            'roomId',
+            'deviceId',
+            'entityId',
+        ],
+    )
+    def test_no_false_positive(self, key: str) -> None:
+        assert is_sensitive_key(key) is False, f'{key} ne doit PAS être masqué'
+
+    def test_segment_words_disabled_for_sql_column_names(self) -> None:
+        """`dataStore.key` est le NOM d'une variable, pas un secret.
+
+        Les noms de colonnes viennent du schéma Jeedom, fermé et connu.
+        """
+        assert is_sensitive_key('key', segment_words=False) is False
+        assert is_sensitive_key('api', segment_words=False) is False
+        # La regex (mech 2) continue de s'appliquer aux noms de colonnes
+        assert is_sensitive_key('password', segment_words=False) is True
+
+    def test_datastore_key_column_survives_sanitize_row(self) -> None:
+        row = {'id': 1, 'type': 'cmd', 'link_id': 5, 'key': 'cmd_ref', 'value': '42'}
+        result, filtered = sanitize_row(row, table='dataStore')
+        assert result['key'] == 'cmd_ref'
+        assert 'key' not in filtered
+
+    def test_key_in_json_blob_is_masked(self) -> None:
+        """Dans un blob, en revanche, `keyGMG` est du contenu — donc masqué."""
+        blob = json.dumps({'keyGMG': 'AIzaSyExample0000000000000000000000000', 'label': 'Maps'})
+        clean, filtered = sanitize_json_blob(blob, 'geotrav')
+        assert clean['keyGMG'] == FILTERED
+        assert clean['label'] == 'Maps'
+        assert 'keyGMG' in filtered
+
+    @pytest.mark.parametrize(
+        ('key', 'expected'),
+        [
+            ('keyGMG', {'key', 'gmg'}),
+            ('jawglabKey', {'jawglab', 'key'}),
+            ('smtp::username', {'smtp', 'username'}),
+            ('mqtt_broker_2', {'mqtt', 'broker'}),
+            ('HTTPServer', {'http', 'server'}),
+            ('monkey', {'monkey'}),
+        ],
+    )
+    def test_key_words_segmentation(self, key: str, expected: set[str]) -> None:
+        assert _key_words(key) == expected
+
+
+# ---------------------------------------------------------------------------
+# Mécanisme 3 sur la table config — le trou structurel de l'audit B3
+# ---------------------------------------------------------------------------
+
+
+class TestMech3OnConfigTable:
+    """Le mécanisme 3 était INERTE sur la table `config`.
+
+    `_sanitize_config_row` appelait `is_sensitive_key(key)` sans passer le plugin,
+    alors que c'est là que vivent les identifiants de compte des plugins.
+    """
+
+    def test_plugin_read_from_the_row_itself(self) -> None:
+        """Aucun appelant ne peut oublier le plugin : la row le porte."""
+        row = {'plugin': 'cozytouch', 'key': 'username', 'value': 'compte@exemple.test'}
+        result, filtered = _sanitize_config_row(row)
+        assert result['value'] == FILTERED
+        assert filtered == ['username']
+        assert result['key'] == 'username', 'la clé reste visible (transparence LLM)'
+
+    def test_explicit_plugin_argument_wins(self) -> None:
+        row = {'key': 'username', 'value': 'compte@exemple.test'}
+        result, _ = _sanitize_config_row(row, plugin='cozytouch')
+        assert result['value'] == FILTERED
+
+    def test_unknown_plugin_leaves_neutral_key_visible(self) -> None:
+        row = {'plugin': 'inconnu', 'key': 'username', 'value': 'bob'}
+        result, filtered = _sanitize_config_row(row)
+        assert result['value'] == 'bob'
+        assert filtered == []
+
+    def test_sanitize_row_threads_plugin_to_config(self) -> None:
+        row = {'plugin': 'geotrav', 'key': 'login', 'value': 'bob'}
+        result, _ = sanitize_row(row, table='config')
+        assert result['value'] == FILTERED
+
+    @pytest.mark.parametrize(
+        ('plugin', 'key'),
+        [
+            ('cozytouch', 'username'),
+            ('CozyTouch', 'login'),
+            ('geotrav', 'username'),
+            ('mail', 'smtp::username'),
+            ('openvpn', 'username'),
+            ('SomfyUnified', 'login'),
+        ],
+    )
+    def test_b3_account_logins_are_covered(self, plugin: str, key: str) -> None:
+        assert is_sensitive_key(key, plugin) is True
+
+    def test_username_stays_visible_without_plugin_context(self) -> None:
+        """`username` masqué partout casserait l'affichage légitime — d'où le mech 3."""
+        assert is_sensitive_key('username') is False
